@@ -10,7 +10,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 
-class HomeMapScreen extends StatefulWidget {g
+class HomeMapScreen extends StatefulWidget {
   const HomeMapScreen({super.key});
   @override
   State<HomeMapScreen> createState() => _HomeMapScreenState();
