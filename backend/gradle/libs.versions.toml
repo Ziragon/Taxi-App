@@ -22,6 +22,8 @@ boot-starter-data-jpa = { group = "org.springframework.boot", name = "spring-boo
 boot-starter-data-redis = { group = "org.springframework.boot", name = "spring-boot-starter-data-redis" }
 boot-starter-amqp = { group = "org.springframework.boot", name = "spring-boot-starter-amqp" }
 
+boot-starter-flyway = { group = "org.springframework.boot", name = "spring-boot-starter-flyway" }
+
 boot-configuration-processor = { group = "org.springframework.boot", name = "spring-boot-configuration-processor" }
 
 boot-starter-test = { group = "org.springframework.boot", name = "spring-boot-starter-test" }
