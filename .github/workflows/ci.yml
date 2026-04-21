@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "dev", "feature/github-ci-init" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+
+  # Проверка изменений в папке .backend/
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+
+  # Сборка shared-libs
+  build-shared-libs:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Build shared-libs
+        working-directory: backend
+        run: ./gradlew :shared-libs:build
+
+  # Сборка сервисов
+  build-and-test:
+    needs: build-shared-libs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - gateway-service
+          # - user-service и остальные по мере введения
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Build and test ${{ matrix.service }}
+        working-directory: backend
+        run: ./gradlew :${{ matrix.service }}:build :${{ matrix.service }}:test
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-report-${{ matrix.service }}
+          path: backend/${{ matrix.service }}/build/reports/tests/test/**
+          retention-days: 7
+
+  # Итоговый статус
+  ci-success:
+    needs: [ build-and-test ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "One or more jobs failed"
+            exit 1
+          fi
+          echo "CI passed"
