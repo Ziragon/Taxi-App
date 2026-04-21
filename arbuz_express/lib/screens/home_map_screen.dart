@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:arbuz_express/widgets/app_ui.dart';
+import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
+import 'package:arbuz_express/CustomTextField/HomeMapScreen/destination_marker.dart';
+import 'package:arbuz_express/CustomTextField/HomeMapScreen/tariff_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -15,11 +18,6 @@ class HomeMapScreen extends StatefulWidget {
 
 class _HomeMapScreenState extends State<HomeMapScreen> {
   static const LatLng _initialCenter = LatLng(55.0084, 82.9357);
-  static const tariffs = [
-    ('Эконом', '650 ₽', Icons.directions_car),
-    ('Комфорт', '820 ₽', Icons.airport_shuttle),
-    ('Бизнес', '1200 ₽', Icons.workspace_premium),
-  ];
   final TextEditingController _fromController = TextEditingController();
   final TextEditingController _toController = TextEditingController();
   final MapController _mapController = MapController();
@@ -414,14 +412,14 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
                           point: _currentPosition!,
                           width: 56,
                           height: 70,
-                          child: const _PickupMarker(),
+                          child: const PickupMarker(),
                         ),
                       if (_toPosition != null)
                         Marker(
                           point: _toPosition!,
                           width: 44,
                           height: 44,
-                          child: const _DestinationMarker(),
+                          child: const DestinationMarker(),
                         ),
                     ],
                   ),
@@ -561,7 +559,12 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
                                     ),
                                     if (_showTariffs) ...[
                                       const SizedBox(height: 16),
-                                      _buildTariffList(),
+                                      TariffSelector(
+                                        selectedTariff: _selectedTariff,
+                                        onTariffSelected: (index) => setState(
+                                          () => _selectedTariff = index,
+                                        ),
+                                      ),
                                     ],
                                     const SizedBox(height: 16),
                                     Row(
@@ -658,187 +661,6 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
             onPressed: _getCurrentLocation,
           ),
       ],
-    );
-  }
-
-  Widget _buildTariffList() {
-    return SizedBox(
-      height: 94,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: tariffs.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final t = tariffs[index];
-          final selected = _selectedTariff == index;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedTariff = index),
-            child: Container(
-              width: 104,
-              decoration: BoxDecoration(
-                color: selected
-                    ? const Color(0x1AFFC107)
-                    : const Color(0xFF151518),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: selected
-                      ? const Color(0xFFFFC107)
-                      : Colors.white.withOpacity(0.04),
-                  width: selected ? 2 : 1,
-                ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    t.$3,
-                    color: selected ? const Color(0xFFFFC107) : Colors.white54,
-                    size: 26,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    t.$1,
-                    style: TextStyle(
-                      color: selected ? Colors.white : Colors.white70,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    t.$2,
-                    style: const TextStyle(
-                      color: Color(0xFFFFC107),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _PickupMarker extends StatelessWidget {
-  const _PickupMarker();
-
-  @override
-  Widget build(BuildContext context) {
-    return ColorFiltered(
-      colorFilter: const ColorFilter.matrix([
-        -1.0,
-        0.0,
-        0.0,
-        0.0,
-        255.0,
-        0.0,
-        -1.0,
-        0.0,
-        0.0,
-        255.0,
-        0.0,
-        0.0,
-        -1.0,
-        0.0,
-        255.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-      ]),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFC107),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x4DFFC107),
-                  blurRadius: 12,
-                  spreadRadius: 4,
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.person_rounded,
-              color: Colors.black,
-              size: 24,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            width: 6,
-            height: 6,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFC107),
-              shape: BoxShape.circle,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DestinationMarker extends StatelessWidget {
-  const _DestinationMarker();
-
-  @override
-  Widget build(BuildContext context) {
-    return ColorFiltered(
-      colorFilter: const ColorFilter.matrix([
-        -1.0,
-        0.0,
-        0.0,
-        0.0,
-        255.0,
-        0.0,
-        -1.0,
-        0.0,
-        0.0,
-        255.0,
-        0.0,
-        0.0,
-        -1.0,
-        0.0,
-        255.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-      ]),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFF5722),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x4DFF5722),
-                  blurRadius: 12,
-                  spreadRadius: 4,
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.flag_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
