@@ -1,0 +1,60 @@
+[versions]
+java = "25"
+
+spring-boot = "4.0.5"
+spring-cloud = "2025.1.1"
+spring-dependency-management = "1.1.7"
+
+jjwt = "0.13.0"
+springdoc = "3.0.3"
+
+[libraries]
+boot-starter = { group = "org.springframework.boot", name = "spring-boot-starter" }
+boot-starter-web = { group = "org.springframework.boot", name = "spring-boot-starter-web" }
+boot-starter-webflux = { group = "org.springframework.boot", name = "spring-boot-starter-webflux" }
+
+boot-starter-actuator = { group = "org.springframework.boot", name = "spring-boot-starter-actuator" }
+boot-starter-validation = { group = "org.springframework.boot", name = "spring-boot-starter-validation" }
+
+boot-starter-security = { group = "org.springframework.boot", name = "spring-boot-starter-security" }
+
+boot-starter-data-jpa = { group = "org.springframework.boot", name = "spring-boot-starter-data-jpa" }
+boot-starter-data-redis = { group = "org.springframework.boot", name = "spring-boot-starter-data-redis" }
+boot-starter-amqp = { group = "org.springframework.boot", name = "spring-boot-starter-amqp" }
+
+boot-configuration-processor = { group = "org.springframework.boot", name = "spring-boot-configuration-processor" }
+
+boot-starter-test = { group = "org.springframework.boot", name = "spring-boot-starter-test" }
+boot-testcontainers = { group = "org.springframework.boot", name = "spring-boot-testcontainers" }
+
+jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind" }
+
+# Lombok 1.18.44
+lombok = { group = "org.projectlombok", name = "lombok" }
+
+# Database
+postgresql = { group = "org.postgresql", name = "postgresql" }
+flyway-core = { group = "org.flywaydb", name = "flyway-core" }
+flyway-database-postgresql = { group = "org.flywaydb", name = "flyway-database-postgresql" }
+
+testcontainers-redis = { group = "com.redis", name = "testcontainers-redis" }
+
+testcontainers-junit-jupiter = { group = "org.testcontainers", name = "testcontainers-junit-jupiter" }
+testcontainers-postgresql = { group = "org.testcontainers", name = "testcontainers-postgresql" }
+testcontainers-rabbitmq = { group = "org.testcontainers", name = "testcontainers-rabbitmq" }
+
+# Gateway
+spring-cloud-starter-gateway = { group = "org.springframework.cloud", name = "spring-cloud-starter-gateway-server-webflux" }
+
+# jjwt
+jjwt-api = { group = "io.jsonwebtoken", name = "jjwt-api", version.ref = "jjwt" }
+jjwt-impl = { group = "io.jsonwebtoken", name = "jjwt-impl", version.ref = "jjwt" }
+jjwt-jackson = { group = "io.jsonwebtoken", name = "jjwt-jackson", version.ref = "jjwt" }
+
+# OpenAPI Swagger
+springdoc-webmvc-ui = { group = "org.springdoc", name = "springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+springdoc-webflux-ui = { group = "org.springdoc", name = "springdoc-openapi-starter-webflux-ui", version.ref = "springdoc" }
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }

@@ -1,0 +1,23 @@
+---
+config:
+  layout: dagre
+---
+flowchart TB
+    A["Flutter App"] -- API Request --> B("API-Gateway")
+    B -- Регистрация --> n1["User-Service<br>Регистрация водителей<br>и клиентов"]
+    B -- Оформление поездок --> n2["Trip-service"]
+    B -- Привязка методов<br>оплаты --> n3["Payment-Service<br>Хранение методов<br>оплаты, оплата в фоне"]
+    B -- Уведомления --> n4["Notification-Service<br>+ Workers"]
+    n2 -- Запрос свободных<br>водителей --> n1
+    n2 -- Обработка оплаты<br>в фоне --> n3
+    n1 -- Кэширование<br>доступных водителей --> n5["Redis"]
+    n3 -- Оплата --> n6["Stripe"]
+    n4 --> n7["RabbitMQ<br>Будет использоваться<br>всеми микросервисами"]
+
+    n1@{ shape: rounded}
+    n2@{ shape: rounded}
+    n3@{ shape: rounded}
+    n4@{ shape: rounded}
+    n5@{ shape: rect}
+    n6@{ shape: rect}
+    n7@{ shape: rect}
