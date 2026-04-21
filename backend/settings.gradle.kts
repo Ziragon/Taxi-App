@@ -12,7 +12,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "microservices-monorepo"
+rootProject.name = "taxi-service"
 
 includeBuild("build-logic")
 
