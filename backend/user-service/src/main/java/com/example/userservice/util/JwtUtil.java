@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
@@ -20,20 +21,21 @@ import java.util.UUID;
 public class JwtUtil {
 
     private final AppProperties appProperties;
+    private final Clock clock;
 
     public TokenData generateAccessToken(Long accountId, String role) {
-        Instant expiresAt = Instant.now().plusMillis(appProperties.getAccessToken().toMillis());
+        Instant expiresAt = Instant.now(clock).plusMillis(appProperties.getAccessToken().toMillis());
         String token = generateToken(accountId, role, appProperties.getAccessToken().toMillis());
         return new TokenData(token, expiresAt);
     }
 
     public TokenData generateRefreshToken() {
-        Instant expiresAt = Instant.now().plusMillis(appProperties.getRefreshToken().toMillis());
+        Instant expiresAt = Instant.now(clock).plusMillis(appProperties.getRefreshToken().toMillis());
         return new TokenData(UUID.randomUUID().toString(), expiresAt);
     }
 
     private String generateToken(Long accountId, String role, long expirationMs) {
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         Instant expiration = now.plusMillis(expirationMs);
 
         var builder = Jwts.builder()

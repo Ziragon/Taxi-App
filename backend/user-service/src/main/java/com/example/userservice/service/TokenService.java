@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
 
@@ -26,6 +27,7 @@ public class TokenService {
     private final JwtUtil jwtUtil;
     private final AppProperties appProperties;
     private final AccountService accountService;
+    private final Clock clock;
 
     @Transactional
     public TokenData createRefreshToken(Account account) {
@@ -35,7 +37,7 @@ public class TokenService {
         RefreshToken refreshToken = RefreshToken.builder()
                 .account(accountService.findById(account.getId()))
                 .tokenHash(tokenHash)
-                .expiresAt(Instant.now().plusMillis(appProperties.getRefreshToken().toMillis()))
+                .expiresAt(Instant.now(clock).plusMillis(appProperties.getRefreshToken().toMillis()))
                 .revoked(false)
                 .build();
 
@@ -54,7 +56,7 @@ public class TokenService {
                 .findByTokenHashAndRevokedFalse(tokenHash)
                 .orElseThrow(() -> new TokenExpiredException("Refresh"));
 
-        if (storedToken.getExpiresAt().isBefore(Instant.now())) {
+        if (storedToken.getExpiresAt().isBefore(Instant.now(clock))) {
             throw new TokenExpiredException("Refresh");
         }
 
@@ -71,7 +73,7 @@ public class TokenService {
 
     @Transactional
     public void cleanupExpiredTokens() {
-        refreshTokenRepository.deleteAllExpired(Instant.now());
+        refreshTokenRepository.deleteAllExpired(Instant.now(clock));
     }
 
     private String hashToken(String rawToken) {
