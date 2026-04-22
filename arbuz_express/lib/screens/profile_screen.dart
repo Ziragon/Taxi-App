@@ -2,6 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
+import 'package:arbuz_express/screens/menuScreens/ride_history_screen.dart';
+import 'package:arbuz_express/screens/menuScreens/payment_methods_screen.dart';
+import 'package:arbuz_express/screens/menuScreens/support_screen.dart';
+import 'package:arbuz_express/screens/auth_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -36,12 +40,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    dynamic avatarImage;
+    ImageProvider avatarImage;
     if (_imagePath != null) {
       avatarImage = FileImage(File(_imagePath!));
     } else {
       avatarImage = const NetworkImage(
-        'https://api.dicebear.com/7.x/avataaars/png?seed=Felix',
+        'https://i.pinimg.com/736x/bd/e4/37/bde4375cab1bde7b846588f068adc681.jpg',
       );
     }
 
@@ -149,7 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(height: 20),
                         const Text(
-                          'Лев Гнузенов',
+                          'Лев Гунзенов',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 26,
@@ -159,7 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '+7 (999) 1408-72-78',
+                          '+7 (999) 000-00-00',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.4),
                             fontSize: 15,
@@ -185,62 +189,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(height: 24),
                         _buildMenuSection([
-                          _MenuItem(Icons.history_rounded, 'История поездок'),
-                          _MenuItem(Icons.payment_rounded, 'Способы оплаты'),
                           _MenuItem(
-                            Icons.settings_suggest_rounded,
-                            'Настройки',
+                            Icons.history_rounded,
+                            'История поездок',
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const RideHistoryScreen(),
+                              ),
+                            ),
                           ),
-                          _MenuItem(Icons.support_agent_rounded, 'Поддержка'),
+                          _MenuItem(
+                            Icons.payment_rounded,
+                            'Способы оплаты',
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const PaymentMethodsScreen(),
+                              ),
+                            ),
+                          ),
+                          _MenuItem(
+                            Icons.support_agent_rounded,
+                            'Поддержка',
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SupportScreen(),
+                              ),
+                            ),
+                          ),
                         ]),
                         const SizedBox(height: 32),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 40),
-                          child: TextButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  backgroundColor: const Color(0xFF151518),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(28),
+                        TextButton(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                backgroundColor: const Color(0xFF151518),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(28),
+                                ),
+                                title: const Text(
+                                  'Выход',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                content: const Text(
+                                  'Вы уверены, что хотите выйти?',
+                                  style: TextStyle(color: Colors.white70),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Отмена'),
                                   ),
-                                  title: const Text(
-                                    'Выход',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  content: const Text(
-                                    'Вы уверены, что хотите выйти из профиля?',
-                                    style: TextStyle(color: Colors.white70),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: const Text('Отмена'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        Navigator.pop(context);
-                                      },
-                                      child: const Text(
-                                        'Выйти',
-                                        style: TextStyle(
-                                          color: Color(0xFFFF5722),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pushAndRemoveUntil(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const AuthScreen(),
                                         ),
+                                        (route) => false,
+                                      );
+                                    },
+                                    child: const Text(
+                                      'Выйти',
+                                      style: TextStyle(
+                                        color: Color(0xFFFF5722),
                                       ),
                                     ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              'Выйти из аккаунта',
-                              style: TextStyle(
-                                color: Color(0xFFFF5722),
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
+                                  ),
+                                ],
                               ),
+                            );
+                          },
+                          child: const Text(
+                            'Выйти из аккаунта',
+                            style: TextStyle(
+                              color: Color(0xFFFF5722),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
@@ -318,7 +349,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: Colors.white.withOpacity(0.1),
                   size: 14,
                 ),
-                onTap: () {},
+                onTap: item.onTap,
               ),
               if (!isLast)
                 Divider(
@@ -338,5 +369,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 class _MenuItem {
   final IconData icon;
   final String title;
-  _MenuItem(this.icon, this.title);
+  final VoidCallback onTap;
+  _MenuItem(this.icon, this.title, this.onTap);
 }
