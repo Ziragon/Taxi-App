@@ -16,18 +16,28 @@ import java.time.Duration;
 @ConfigurationProperties(prefix = "jwt")
 @Validated
 public class AppProperties {
+
     @NotBlank
     private String secret;
-    @NotBlank private String issuer;
+
+    @NotBlank
+    private String issuer;
+
+    @NotNull
     private TokenProperties accessToken;
+
+    @NotNull
     private TokenProperties refreshToken;
 
-
+    @Getter
     @NoArgsConstructor
     @AllArgsConstructor
     public static class TokenProperties {
         @NotNull
         private Duration expiration;
-        public long toMillis() { return expiration.toMillis(); }
+
+        public long toMillis() {
+            return expiration.toMillis();
+        }
     }
 }
