@@ -27,10 +27,9 @@ public class JwtUtil {
         return new TokenData(token, expiresAt);
     }
 
-    public TokenData generateRefreshToken(Long accountId) {
+    public TokenData generateRefreshToken() {
         Instant expiresAt = Instant.now().plusMillis(appProperties.getRefreshToken().toMillis());
-        String token = generateToken(accountId, null, appProperties.getRefreshToken().toMillis());
-        return new TokenData(token, expiresAt);
+        return new TokenData(UUID.randomUUID().toString(), expiresAt);
     }
 
     private String generateToken(Long accountId, String role, long expirationMs) {

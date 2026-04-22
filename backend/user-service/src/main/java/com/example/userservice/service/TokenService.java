@@ -29,7 +29,7 @@ public class TokenService {
 
     @Transactional
     public TokenData createRefreshToken(Account account) {
-        TokenData tokenData = jwtUtil.generateRefreshToken(account.getId());
+        TokenData tokenData = jwtUtil.generateRefreshToken();
         String tokenHash = hashToken(tokenData.token());
 
         RefreshToken refreshToken = RefreshToken.builder()
@@ -45,9 +45,6 @@ public class TokenService {
 
     @Transactional
     public Long validateAndRotateRefreshToken(String rawToken) {
-        if (jwtUtil.isTokenExpired(rawToken)) {
-            throw new TokenExpiredException("Refresh");
-        }
 
         Long accountId = jwtUtil.extractAccountId(rawToken);
 
