@@ -42,7 +42,7 @@ public class DriverProfileController {
                     )
             ),
             responses = {
-                    @ApiResponse(responseCode = "201", description = "Профиль создан"),
+                    @ApiResponse(responseCode = "200", description = "Профиль создан"),
                     @ApiResponse(responseCode = "409", description = "Профиль или номер ВУ уже существует")
             }
     )

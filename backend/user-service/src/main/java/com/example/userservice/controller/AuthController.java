@@ -41,7 +41,7 @@ public class AuthController {
                     )
             ),
             responses = {
-                    @ApiResponse(responseCode = "201", description = "Успешная регистрация",
+                    @ApiResponse(responseCode = "200", description = "Успешная регистрация",
                             content = @Content(schema = @Schema(implementation = AuthResponse.class))),
                     @ApiResponse(responseCode = "409", description = "Email или телефон уже заняты"),
                     @ApiResponse(responseCode = "422", description = "Ошибка валидации")
