@@ -44,7 +44,7 @@ public class AuthService {
             throw new InvalidCredentialsException();
         }
 
-        if (!account.getIsActive()) {
+        if (!account.isActive()) {
             throw new AccountDeactivatedException(account.getId());
         }
 
@@ -56,7 +56,7 @@ public class AuthService {
         Long accountId = tokenService.validateAndRotateRefreshToken(refreshToken);
         Account account = accountService.findById(accountId);
 
-        if (!account.getIsActive()) {
+        if (!account.isActive()) {
             throw new AccountDeactivatedException(accountId);
         }
 

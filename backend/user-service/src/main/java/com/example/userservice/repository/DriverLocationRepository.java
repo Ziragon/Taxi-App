@@ -15,7 +15,7 @@ public interface DriverLocationRepository extends JpaRepository<DriverLocation, 
             SELECT dl FROM DriverLocation dl
             JOIN dl.driver dp
             WHERE dp.status = 'ONLINE'
-              AND dp.isVerified = true
+              AND dp.verified = true
               AND ABS(dl.latitude - :lat) < :radius
               AND ABS(dl.longitude - :lng) < :radius
             """)

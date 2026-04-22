@@ -34,7 +34,7 @@ public class DriverProfileService {
                 .status(DriverStatus.OFFLINE)
                 .averageRating(BigDecimal.ZERO)
                 .totalTrips(0)
-                .isVerified(false)
+                .verified(false)
                 .build();
 
         return driverProfileRepository.save(profile);
@@ -67,7 +67,7 @@ public class DriverProfileService {
     @Transactional
     public void verifyDriver(Long accountId) {
         DriverProfile profile = getProfile(accountId);
-        profile.setIsVerified(true);
+        profile.setVerified(true);
         driverProfileRepository.save(profile);
     }
 
@@ -78,7 +78,7 @@ public class DriverProfileService {
 
     @Transactional(readOnly = true)
     public List<DriverProfile> getVerifiedDrivers() {
-        return driverProfileRepository.findAllByIsVerifiedTrue();
+        return driverProfileRepository.findAllByVerifiedTrue();
     }
 
     @Transactional

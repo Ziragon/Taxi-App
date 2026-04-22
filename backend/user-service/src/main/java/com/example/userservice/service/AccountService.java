@@ -30,7 +30,7 @@ public class AccountService {
                 .phone(phone)
                 .passwordHash(passwordHash)
                 .role(AccountRole.USER)
-                .isActive(true)
+                .active(true)
                 .build();
 
         return accountRepository.save(account);
@@ -57,14 +57,14 @@ public class AccountService {
     @Transactional
     public void deactivateAccount(Long id) {
         Account account = findById(id);
-        account.setIsActive(false);
+        account.setActive(false);
         accountRepository.save(account);
     }
 
     @Transactional
     public void activateAccount(Long id) {
         Account account = findById(id);
-        account.setIsActive(true);
+        account.setActive(true);
         accountRepository.save(account);
     }
 }
