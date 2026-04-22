@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,7 +24,6 @@ public class PassengerProfileController {
     private final PassengerProfileService passengerProfileService;
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Создать профиль пассажира",
             description = "Создаёт профиль после регистрации. Вызывается когда пользователь заполнил анкету",
@@ -41,21 +40,23 @@ public class PassengerProfileController {
                     )
             ),
             responses = {
-                    @ApiResponse(responseCode = "201", description = "Профиль создан"),
+                    @ApiResponse(responseCode = "200", description = "Профиль создан"),
                     @ApiResponse(responseCode = "404", description = "Аккаунт не найден"),
                     @ApiResponse(responseCode = "409", description = "Профиль уже существует")
             }
     )
-    public PassengerProfileResponse createProfile(
+    public ResponseEntity<PassengerProfileResponse> createProfile(
             @RequestHeader("X-Account-ID") Long accountId,
-            @Valid @RequestBody CreatePassengerProfileRequest request) {
+            @Valid @RequestBody CreatePassengerProfileRequest request
+    ) {
         PassengerProfile profile = passengerProfileService.createProfile(
                 accountId,
                 request.getFirstName(),
                 request.getLastName(),
                 request.getPhotoUrl()
         );
-        return mapToResponse(profile);
+
+        return ResponseEntity.ok(PassengerProfileResponse.from(profile));
     }
 
     @GetMapping
@@ -67,9 +68,12 @@ public class PassengerProfileController {
                     @ApiResponse(responseCode = "404", description = "Профиль не найден")
             }
     )
-    public PassengerProfileResponse getProfile(@RequestHeader("X-Account-ID") Long accountId) {
+    public ResponseEntity<PassengerProfileResponse> getProfile(
+            @RequestHeader("X-Account-ID") Long accountId
+    ) {
         PassengerProfile profile = passengerProfileService.getProfile(accountId);
-        return mapToResponse(profile);
+
+        return ResponseEntity.ok(PassengerProfileResponse.from(profile));
     }
 
     @PutMapping
@@ -93,26 +97,17 @@ public class PassengerProfileController {
                     @ApiResponse(responseCode = "404", description = "Профиль не найден")
             }
     )
-    public PassengerProfileResponse updateProfile(
+    public ResponseEntity<PassengerProfileResponse> updateProfile(
             @RequestHeader("X-Account-ID") Long accountId,
-            @Valid @RequestBody UpdatePassengerProfileRequest request) {
+            @Valid @RequestBody UpdatePassengerProfileRequest request
+    ) {
         PassengerProfile profile = passengerProfileService.updateProfile(
                 accountId,
                 request.getFirstName(),
                 request.getLastName(),
                 request.getPhotoUrl()
         );
-        return mapToResponse(profile);
-    }
 
-    private PassengerProfileResponse mapToResponse(PassengerProfile profile) {
-        return new PassengerProfileResponse(
-                profile.getAccountId(),
-                profile.getFirstName(),
-                profile.getLastName(),
-                profile.getPhotoUrl(),
-                profile.getAverageRating(),
-                profile.getTotalTrips()
-        );
+        return ResponseEntity.ok(PassengerProfileResponse.from(profile));
     }
 }

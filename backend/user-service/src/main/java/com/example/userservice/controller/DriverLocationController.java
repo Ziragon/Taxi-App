@@ -64,7 +64,7 @@ public class DriverLocationController {
     )
     public DriverLocationResponse getLocation(@RequestHeader("X-Account-ID") Long driverId) {
         DriverLocation location = driverLocationService.getLocation(driverId);
-        return mapToResponse(location);
+        return DriverLocationResponse.from(location);
     }
 
     @GetMapping("/nearby")
@@ -80,16 +80,7 @@ public class DriverLocationController {
             @RequestParam BigDecimal longitude,
             @RequestParam(defaultValue = "5.0") BigDecimal radiusKm) {
         return driverLocationService.findNearbyDrivers(latitude, longitude, radiusKm).stream()
-                .map(this::mapToResponse)
+                .map(DriverLocationResponse::from)
                 .toList();
-    }
-
-    private DriverLocationResponse mapToResponse(DriverLocation location) {
-        return new DriverLocationResponse(
-                location.getDriverId(),
-                location.getLatitude(),
-                location.getLongitude(),
-                location.getUpdatedAt()
-        );
     }
 }

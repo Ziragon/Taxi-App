@@ -12,11 +12,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/vehicles")
@@ -27,7 +26,6 @@ public class VehicleController {
     private final VehicleService vehicleService;
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Добавить автомобиль",
             description = "Водитель добавляет новый автомобиль. По умолчанию is_active = false",
@@ -47,13 +45,14 @@ public class VehicleController {
                     )
             ),
             responses = {
-                    @ApiResponse(responseCode = "201", description = "Автомобиль добавлен"),
+                    @ApiResponse(responseCode = "200", description = "Автомобиль добавлен"),
                     @ApiResponse(responseCode = "409", description = "Госномер уже существует")
             }
     )
-    public VehicleResponse addVehicle(
+    public ResponseEntity<VehicleResponse> addVehicle(
             @RequestHeader("X-Account-ID") Long driverId,
-            @Valid @RequestBody AddVehicleRequest request) {
+            @Valid @RequestBody AddVehicleRequest request
+    ) {
         Vehicle vehicle = vehicleService.addVehicle(
                 driverId,
                 request.getBrand(),
@@ -63,7 +62,8 @@ public class VehicleController {
                 request.getLicensePlate(),
                 request.getVehicleClass()
         );
-        return mapToResponse(vehicle);
+
+        return ResponseEntity.ok(VehicleResponse.from(vehicle));
     }
 
     @GetMapping
@@ -76,8 +76,8 @@ public class VehicleController {
     )
     public List<VehicleResponse> getVehicles(@RequestHeader("X-Account-ID") Long driverId) {
         return vehicleService.getVehiclesByDriver(driverId).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+                .map(VehicleResponse::from)
+                .toList();
     }
 
     @PutMapping("/{vehicleId}")
@@ -103,9 +103,10 @@ public class VehicleController {
                     @ApiResponse(responseCode = "404", description = "Автомобиль не найден")
             }
     )
-    public VehicleResponse updateVehicle(
+    public ResponseEntity<VehicleResponse> updateVehicle(
             @PathVariable Long vehicleId,
-            @Valid @RequestBody UpdateVehicleRequest request) {
+            @Valid @RequestBody UpdateVehicleRequest request
+    ) {
         Vehicle vehicle = vehicleService.updateVehicle(
                 vehicleId,
                 request.getBrand(),
@@ -115,11 +116,11 @@ public class VehicleController {
                 request.getLicensePlate(),
                 request.getVehicleClass()
         );
-        return mapToResponse(vehicle);
+
+        return ResponseEntity.ok(VehicleResponse.from(vehicle));
     }
 
     @PostMapping("/{vehicleId}/set-active")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(
             summary = "Установить активный автомобиль",
             description = "Помечает выбранный автомобиль как активный, остальные становятся неактивными",
@@ -127,14 +128,16 @@ public class VehicleController {
                     @ApiResponse(responseCode = "204", description = "Автомобиль активирован")
             }
     )
-    public void setActiveVehicle(
+    public ResponseEntity<Void> setActiveVehicle(
             @RequestHeader("X-Account-ID") Long driverId,
-            @PathVariable Long vehicleId) {
+            @PathVariable Long vehicleId
+    ) {
         vehicleService.setActiveVehicle(driverId, vehicleId);
+
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{vehicleId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(
             summary = "Удалить автомобиль",
             responses = {
@@ -142,21 +145,11 @@ public class VehicleController {
                     @ApiResponse(responseCode = "404", description = "Автомобиль не найден")
             }
     )
-    public void deleteVehicle(@PathVariable Long vehicleId) {
+    public ResponseEntity<Void> deleteVehicle(
+            @PathVariable Long vehicleId
+    ) {
         vehicleService.deleteVehicle(vehicleId);
-    }
 
-    private VehicleResponse mapToResponse(Vehicle vehicle) {
-        return new VehicleResponse(
-                vehicle.getId(),
-                vehicle.getDriver().getAccountId(),
-                vehicle.getBrand(),
-                vehicle.getModel(),
-                vehicle.getYear(),
-                vehicle.getColor(),
-                vehicle.getLicensePlate(),
-                vehicle.getVehicleClass(),
-                vehicle.isActive()
-        );
+        return ResponseEntity.noContent().build();
     }
 }
