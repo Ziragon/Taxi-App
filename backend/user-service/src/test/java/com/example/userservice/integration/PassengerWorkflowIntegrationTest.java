@@ -49,7 +49,7 @@ class PassengerWorkflowIntegrationTest extends BaseIntegrationTest{
     @Test
     @DisplayName("Полный workflow пассажира: регистрация -> профиль -> обновление -> рейтинг")
     void fullPassengerWorkflow() {
-        Map<String, String> tokens = authService.registerPassenger(
+        Map<String, String> tokens = authService.register(
                 "passenger@workflow.com",
                 "+79995555555",
                 "PassPass123"
@@ -89,7 +89,7 @@ class PassengerWorkflowIntegrationTest extends BaseIntegrationTest{
     @Test
     @DisplayName("Пересчёт рейтинга: математическая точность")
     void ratingCalculation_Precision() {
-        Map<String, String> tokens = authService.registerPassenger(
+        Map<String, String> tokens = authService.register(
                 "rating@test.com",
                 "+79996666666",
                 "Test123"

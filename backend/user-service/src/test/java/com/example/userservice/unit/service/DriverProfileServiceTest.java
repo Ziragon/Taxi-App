@@ -36,7 +36,7 @@ class DriverProfileServiceTest {
     @Test
     @DisplayName("Создание профиля водителя: is_verified = false по умолчанию")
     void createProfile_DefaultsNotVerified() {
-        Account account = Account.builder().id(1L).role(AccountRole.DRIVER).build();
+        Account account = Account.builder().id(1L).role(AccountRole.USER).build();
         DriverProfile profile = DriverProfile.builder()
                 .accountId(1L)
                 .firstName("Сергей")

@@ -26,17 +26,17 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/register/passenger")
+    @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Регистрация пассажира",
-            description = "Создаёт аккаунт с ролью PASSENGER. Профиль создаётся отдельно через /api/v1/profiles/passenger",
+            description = "Создаёт базовый аккаунт. Профиль создаётся отдельно через /api/v1/profiles/{passenger/driver}",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     content = @Content(
                             mediaType = "application/json",
                             examples = @ExampleObject(value = """
                                     {
-                                      "email": "passenger@example.com",
+                                      "email": "user@example.com",
                                       "phone": "+79991234567",
                                       "password": "SecurePass123"
                                     }
@@ -51,38 +51,7 @@ public class AuthController {
             }
     )
     public AuthResponse registerPassenger(@Valid @RequestBody RegisterRequest request) {
-        Map<String, String> tokens = authService.registerPassenger(
-                request.getEmail(),
-                request.getPhone(),
-                request.getPassword()
-        );
-        return new AuthResponse(tokens.get("accessToken"), tokens.get("refreshToken"));
-    }
-
-    @PostMapping("/register/driver")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(
-            summary = "Регистрация водителя",
-            description = "Создаёт аккаунт с ролью DRIVER. Профиль создаётся отдельно через /api/v1/profiles/driver",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "email": "driver@example.com",
-                                      "phone": "+79997654321",
-                                      "password": "DriverPass456"
-                                    }
-                                    """)
-                    )
-            ),
-            responses = {
-                    @ApiResponse(responseCode = "201", description = "Успешная регистрация"),
-                    @ApiResponse(responseCode = "409", description = "Email или телефон уже заняты")
-            }
-    )
-    public AuthResponse registerDriver(@Valid @RequestBody RegisterRequest request) {
-        Map<String, String> tokens = authService.registerDriver(
+        Map<String, String> tokens = authService.register(
                 request.getEmail(),
                 request.getPhone(),
                 request.getPassword()

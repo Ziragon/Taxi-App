@@ -27,19 +27,10 @@ public class AuthService {
     private final RabbitTemplate rabbitTemplate;
 
     @Transactional
-    public Map<String, String> registerPassenger(String email, String phone, String password) {
-        Account account = accountService.createAccount(email, phone, password, AccountRole.PASSENGER);
+    public Map<String, String> register(String email, String phone, String password) {
+        Account account = accountService.createAccount(email, phone, password);
 
-        publishUserRegisteredEvent(account.getId(), email, AccountRole.PASSENGER);
-
-        return generateTokens(account);
-    }
-
-    @Transactional
-    public Map<String, String> registerDriver(String email, String phone, String password) {
-        Account account = accountService.createAccount(email, phone, password, AccountRole.DRIVER);
-
-        publishUserRegisteredEvent(account.getId(), email, AccountRole.DRIVER);
+        publishUserRegisteredEvent(account.getId(), email);
 
         return generateTokens(account);
     }
@@ -86,11 +77,11 @@ public class AuthService {
         );
     }
 
-    private void publishUserRegisteredEvent(Long accountId, String email, AccountRole role) {
+    private void publishUserRegisteredEvent(Long accountId, String email) {
         Map<String, Object> event = Map.of(
                 "accountId", accountId,
                 "email", email,
-                "role", role.name(),
+                "role", AccountRole.USER,
                 "timestamp", System.currentTimeMillis()
         );
 

@@ -51,16 +51,16 @@ class AuthServiceTest {
                 .id(1L)
                 .email("passenger@test.com")
                 .phone("+79991234567")
-                .role(AccountRole.PASSENGER)
+                .role(AccountRole.USER)
                 .isActive(true)
                 .build();
 
-        when(accountService.createAccount(anyString(), anyString(), anyString(), any(AccountRole.class)))
+        when(accountService.createAccount(anyString(), anyString(), anyString()))
                 .thenReturn(account);
         when(jwtUtil.generateAccessToken(anyLong(), anyString())).thenReturn("access-token");
         when(tokenService.createRefreshToken(anyLong())).thenReturn("refresh-token");
 
-        Map<String, String> tokens = authService.registerPassenger(
+        Map<String, String> tokens = authService.register(
                 "passenger@test.com",
                 "+79991234567",
                 "password123"
@@ -70,7 +70,7 @@ class AuthServiceTest {
         assertThat(tokens.get("accessToken")).isEqualTo("access-token");
         assertThat(tokens.get("refreshToken")).isEqualTo("refresh-token");
 
-        verify(accountService).createAccount("passenger@test.com", "+79991234567", "password123", AccountRole.PASSENGER);
+        verify(accountService).createAccount("passenger@test.com", "+79991234567", "password123");
         verify(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Map.class));
     }
 
@@ -81,13 +81,13 @@ class AuthServiceTest {
                 .id(1L)
                 .email("user@test.com")
                 .passwordHash("hashed-password")
-                .role(AccountRole.PASSENGER)
+                .role(AccountRole.USER)
                 .isActive(true)
                 .build();
 
         when(accountService.findByEmail("user@test.com")).thenReturn(account);
         when(passwordEncoder.matches("password123", "hashed-password")).thenReturn(true);
-        when(jwtUtil.generateAccessToken(1L, "PASSENGER")).thenReturn("access-token");
+        when(jwtUtil.generateAccessToken(1L, "USER")).thenReturn("access-token");
         when(tokenService.createRefreshToken(1L)).thenReturn("refresh-token");
 
         Map<String, String> tokens = authService.login("user@test.com", "password123");
@@ -117,13 +117,13 @@ class AuthServiceTest {
     void refreshToken_Success() {
         Account account = Account.builder()
                 .id(1L)
-                .role(AccountRole.DRIVER)
+                .role(AccountRole.USER)
                 .isActive(true)
                 .build();
 
         when(tokenService.validateAndRotateRefreshToken("old-refresh-token")).thenReturn(1L);
         when(accountService.findById(1L)).thenReturn(account);
-        when(jwtUtil.generateAccessToken(1L, "DRIVER")).thenReturn("new-access-token");
+        when(jwtUtil.generateAccessToken(1L, "USER")).thenReturn("new-access-token");
         when(tokenService.createRefreshToken(1L)).thenReturn("new-refresh-token");
 
         Map<String, String> tokens = authService.refreshAccessToken("old-refresh-token");

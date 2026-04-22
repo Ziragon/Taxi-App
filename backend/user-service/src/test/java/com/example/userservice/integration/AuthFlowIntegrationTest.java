@@ -45,7 +45,7 @@ class AuthFlowIntegrationTest extends BaseIntegrationTest{
     @Test
     @DisplayName("Полный flow: регистрация -> логин -> refresh -> logout")
     void fullAuthFlow() {
-        Map<String, String> registerTokens = authService.registerPassenger(
+        Map<String, String> registerTokens = authService.register(
                 "integration@test.com",
                 "+79991111111",
                 "TestPass123"
@@ -56,7 +56,7 @@ class AuthFlowIntegrationTest extends BaseIntegrationTest{
 
         Account account = accountRepository.findById(accountId).orElseThrow();
         assertThat(account.getEmail()).isEqualTo("integration@test.com");
-        assertThat(account.getRole()).isEqualTo(AccountRole.PASSENGER);
+        assertThat(account.getRole()).isEqualTo(AccountRole.USER);
         assertThat(account.getIsActive()).isTrue();
 
         Map<String, String> loginTokens = authService.login("integration@test.com", "TestPass123");
@@ -78,7 +78,7 @@ class AuthFlowIntegrationTest extends BaseIntegrationTest{
     @Test
     @DisplayName("Ротация токенов: старый refresh становится revoked")
     void refreshTokenRotation() {
-        Map<String, String> tokens = authService.registerDriver(
+        Map<String, String> tokens = authService.register(
                 "driver@test.com",
                 "+79992222222",
                 "DriverPass456"

@@ -64,7 +64,7 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
     @Test
     @DisplayName("Полный workflow водителя: регистрация -> профиль -> транспорт -> статус -> верификация")
     void fullDriverWorkflow() {
-        Map<String, String> tokens = authService.registerDriver(
+        Map<String, String> tokens = authService.register(
                 "driver@workflow.com",
                 "+79993333333",
                 "DriverPass789"
@@ -129,7 +129,7 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
     @Test
     @DisplayName("Несколько автомобилей: только один может быть активным")
     void multipleVehicles_OnlyOneActive() {
-        Map<String, String> tokens = authService.registerDriver(
+        Map<String, String> tokens = authService.register(
                 "driver2@workflow.com",
                 "+79994444444",
                 "Pass123"

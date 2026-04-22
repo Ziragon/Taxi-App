@@ -18,7 +18,7 @@ public class AccountService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public Account createAccount(String email, String phone, String password, AccountRole role) {
+    public Account createAccount(String email, String phone, String password) {
         if (accountRepository.existsByEmailOrPhone(email, phone)) {
             throw new AccountAlreadyExistsException("email or phone", email + " / " + phone);
         }
@@ -29,7 +29,7 @@ public class AccountService {
                 .email(email)
                 .phone(phone)
                 .passwordHash(passwordHash)
-                .role(role)
+                .role(AccountRole.USER)
                 .isActive(true)
                 .build();
 
