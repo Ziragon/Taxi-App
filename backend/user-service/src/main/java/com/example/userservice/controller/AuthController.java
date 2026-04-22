@@ -52,9 +52,9 @@ public class AuthController {
             @Valid @RequestBody RegisterRequest request
     ) {
         AuthResult result = authService.register(
-                request.getEmail(),
-                request.getPhone(),
-                request.getPassword()
+                request.email(),
+                request.phone(),
+                request.password()
         );
 
         return ResponseEntity.ok(AuthResponse.from(result));
@@ -84,7 +84,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(
             @Valid @RequestBody LoginRequest request
     ) {
-        AuthResult result = authService.login(request.getEmail(), request.getPassword());
+        AuthResult result = authService.login(request.email(), request.password());
 
         return ResponseEntity.ok(AuthResponse.from(result));
     }
@@ -111,7 +111,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> refresh(
             @Valid @RequestBody RefreshTokenRequest request
     ) {
-        AuthResult result = authService.refreshTokens(request.getRefreshToken());
+        AuthResult result = authService.refreshTokens(request.refreshToken());
 
         return ResponseEntity.ok(AuthResponse.from(result));
     }

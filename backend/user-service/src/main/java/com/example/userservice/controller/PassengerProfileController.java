@@ -51,9 +51,9 @@ public class PassengerProfileController {
     ) {
         PassengerProfile profile = passengerProfileService.createProfile(
                 accountId,
-                request.getFirstName(),
-                request.getLastName(),
-                request.getPhotoUrl()
+                request.firstName(),
+                request.lastName(),
+                request.photoUrl()
         );
 
         return ResponseEntity.ok(PassengerProfileResponse.from(profile));
@@ -103,9 +103,9 @@ public class PassengerProfileController {
     ) {
         PassengerProfile profile = passengerProfileService.updateProfile(
                 accountId,
-                request.getFirstName(),
-                request.getLastName(),
-                request.getPhotoUrl()
+                request.firstName(),
+                request.lastName(),
+                request.photoUrl()
         );
 
         return ResponseEntity.ok(PassengerProfileResponse.from(profile));

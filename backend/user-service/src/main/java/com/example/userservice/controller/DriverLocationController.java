@@ -49,8 +49,8 @@ public class DriverLocationController {
             @Valid @RequestBody UpdateLocationRequest request) {
         driverLocationService.updateLocation(
                 driverId,
-                request.getLatitude(),
-                request.getLongitude()
+                request.latitude(),
+                request.longitude()
         );
     }
 

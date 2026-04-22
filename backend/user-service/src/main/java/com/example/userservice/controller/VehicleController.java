@@ -55,12 +55,12 @@ public class VehicleController {
     ) {
         Vehicle vehicle = vehicleService.addVehicle(
                 driverId,
-                request.getBrand(),
-                request.getModel(),
-                request.getYear(),
-                request.getColor(),
-                request.getLicensePlate(),
-                request.getVehicleClass()
+                request.brand(),
+                request.model(),
+                request.year(),
+                request.color(),
+                request.licensePlate(),
+                request.vehicleClass()
         );
 
         return ResponseEntity.ok(VehicleResponse.from(vehicle));
@@ -109,12 +109,12 @@ public class VehicleController {
     ) {
         Vehicle vehicle = vehicleService.updateVehicle(
                 vehicleId,
-                request.getBrand(),
-                request.getModel(),
-                request.getYear(),
-                request.getColor(),
-                request.getLicensePlate(),
-                request.getVehicleClass()
+                request.brand(),
+                request.model(),
+                request.year(),
+                request.color(),
+                request.licensePlate(),
+                request.vehicleClass()
         );
 
         return ResponseEntity.ok(VehicleResponse.from(vehicle));

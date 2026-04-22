@@ -52,10 +52,10 @@ public class DriverProfileController {
     ) {
         DriverProfile profile = driverProfileService.createProfile(
                 accountId,
-                request.getFirstName(),
-                request.getLastName(),
-                request.getLicenseNumber(),
-                request.getPhotoUrl()
+                request.firstName(),
+                request.lastName(),
+                request.licenseNumber(),
+                request.photoUrl()
         );
 
         return ResponseEntity.ok(DriverProfileResponse.from(profile));
@@ -103,10 +103,10 @@ public class DriverProfileController {
     ) {
         DriverProfile profile = driverProfileService.updateProfile(
                 accountId,
-                request.getFirstName(),
-                request.getLastName(),
-                request.getLicenseNumber(),
-                request.getPhotoUrl()
+                request.firstName(),
+                request.lastName(),
+                request.licenseNumber(),
+                request.photoUrl()
         );
 
         return ResponseEntity.ok(DriverProfileResponse.from(profile));
@@ -134,7 +134,7 @@ public class DriverProfileController {
             @RequestHeader("X-Account-ID") Long accountId,
             @Valid @RequestBody UpdateDriverStatusRequest request) {
 
-        driverProfileService.updateStatus(accountId, request.getStatus());
+        driverProfileService.updateStatus(accountId, request.status());
 
         return ResponseEntity.noContent().build();
     }
