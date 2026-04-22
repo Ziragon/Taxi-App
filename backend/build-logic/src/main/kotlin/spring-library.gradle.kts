@@ -20,6 +20,8 @@ dependencyManagement {
 dependencies {
     compileOnly(libs.findLibrary("lombok").get())
     annotationProcessor(libs.findLibrary("lombok").get())
+    api(libs.findLibrary("boot-starter-web").get())
+    api(libs.findLibrary("boot-starter-validation").get())
 
     testImplementation(libs.findLibrary("boot-starter-test").get())
 }
