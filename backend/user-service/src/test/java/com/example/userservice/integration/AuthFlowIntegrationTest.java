@@ -15,8 +15,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
-
 import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
@@ -61,7 +59,7 @@ class AuthFlowIntegrationTest extends BaseIntegrationTest{
         Account account = accountRepository.findById(accountId).orElseThrow();
         assertThat(account.getEmail()).isEqualTo("integration@test.com");
         assertThat(account.getRole()).isEqualTo(AccountRole.USER);
-        assertThat(account.getIsActive()).isTrue();
+        assertThat(account.isActive()).isTrue();
 
         AuthResponse loginTokens = authService.login("integration@test.com", "TestPass123");
         assertThat(loginTokens).satisfies(response -> {

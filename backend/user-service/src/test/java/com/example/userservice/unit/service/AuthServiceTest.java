@@ -53,7 +53,7 @@ class AuthServiceTest {
                 .email("passenger@test.com")
                 .phone("+79991234567")
                 .role(AccountRole.USER)
-                .isActive(true)
+                .active(true)
                 .build();
 
         when(accountService.createAccount(anyString(), anyString(), anyString()))
@@ -86,7 +86,7 @@ class AuthServiceTest {
                 .email("user@test.com")
                 .passwordHash("hashed-password")
                 .role(AccountRole.USER)
-                .isActive(true)
+                .active(true)
                 .build();
 
         when(accountService.findByEmail("user@test.com")).thenReturn(account);
@@ -125,7 +125,7 @@ class AuthServiceTest {
         Account account = Account.builder()
                 .id(1L)
                 .role(AccountRole.USER)
-                .isActive(true)
+                .active(true)
                 .build();
 
         when(tokenService.validateAndRotateRefreshToken("old-refresh-token")).thenReturn(1L);

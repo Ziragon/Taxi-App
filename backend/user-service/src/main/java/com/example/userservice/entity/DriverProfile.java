@@ -53,7 +53,7 @@ public class DriverProfile {
 
     @Builder.Default
     @Column(name = "is_verified", nullable = false)
-    private Boolean verified = false;
+    private boolean verified = false;
 
     @Builder.Default
     @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL, orphanRemoval = true)

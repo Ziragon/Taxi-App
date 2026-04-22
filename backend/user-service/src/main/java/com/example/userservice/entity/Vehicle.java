@@ -44,5 +44,5 @@ public class Vehicle {
 
     @Builder.Default
     @Column(name = "is_active", nullable = false)
-    private Boolean active = true;
+    private boolean active = true;
 }

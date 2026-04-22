@@ -81,7 +81,7 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
                 null
         );
 
-        assertThat(profile.getIsVerified()).isFalse();
+        assertThat(profile.isVerified()).isFalse();
         assertThat(profile.getStatus()).isEqualTo(DriverStatus.OFFLINE);
 
         Vehicle vehicle1 = vehicleService.addVehicle(
@@ -104,15 +104,15 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
                 VehicleClass.ECONOMY
         );
 
-        assertThat(vehicle1.getIsActive()).isFalse();
-        assertThat(vehicle2.getIsActive()).isFalse();
+        assertThat(vehicle1.isActive()).isFalse();
+        assertThat(vehicle2.isActive()).isFalse();
 
         vehicleService.setActiveVehicle(driverId, vehicle1.getId());
 
         List<Vehicle> vehicles = vehicleService.getVehiclesByDriver(driverId);
         assertThat(vehicles).hasSize(2);
-        assertThat(vehicles.stream().filter(Vehicle::getIsActive)).hasSize(1);
-        assertThat(vehicles.stream().filter(Vehicle::getIsActive).findFirst().get().getId())
+        assertThat(vehicles.stream().filter(Vehicle::isActive)).hasSize(1);
+        assertThat(vehicles.stream().filter(Vehicle::isActive).findFirst().get().getId())
                 .isEqualTo(vehicle1.getId());
 
         driverProfileService.updateStatus(driverId, DriverStatus.ONLINE);
@@ -124,7 +124,7 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
 
         driverProfileService.verifyDriver(driverId);
         DriverProfile verifiedProfile = driverProfileService.getProfile(driverId);
-        assertThat(verifiedProfile.getIsVerified()).isTrue();
+        assertThat(verifiedProfile.isVerified()).isTrue();
     }
 
     @Test
@@ -146,12 +146,12 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
 
         vehicleService.setActiveVehicle(driverId, v2.getId());
         List<Vehicle> afterFirstSet = vehicleService.getVehiclesByDriver(driverId);
-        assertThat(afterFirstSet.stream().filter(Vehicle::getIsActive)).hasSize(1);
-        assertThat(afterFirstSet.stream().filter(Vehicle::getIsActive).findFirst().get().getId()).isEqualTo(v2.getId());
+        assertThat(afterFirstSet.stream().filter(Vehicle::isActive)).hasSize(1);
+        assertThat(afterFirstSet.stream().filter(Vehicle::isActive).findFirst().get().getId()).isEqualTo(v2.getId());
 
         vehicleService.setActiveVehicle(driverId, v3.getId());
         List<Vehicle> afterSecondSet = vehicleService.getVehiclesByDriver(driverId);
-        assertThat(afterSecondSet.stream().filter(Vehicle::getIsActive)).hasSize(1);
-        assertThat(afterSecondSet.stream().filter(Vehicle::getIsActive).findFirst().get().getId()).isEqualTo(v3.getId());
+        assertThat(afterSecondSet.stream().filter(Vehicle::isActive)).hasSize(1);
+        assertThat(afterSecondSet.stream().filter(Vehicle::isActive).findFirst().get().getId()).isEqualTo(v3.getId());
     }
 }

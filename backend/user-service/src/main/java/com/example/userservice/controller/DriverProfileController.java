@@ -155,7 +155,7 @@ public class DriverProfileController {
                 profile.getStatus(),
                 profile.getAverageRating(),
                 profile.getTotalTrips(),
-                profile.getVerified()
+                profile.isVerified()
         );
     }
 }

@@ -156,7 +156,7 @@ public class VehicleController {
                 vehicle.getColor(),
                 vehicle.getLicensePlate(),
                 vehicle.getVehicleClass(),
-                vehicle.getActive()
+                vehicle.isActive()
         );
     }
 }
