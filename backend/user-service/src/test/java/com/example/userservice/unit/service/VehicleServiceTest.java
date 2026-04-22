@@ -1,0 +1,70 @@
+package com.example.userservice.unit.service;
+
+import com.example.userservice.entity.DriverProfile;
+import com.example.userservice.entity.Vehicle;
+import com.example.userservice.entity.enums.VehicleClass;
+import com.example.userservice.repository.VehicleRepository;
+import com.example.userservice.service.DriverProfileService;
+import com.example.userservice.service.VehicleService;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("VehicleService Unit Tests")
+class VehicleServiceTest {
+
+    @Mock
+    private VehicleRepository vehicleRepository;
+
+    @Mock
+    private DriverProfileService driverProfileService;
+
+    @InjectMocks
+    private VehicleService vehicleService;
+
+    @Test
+    @DisplayName("Добавление автомобиля: is_active = false по умолчанию")
+    void addVehicle_DefaultsInactive() {
+        DriverProfile driver = DriverProfile.builder().accountId(1L).build();
+        Vehicle vehicle = Vehicle.builder()
+                .id(1L)
+                .driver(driver)
+                .brand("Toyota")
+                .isActive(false)
+                .build();
+
+        when(driverProfileService.getProfile(1L)).thenReturn(driver);
+        when(vehicleRepository.save(any(Vehicle.class))).thenReturn(vehicle);
+
+        Vehicle created = vehicleService.addVehicle(1L, "Toyota", "Camry", (short) 2020, "Black", "A123BC777", VehicleClass.COMFORT);
+
+        assertThat(created.getIsActive()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Установка активного автомобиля: только один активен")
+    void setActiveVehicle_OnlyOneActive() {
+        Vehicle vehicle1 = Vehicle.builder().id(1L).isActive(false).build();
+        Vehicle vehicle2 = Vehicle.builder().id(2L).isActive(true).build();
+        Vehicle vehicle3 = Vehicle.builder().id(3L).isActive(false).build();
+
+        when(vehicleRepository.findAllByDriverAccountId(1L)).thenReturn(List.of(vehicle1, vehicle2, vehicle3));
+
+        vehicleService.setActiveVehicle(1L, 3L);
+
+        assertThat(vehicle1.getIsActive()).isFalse();
+        assertThat(vehicle2.getIsActive()).isFalse();
+        assertThat(vehicle3.getIsActive()).isTrue();
+        verify(vehicleRepository, times(3)).save(any(Vehicle.class));
+    }
+}

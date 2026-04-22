@@ -11,4 +11,5 @@ dependencies {
 
     implementation(libs.findLibrary("flyway-core").get())
     implementation(libs.findLibrary("flyway-database-postgresql").get())
+    implementation(libs.findLibrary("boot-starter-flyway").get())
 }
