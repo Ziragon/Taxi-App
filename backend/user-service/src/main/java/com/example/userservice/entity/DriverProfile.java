@@ -3,6 +3,8 @@ package com.example.userservice.entity;
 import com.example.userservice.entity.enums.DriverStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -40,6 +42,7 @@ public class DriverProfile {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false)
     private DriverStatus status = DriverStatus.OFFLINE;
 

@@ -12,6 +12,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -41,6 +42,8 @@ public class JwtUtil {
         if (role != null) {
             builder.claim("role", role);
         }
+
+        builder.id(UUID.randomUUID().toString());
 
         return builder.compact();
     }

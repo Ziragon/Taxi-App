@@ -12,6 +12,12 @@ spring:
         order_inserts: true
         order_updates: true
 
+  datasource:
+    url: jdbc:postgresql://localhost:5433/user_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
   flyway:
     enabled: true
     baseline-on-migrate: true
