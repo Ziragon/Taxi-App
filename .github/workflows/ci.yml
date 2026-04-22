@@ -33,7 +33,7 @@ jobs:
       matrix:
         service:
           - gateway-service
-          # - user-service и тд по мере добавления
+          - user-service
     steps:
       - uses: actions/checkout@v4
 
