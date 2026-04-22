@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.*;
 @ActiveProfiles("test")
 @Transactional
 @DisplayName("Passenger Workflow Integration Tests")
-class PassengerWorkflowIntegrationTest {
+class PassengerWorkflowIntegrationTest extends BaseIntegrationTest{
 
     @Autowired
     private AuthService authService;

@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.*;
 @ActiveProfiles("test")
 @Transactional
 @DisplayName("Driver Workflow Integration Tests")
-class DriverWorkflowIntegrationTest {
+class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private AuthService authService;

@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.*;
 @ActiveProfiles("test")
 @Transactional
 @DisplayName("Auth Flow Integration Tests")
-class AuthFlowIntegrationTest {
+class AuthFlowIntegrationTest extends BaseIntegrationTest{
 
     @Autowired
     private AuthService authService;
