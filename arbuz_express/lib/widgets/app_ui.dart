@@ -150,25 +150,27 @@ class CircleIconButton extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.color = const Color(0xFF151518),
+    this.size = 52,
   });
 
   final IconData icon;
   final VoidCallback onTap;
   final Color color;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 52,
-        height: 52,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
           color: color.withOpacity(0.9),
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white.withOpacity(0.08)),
         ),
-        child: Icon(icon, color: Colors.white, size: 26),
+        child: Icon(icon, color: Colors.white, size: size * 0.5),
       ),
     );
   }

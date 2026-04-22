@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:arbuz_express/widgets/app_ui.dart';
+import 'package:arbuz_express/screens/profile_screen.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/destination_marker.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/tariff_selector.dart';
@@ -9,6 +10,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
+
+// Предполагается, что ProfileScreen — это отдельный компонент (страница профиля)
+// Если он находится в другом файле, добавьте импорт:
+// import 'package:arbuz_express/profile_screen.dart'; // или путь к вашему файлу
 
 class HomeMapScreen extends StatefulWidget {
   const HomeMapScreen({super.key});
@@ -299,14 +304,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
               ),
               onTap: () => Navigator.pop(context),
             ),
-            ListTile(
-              leading: const Icon(Icons.person_rounded, color: Colors.white70),
-              title: const Text(
-                'Профиль',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              onTap: () => Navigator.pop(context),
-            ),
+            // Кнопка «Профиль» удалена из бургер-меню
             const Divider(color: Colors.white10, height: 1),
             ListTile(
               leading: const Icon(
@@ -335,6 +333,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
       ),
       body: Stack(
         children: [
+          // Карта
           Positioned.fill(
             child: ColorFiltered(
               colorFilter: const ColorFilter.matrix([
@@ -427,6 +426,8 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
               ),
             ),
           ),
+
+          // Кнопка бургер-меню (слева)
           Positioned(
             top: 0,
             left: 0,
@@ -441,6 +442,32 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
               ),
             ),
           ),
+
+          // Кнопка профиля (справа вверху) — перенесена сюда
+          Positioned(
+            top: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16, top: 16),
+                child: CircleIconButton(
+                  icon: Icons.person_rounded,
+                  onTap: () {
+                    // Открываем отдельный компонент профиля
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ProfileScreen(),
+                      ),
+                    );
+                  },
+                  color: const Color(0xFF1A1A1E),
+                ),
+              ),
+            ),
+          ),
+
+          // Основной контент (поиск + панель заказа)
           SafeArea(
             child: Column(
               children: [
