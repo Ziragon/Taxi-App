@@ -11,12 +11,16 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 
-// Предполагается, что ProfileScreen — это отдельный компонент (страница профиля)
-// Если он находится в другом файле, добавьте импорт:
-// import 'package:arbuz_express/profile_screen.dart'; // или путь к вашему файлу
-
 class HomeMapScreen extends StatefulWidget {
-  const HomeMapScreen({super.key});
+  const HomeMapScreen({
+    super.key,
+    this.isDriver = false,
+    this.showVerificationBanner = false,
+  });
+
+  final bool isDriver;
+  final bool showVerificationBanner;
+
   @override
   State<HomeMapScreen> createState() => _HomeMapScreenState();
 }
@@ -304,7 +308,6 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
               ),
               onTap: () => Navigator.pop(context),
             ),
-            // Кнопка «Профиль» удалена из бургер-меню
             const Divider(color: Colors.white10, height: 1),
             ListTile(
               leading: const Icon(
@@ -333,7 +336,6 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
       ),
       body: Stack(
         children: [
-          // Карта
           Positioned.fill(
             child: ColorFiltered(
               colorFilter: const ColorFilter.matrix([
@@ -426,8 +428,6 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
               ),
             ),
           ),
-
-          // Кнопка бургер-меню (слева)
           Positioned(
             top: 0,
             left: 0,
@@ -442,8 +442,6 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
               ),
             ),
           ),
-
-          // Кнопка профиля (справа вверху) — перенесена сюда
           Positioned(
             top: 0,
             right: 0,
@@ -453,7 +451,6 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
                 child: CircleIconButton(
                   icon: Icons.person_rounded,
                   onTap: () {
-                    // Открываем отдельный компонент профиля
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -466,8 +463,48 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
               ),
             ),
           ),
-
-          // Основной контент (поиск + панель заказа)
+          if (widget.showVerificationBanner)
+            Positioned(
+              top: 76,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFC107).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFFFC107).withOpacity(0.4),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        color: Color(0xFFFFC107),
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Ваши данные на проверке. Это займёт 5–10 минут.',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           SafeArea(
             child: Column(
               children: [
