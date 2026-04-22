@@ -13,7 +13,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,7 +25,6 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Регистрация пассажира",
             description = "Создаёт базовый аккаунт. Профиль создаётся отдельно через /api/v1/profiles/{passenger/driver}",
@@ -118,7 +116,6 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(
             summary = "Выход из системы",
             description = "Отзывает все refresh токены пользователя. Access токен продолжит работать до истечения (JWT stateless)",
