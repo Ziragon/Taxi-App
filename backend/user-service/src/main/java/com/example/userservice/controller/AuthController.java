@@ -1,5 +1,6 @@
 package com.example.userservice.controller;
 
+import com.example.userservice.dto.data.AuthResult;
 import com.example.userservice.dto.request.LoginRequest;
 import com.example.userservice.dto.request.RefreshTokenRequest;
 import com.example.userservice.dto.request.RegisterRequest;
@@ -50,13 +51,13 @@ public class AuthController {
     public ResponseEntity<AuthResponse> registerPassenger(
             @Valid @RequestBody RegisterRequest request
     ) {
-        AuthResponse response = authService.register(
+        AuthResult result = authService.register(
                 request.getEmail(),
                 request.getPhone(),
                 request.getPassword()
         );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(AuthResponse.from(result));
     }
 
     @PostMapping("/login")
@@ -83,9 +84,9 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(
             @Valid @RequestBody LoginRequest request
     ) {
-        AuthResponse response = authService.login(request.getEmail(), request.getPassword());
+        AuthResult result = authService.login(request.getEmail(), request.getPassword());
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(AuthResponse.from(result));
     }
 
     @PostMapping("/refresh")
@@ -110,9 +111,9 @@ public class AuthController {
     public ResponseEntity<AuthResponse> refresh(
             @Valid @RequestBody RefreshTokenRequest request
     ) {
-        AuthResponse response = authService.refreshAccessToken(request.getRefreshToken());
+        AuthResult result = authService.refreshAccessToken(request.getRefreshToken());
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(AuthResponse.from(result));
     }
 
     @PostMapping("/logout")

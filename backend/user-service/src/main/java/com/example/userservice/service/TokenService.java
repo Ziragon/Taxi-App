@@ -2,6 +2,8 @@ package com.example.userservice.service;
 
 
 import com.example.userservice.config.AppProperties;
+import com.example.userservice.dto.data.TokenData;
+import com.example.userservice.entity.Account;
 import com.example.userservice.entity.RefreshToken;
 import com.example.userservice.exception.TokenExpiredException;
 import com.example.userservice.repository.RefreshTokenRepository;
@@ -26,19 +28,19 @@ public class TokenService {
     private final AccountService accountService;
 
     @Transactional
-    public String createRefreshToken(Long accountId) {
-        String rawToken = jwtUtil.generateRefreshToken(accountId);
-        String tokenHash = hashToken(rawToken);
+    public TokenData createRefreshToken(Account account) {
+        TokenData tokenData = jwtUtil.generateRefreshToken(account.getId());
+        String tokenHash = hashToken(tokenData.token());
 
         RefreshToken refreshToken = RefreshToken.builder()
-                .account(accountService.findById(accountId))
+                .account(accountService.findById(account.getId()))
                 .tokenHash(tokenHash)
                 .expiresAt(Instant.now().plusMillis(appProperties.getRefreshToken().toMillis()))
                 .revoked(false)
                 .build();
 
         refreshTokenRepository.save(refreshToken);
-        return rawToken;
+        return tokenData;
     }
 
     @Transactional

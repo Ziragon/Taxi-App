@@ -1,6 +1,7 @@
 package com.example.userservice.service;
 
-import com.example.userservice.dto.response.AuthResponse;
+import com.example.userservice.dto.data.AuthResult;
+import com.example.userservice.dto.data.TokenData;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.enums.AccountRole;
 import com.example.userservice.exception.AccountDeactivatedException;
@@ -12,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Map;
 
 import static com.example.userservice.config.RabbitMQConfig.USER_EVENTS_EXCHANGE;
@@ -28,7 +30,8 @@ public class AuthService {
     private final RabbitTemplate rabbitTemplate;
 
     @Transactional
-    public AuthResponse register(String email, String phone, String password) {
+    public AuthResult register(String email, String phone, String password) {
+
         Account account = accountService.createAccount(email, phone, password);
 
         publishUserRegisteredEvent(account.getId(), email);
@@ -36,23 +39,24 @@ public class AuthService {
         return generateTokens(account);
     }
 
-    @Transactional(readOnly = true)
-    public AuthResponse login(String email, String password) {
-        Account account = accountService.findByEmail(email);
+    @Transactional
+    public AuthResult login(String email, String password) {
 
-        if (!passwordEncoder.matches(password, account.getPasswordHash())) {
-            throw new InvalidCredentialsException();
-        }
+        Account account = accountService.findByEmail(email);
 
         if (!account.isActive()) {
             throw new AccountDeactivatedException(account.getId());
+        }
+
+        if (!passwordEncoder.matches(password, account.getPasswordHash())) {
+            throw new InvalidCredentialsException();
         }
 
         return generateTokens(account);
     }
 
     @Transactional
-    public AuthResponse refreshAccessToken(String refreshToken) {
+    public AuthResult refreshAccessToken(String refreshToken) {
         Long accountId = tokenService.validateAndRotateRefreshToken(refreshToken);
         Account account = accountService.findById(accountId);
 
@@ -68,13 +72,14 @@ public class AuthService {
         tokenService.revokeAllTokens(accountId);
     }
 
-    private AuthResponse generateTokens(Account account) {
-        String accessToken = jwtUtil.generateAccessToken(account.getId(), account.getRole().name());
-        String refreshToken = tokenService.createRefreshToken(account.getId());
+    private AuthResult generateTokens(Account account) {
+        TokenData accessTokenData = jwtUtil.generateAccessToken(account.getId(), account.getRole().name());
+        TokenData refreshTokenData = tokenService.createRefreshToken(account);
 
-        return new AuthResponse(
-                accessToken,
-                refreshToken
+        return new AuthResult(
+                account,
+                accessTokenData,
+                refreshTokenData
         );
     }
 
@@ -83,7 +88,7 @@ public class AuthService {
                 "accountId", accountId,
                 "email", email,
                 "role", AccountRole.USER,
-                "timestamp", System.currentTimeMillis()
+                "timestamp", Instant.now()
         );
 
         rabbitTemplate.convertAndSend(USER_EVENTS_EXCHANGE, USER_REGISTERED_ROUTING_KEY, event);
