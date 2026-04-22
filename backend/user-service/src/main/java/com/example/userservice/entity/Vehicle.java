@@ -3,8 +3,6 @@ package com.example.userservice.entity;
 import com.example.userservice.entity.enums.VehicleClass;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "vehicles")
@@ -25,23 +23,22 @@ public class Vehicle {
     @JoinColumn(name = "driver_id", nullable = false)
     private DriverProfile driver;
 
-    @Column(name = "brand", nullable = false)
+    @Column(name = "brand", nullable = false, length = 100)
     private String brand;
 
-    @Column(name = "model", nullable = false)
+    @Column(name = "model", nullable = false, length = 100)
     private String model;
 
     @Column(name = "year", nullable = false)
     private Short year;
 
-    @Column(name = "color", nullable = false)
+    @Column(name = "color", nullable = false, length = 50)
     private String color;
 
-    @Column(name = "license_plate", nullable = false, unique = true)
+    @Column(name = "license_plate", nullable = false, unique = true, length = 20)
     private String licensePlate;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "vehicle_class", nullable = false)
     private VehicleClass vehicleClass;
 

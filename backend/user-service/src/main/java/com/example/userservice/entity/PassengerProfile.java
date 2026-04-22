@@ -23,13 +23,13 @@ public class PassengerProfile {
     @JoinColumn(name = "account_id")
     private Account account;
 
-    @Column(name = "first_name", nullable = false)
+    @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
 
-    @Column(name = "last_name", nullable = false)
+    @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
-    @Column(name = "photo_url")
+    @Column(name = "photo_url", length = 500)
     private String photoUrl;
 
     @Builder.Default

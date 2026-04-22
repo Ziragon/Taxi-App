@@ -4,8 +4,6 @@ import com.example.userservice.entity.enums.AccountRole;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -27,14 +25,13 @@ public class Account {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "role", nullable = false)
     private AccountRole role;
 
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(name = "phone", nullable = false, unique = true)
+    @Column(name = "phone", nullable = false, unique = true, length = 50)
     private String phone;
 
     @Column(name = "password_hash", nullable = false)
