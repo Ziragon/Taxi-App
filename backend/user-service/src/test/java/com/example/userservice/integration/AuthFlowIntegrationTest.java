@@ -1,5 +1,6 @@
 package com.example.userservice.integration;
 
+import com.example.userservice.dto.data.AuthResult;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.enums.AccountRole;
 import com.example.userservice.repository.AccountRepository;
@@ -13,8 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -45,26 +44,32 @@ class AuthFlowIntegrationTest extends BaseIntegrationTest{
     @Test
     @DisplayName("Полный flow: регистрация -> логин -> refresh -> logout")
     void fullAuthFlow() {
-        Map<String, String> registerTokens = authService.registerPassenger(
+        AuthResult registerResult = authService.register(
                 "integration@test.com",
                 "+79991111111",
                 "TestPass123"
         );
 
-        assertThat(registerTokens).containsKeys("accessToken", "refreshToken");
-        Long accountId = jwtUtil.extractAccountId(registerTokens.get("accessToken"));
+        assertThat(registerResult).satisfies(result -> {
+            assertThat(result.accessTokenData().token()).isNotBlank();
+            assertThat(result.refreshTokenData().token()).isNotBlank();
+        });
+        Long accountId = jwtUtil.extractAccountId(registerResult.accessTokenData().token());
 
         Account account = accountRepository.findById(accountId).orElseThrow();
         assertThat(account.getEmail()).isEqualTo("integration@test.com");
-        assertThat(account.getRole()).isEqualTo(AccountRole.PASSENGER);
-        assertThat(account.getIsActive()).isTrue();
+        assertThat(account.getRole()).isEqualTo(AccountRole.USER);
+        assertThat(account.isActive()).isTrue();
 
-        Map<String, String> loginTokens = authService.login("integration@test.com", "TestPass123");
-        assertThat(loginTokens).containsKeys("accessToken", "refreshToken");
+        AuthResult loginResult = authService.login("integration@test.com", "TestPass123");
+        assertThat(loginResult).satisfies(result -> {
+            assertThat(result.accessTokenData().token()).isNotBlank();
+            assertThat(result.refreshTokenData().token()).isNotBlank();
+        });
 
-        String oldRefreshToken = loginTokens.get("refreshToken");
-        Map<String, String> refreshedTokens = authService.refreshAccessToken(oldRefreshToken);
-        assertThat(refreshedTokens.get("accessToken")).isNotEqualTo(loginTokens.get("accessToken"));
+        String oldRefreshToken = loginResult.refreshTokenData().token();
+        AuthResult refreshedResult = authService.refreshTokens(oldRefreshToken);
+        assertThat(refreshedResult.accessTokenData().token()).isNotEqualTo(loginResult.accessTokenData().token());
 
         long activeTokensBeforeLogout = refreshTokenRepository.countByAccountIdAndRevokedFalse(accountId);
         assertThat(activeTokensBeforeLogout).isGreaterThan(0);
@@ -78,16 +83,16 @@ class AuthFlowIntegrationTest extends BaseIntegrationTest{
     @Test
     @DisplayName("Ротация токенов: старый refresh становится revoked")
     void refreshTokenRotation() {
-        Map<String, String> tokens = authService.registerDriver(
+        AuthResult result = authService.register(
                 "driver@test.com",
                 "+79992222222",
                 "DriverPass456"
         );
 
-        String refreshToken = tokens.get("refreshToken");
-        Long accountId = jwtUtil.extractAccountId(tokens.get("accessToken"));
+        String refreshToken = result.refreshTokenData().token();
+        Long accountId = jwtUtil.extractAccountId(result.accessTokenData().token());
 
-        authService.refreshAccessToken(refreshToken);
+        authService.refreshTokens(refreshToken);
 
         long activeTokens = refreshTokenRepository.countByAccountIdAndRevokedFalse(accountId);
         assertThat(activeTokens).isEqualTo(1);

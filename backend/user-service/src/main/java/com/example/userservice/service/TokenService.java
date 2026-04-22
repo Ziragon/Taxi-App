@@ -2,6 +2,8 @@ package com.example.userservice.service;
 
 
 import com.example.userservice.config.AppProperties;
+import com.example.userservice.dto.data.TokenData;
+import com.example.userservice.entity.Account;
 import com.example.userservice.entity.RefreshToken;
 import com.example.userservice.exception.TokenExpiredException;
 import com.example.userservice.repository.RefreshTokenRepository;
@@ -13,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
 
@@ -24,30 +27,26 @@ public class TokenService {
     private final JwtUtil jwtUtil;
     private final AppProperties appProperties;
     private final AccountService accountService;
+    private final Clock clock;
 
     @Transactional
-    public String createRefreshToken(Long accountId) {
-        String rawToken = jwtUtil.generateRefreshToken(accountId);
-        String tokenHash = hashToken(rawToken);
+    public TokenData createRefreshToken(Account account) {
+        TokenData tokenData = jwtUtil.generateRefreshToken();
+        String tokenHash = hashToken(tokenData.token());
 
         RefreshToken refreshToken = RefreshToken.builder()
-                .account(accountService.findById(accountId))
+                .account(accountService.findById(account.getId()))
                 .tokenHash(tokenHash)
-                .expiresAt(Instant.now().plusMillis(appProperties.getRefreshToken().toMillis()))
+                .expiresAt(Instant.now(clock).plusMillis(appProperties.getRefreshToken().toMillis()))
                 .revoked(false)
                 .build();
 
         refreshTokenRepository.save(refreshToken);
-        return rawToken;
+        return tokenData;
     }
 
     @Transactional
-    public Long validateAndRotateRefreshToken(String rawToken) {
-        if (jwtUtil.isTokenExpired(rawToken)) {
-            throw new TokenExpiredException("Refresh");
-        }
-
-        Long accountId = jwtUtil.extractAccountId(rawToken);
+    public Account validateAndRotateRefreshToken(String rawToken) {
 
         String tokenHash = hashToken(rawToken);
 
@@ -55,14 +54,14 @@ public class TokenService {
                 .findByTokenHashAndRevokedFalse(tokenHash)
                 .orElseThrow(() -> new TokenExpiredException("Refresh"));
 
-        if (storedToken.getExpiresAt().isBefore(Instant.now())) {
+        if (storedToken.getExpiresAt().isBefore(Instant.now(clock))) {
             throw new TokenExpiredException("Refresh");
         }
 
         storedToken.setRevoked(true);
         refreshTokenRepository.save(storedToken);
 
-        return accountId;
+        return storedToken.getAccount();
     }
 
     @Transactional
@@ -72,7 +71,7 @@ public class TokenService {
 
     @Transactional
     public void cleanupExpiredTokens() {
-        refreshTokenRepository.deleteAllExpired(Instant.now());
+        refreshTokenRepository.deleteAllExpired(Instant.now(clock));
     }
 
     private String hashToken(String rawToken) {

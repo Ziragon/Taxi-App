@@ -3,8 +3,6 @@ package com.example.userservice.entity;
 import com.example.userservice.entity.enums.DriverStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -28,21 +26,20 @@ public class DriverProfile {
     @JoinColumn(name = "account_id")
     private Account account;
 
-    @Column(name = "first_name", nullable = false)
+    @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
 
-    @Column(name = "last_name", nullable = false)
+    @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
 
-    @Column(name = "photo_url")
+    @Column(name = "photo_url", length = 500)
     private String photoUrl;
 
-    @Column(name = "license_number", nullable = false, unique = true)
+    @Column(name = "license_number", nullable = false, unique = true, length = 50)
     private String licenseNumber;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false)
     private DriverStatus status = DriverStatus.OFFLINE;
 
@@ -56,7 +53,7 @@ public class DriverProfile {
 
     @Builder.Default
     @Column(name = "is_verified", nullable = false)
-    private Boolean isVerified = false;
+    private boolean verified = false;
 
     @Builder.Default
     @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL, orphanRemoval = true)

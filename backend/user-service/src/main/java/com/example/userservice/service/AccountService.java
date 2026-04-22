@@ -18,7 +18,7 @@ public class AccountService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public Account createAccount(String email, String phone, String password, AccountRole role) {
+    public Account createAccount(String email, String phone, String password) {
         if (accountRepository.existsByEmailOrPhone(email, phone)) {
             throw new AccountAlreadyExistsException("email or phone", email + " / " + phone);
         }
@@ -29,8 +29,8 @@ public class AccountService {
                 .email(email)
                 .phone(phone)
                 .passwordHash(passwordHash)
-                .role(role)
-                .isActive(true)
+                .role(AccountRole.USER)
+                .active(true)
                 .build();
 
         return accountRepository.save(account);
@@ -57,14 +57,14 @@ public class AccountService {
     @Transactional
     public void deactivateAccount(Long id) {
         Account account = findById(id);
-        account.setIsActive(false);
+        account.setActive(false);
         accountRepository.save(account);
     }
 
     @Transactional
     public void activateAccount(Long id) {
         Account account = findById(id);
-        account.setIsActive(true);
+        account.setActive(true);
         accountRepository.save(account);
     }
 }

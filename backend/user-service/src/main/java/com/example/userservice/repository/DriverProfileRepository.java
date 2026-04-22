@@ -15,7 +15,7 @@ public interface DriverProfileRepository extends JpaRepository<DriverProfile, Lo
 
     List<DriverProfile> findAllByStatus(DriverStatus status);
 
-    List<DriverProfile> findAllByIsVerifiedTrue();
+    List<DriverProfile> findAllByVerifiedTrue();
 
     boolean existsByLicenseNumber(String licenseNumber);
 

@@ -31,7 +31,7 @@ public class VehicleService {
                 .color(color)
                 .licensePlate(licensePlate)
                 .vehicleClass(vehicleClass)
-                .isActive(false)
+                .active(false)
                 .build();
 
         return vehicleRepository.save(vehicle);
@@ -50,7 +50,7 @@ public class VehicleService {
 
     @Transactional(readOnly = true)
     public List<Vehicle> getActiveVehiclesByDriver(Long driverId) {
-        return vehicleRepository.findAllByDriverAccountIdAndIsActiveTrue(driverId);
+        return vehicleRepository.findAllByDriverAccountIdAndActiveTrue(driverId);
     }
 
     @Transactional
@@ -73,7 +73,7 @@ public class VehicleService {
         List<Vehicle> driverVehicles = getVehiclesByDriver(driverId);
 
         driverVehicles.forEach(v -> {
-            v.setIsActive(v.getId().equals(vehicleId));
+            v.setActive(v.getId().equals(vehicleId));
             vehicleRepository.save(v);
         });
     }

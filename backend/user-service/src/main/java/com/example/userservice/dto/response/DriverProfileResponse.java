@@ -1,43 +1,52 @@
 package com.example.userservice.dto.response;
 
+import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.enums.DriverStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Schema(description = "Профиль водителя")
-public class DriverProfileResponse {
+public record DriverProfileResponse (
 
     @Schema(description = "ID аккаунта", example = "456")
-    private Long accountId;
+    Long accountId,
 
     @Schema(description = "Имя", example = "Сергей")
-    private String firstName;
+    String firstName,
 
     @Schema(description = "Фамилия", example = "Сидоров")
-    private String lastName;
+    String lastName,
 
     @Schema(description = "URL фото", example = "https://cults3d.com/en/3d-model/art/six-seven-meme-character?srsltid=AfmBOooc9X4Jb3lmH25XJC5dcAyY9E44M9HvZPvOJVCAIs7SFjeEx0v8")
-    private String photoUrl;
+    String photoUrl,
 
     @Schema(description = "Номер водительского удостоверения", example = "7712345678")
-    private String licenseNumber;
+    String licenseNumber,
 
     @Schema(description = "Статус", example = "ONLINE")
-    private DriverStatus status;
+    DriverStatus status,
 
     @Schema(description = "Средний рейтинг", example = "4.92")
-    private BigDecimal averageRating;
+    BigDecimal averageRating,
 
     @Schema(description = "Количество поездок", example = "312")
-    private Integer totalTrips;
+    Integer totalTrips,
 
     @Schema(description = "Верифицирован ли", example = "true")
-    private Boolean isVerified;
+    boolean isVerified
+) {
+    public static DriverProfileResponse from(DriverProfile profile) {
+        return new DriverProfileResponse(
+                profile.getAccountId(),
+                profile.getFirstName(),
+                profile.getLastName(),
+                profile.getPhotoUrl(),
+                profile.getLicenseNumber(),
+                profile.getStatus(),
+                profile.getAverageRating(),
+                profile.getTotalTrips(),
+                profile.isVerified()
+        );
+    }
 }

@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,7 +25,6 @@ public class DriverProfileController {
     private final DriverProfileService driverProfileService;
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Создать профиль водителя",
             description = "Создаёт профиль после регистрации. is_verified = false по умолчанию",
@@ -43,21 +42,23 @@ public class DriverProfileController {
                     )
             ),
             responses = {
-                    @ApiResponse(responseCode = "201", description = "Профиль создан"),
+                    @ApiResponse(responseCode = "200", description = "Профиль создан"),
                     @ApiResponse(responseCode = "409", description = "Профиль или номер ВУ уже существует")
             }
     )
-    public DriverProfileResponse createProfile(
+    public ResponseEntity<DriverProfileResponse> createProfile(
             @RequestHeader("X-Account-ID") Long accountId,
-            @Valid @RequestBody CreateDriverProfileRequest request) {
+            @Valid @RequestBody CreateDriverProfileRequest request
+    ) {
         DriverProfile profile = driverProfileService.createProfile(
                 accountId,
-                request.getFirstName(),
-                request.getLastName(),
-                request.getLicenseNumber(),
-                request.getPhotoUrl()
+                request.firstName(),
+                request.lastName(),
+                request.licenseNumber(),
+                request.photoUrl()
         );
-        return mapToResponse(profile);
+
+        return ResponseEntity.ok(DriverProfileResponse.from(profile));
     }
 
     @GetMapping
@@ -68,9 +69,12 @@ public class DriverProfileController {
                     @ApiResponse(responseCode = "404", description = "Профиль не найден")
             }
     )
-    public DriverProfileResponse getProfile(@RequestHeader("X-Account-ID") Long accountId) {
+    public ResponseEntity<DriverProfileResponse> getProfile(
+            @RequestHeader("X-Account-ID") Long accountId
+    ) {
         DriverProfile profile = driverProfileService.getProfile(accountId);
-        return mapToResponse(profile);
+
+        return ResponseEntity.ok(DriverProfileResponse.from(profile));
     }
 
     @PutMapping
@@ -93,17 +97,19 @@ public class DriverProfileController {
                     @ApiResponse(responseCode = "200", description = "Профиль обновлён")
             }
     )
-    public DriverProfileResponse updateProfile(
+    public ResponseEntity<DriverProfileResponse> updateProfile(
             @RequestHeader("X-Account-ID") Long accountId,
-            @Valid @RequestBody UpdateDriverProfileRequest request) {
+            @Valid @RequestBody UpdateDriverProfileRequest request
+    ) {
         DriverProfile profile = driverProfileService.updateProfile(
                 accountId,
-                request.getFirstName(),
-                request.getLastName(),
-                request.getLicenseNumber(),
-                request.getPhotoUrl()
+                request.firstName(),
+                request.lastName(),
+                request.licenseNumber(),
+                request.photoUrl()
         );
-        return mapToResponse(profile);
+
+        return ResponseEntity.ok(DriverProfileResponse.from(profile));
     }
 
     @PutMapping("/status")
@@ -124,11 +130,13 @@ public class DriverProfileController {
                     @ApiResponse(responseCode = "204", description = "Статус обновлён")
             }
     )
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void updateStatus(
+    public ResponseEntity<Void> updateStatus(
             @RequestHeader("X-Account-ID") Long accountId,
             @Valid @RequestBody UpdateDriverStatusRequest request) {
-        driverProfileService.updateStatus(accountId, request.getStatus());
+
+        driverProfileService.updateStatus(accountId, request.status());
+
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{driverId}/verify")
@@ -140,22 +148,11 @@ public class DriverProfileController {
                     @ApiResponse(responseCode = "403", description = "Недостаточно прав")
             }
     )
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void verifyDriver(@PathVariable Long driverId) {
+    public ResponseEntity<Void> verifyDriver(
+            @PathVariable Long driverId
+    ) {
         driverProfileService.verifyDriver(driverId);
-    }
 
-    private DriverProfileResponse mapToResponse(DriverProfile profile) {
-        return new DriverProfileResponse(
-                profile.getAccountId(),
-                profile.getFirstName(),
-                profile.getLastName(),
-                profile.getPhotoUrl(),
-                profile.getLicenseNumber(),
-                profile.getStatus(),
-                profile.getAverageRating(),
-                profile.getTotalTrips(),
-                profile.getIsVerified()
-        );
+        return ResponseEntity.noContent().build();
     }
 }

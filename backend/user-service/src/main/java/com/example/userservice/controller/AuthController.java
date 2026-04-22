@@ -1,5 +1,6 @@
 package com.example.userservice.controller;
 
+import com.example.userservice.dto.data.AuthResult;
 import com.example.userservice.dto.request.LoginRequest;
 import com.example.userservice.dto.request.RefreshTokenRequest;
 import com.example.userservice.dto.request.RegisterRequest;
@@ -13,10 +14,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -26,17 +25,16 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/register/passenger")
-    @ResponseStatus(HttpStatus.CREATED)
+    @PostMapping("/register")
     @Operation(
             summary = "Регистрация пассажира",
-            description = "Создаёт аккаунт с ролью PASSENGER. Профиль создаётся отдельно через /api/v1/profiles/passenger",
+            description = "Создаёт базовый аккаунт. Профиль создаётся отдельно через /api/v1/profiles/{passenger/driver}",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     content = @Content(
                             mediaType = "application/json",
                             examples = @ExampleObject(value = """
                                     {
-                                      "email": "passenger@example.com",
+                                      "email": "user@example.com",
                                       "phone": "+79991234567",
                                       "password": "SecurePass123"
                                     }
@@ -44,50 +42,22 @@ public class AuthController {
                     )
             ),
             responses = {
-                    @ApiResponse(responseCode = "201", description = "Успешная регистрация",
+                    @ApiResponse(responseCode = "200", description = "Успешная регистрация",
                             content = @Content(schema = @Schema(implementation = AuthResponse.class))),
                     @ApiResponse(responseCode = "409", description = "Email или телефон уже заняты"),
                     @ApiResponse(responseCode = "422", description = "Ошибка валидации")
             }
     )
-    public AuthResponse registerPassenger(@Valid @RequestBody RegisterRequest request) {
-        Map<String, String> tokens = authService.registerPassenger(
-                request.getEmail(),
-                request.getPhone(),
-                request.getPassword()
+    public ResponseEntity<AuthResponse> registerPassenger(
+            @Valid @RequestBody RegisterRequest request
+    ) {
+        AuthResult result = authService.register(
+                request.email(),
+                request.phone(),
+                request.password()
         );
-        return new AuthResponse(tokens.get("accessToken"), tokens.get("refreshToken"));
-    }
 
-    @PostMapping("/register/driver")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(
-            summary = "Регистрация водителя",
-            description = "Создаёт аккаунт с ролью DRIVER. Профиль создаётся отдельно через /api/v1/profiles/driver",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "email": "driver@example.com",
-                                      "phone": "+79997654321",
-                                      "password": "DriverPass456"
-                                    }
-                                    """)
-                    )
-            ),
-            responses = {
-                    @ApiResponse(responseCode = "201", description = "Успешная регистрация"),
-                    @ApiResponse(responseCode = "409", description = "Email или телефон уже заняты")
-            }
-    )
-    public AuthResponse registerDriver(@Valid @RequestBody RegisterRequest request) {
-        Map<String, String> tokens = authService.registerDriver(
-                request.getEmail(),
-                request.getPhone(),
-                request.getPassword()
-        );
-        return new AuthResponse(tokens.get("accessToken"), tokens.get("refreshToken"));
+        return ResponseEntity.ok(AuthResponse.from(result));
     }
 
     @PostMapping("/login")
@@ -111,9 +81,12 @@ public class AuthController {
                     @ApiResponse(responseCode = "403", description = "Аккаунт заблокирован")
             }
     )
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        Map<String, String> tokens = authService.login(request.getEmail(), request.getPassword());
-        return new AuthResponse(tokens.get("accessToken"), tokens.get("refreshToken"));
+    public ResponseEntity<AuthResponse> login(
+            @Valid @RequestBody LoginRequest request
+    ) {
+        AuthResult result = authService.login(request.email(), request.password());
+
+        return ResponseEntity.ok(AuthResponse.from(result));
     }
 
     @PostMapping("/refresh")
@@ -135,13 +108,15 @@ public class AuthController {
                     @ApiResponse(responseCode = "401", description = "Недействительный или истёкший refresh токен")
             }
     )
-    public AuthResponse refresh(@Valid @RequestBody RefreshTokenRequest request) {
-        Map<String, String> tokens = authService.refreshAccessToken(request.getRefreshToken());
-        return new AuthResponse(tokens.get("accessToken"), tokens.get("refreshToken"));
+    public ResponseEntity<AuthResponse> refresh(
+            @Valid @RequestBody RefreshTokenRequest request
+    ) {
+        AuthResult result = authService.refreshTokens(request.refreshToken());
+
+        return ResponseEntity.ok(AuthResponse.from(result));
     }
 
     @PostMapping("/logout")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(
             summary = "Выход из системы",
             description = "Отзывает все refresh токены пользователя. Access токен продолжит работать до истечения (JWT stateless)",
@@ -150,7 +125,11 @@ public class AuthController {
                     @ApiResponse(responseCode = "401", description = "Не авторизован")
             }
     )
-    public void logout(@RequestHeader("X-Account-ID") Long accountId) {
+    public ResponseEntity<Void> logout(
+            @RequestHeader("X-Account-ID") Long accountId
+    ) {
         authService.logout(accountId);
+
+        return ResponseEntity.noContent().build();
     }
 }

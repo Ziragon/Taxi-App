@@ -1,5 +1,7 @@
 package com.example.userservice.service;
 
+import com.example.userservice.dto.data.AuthResult;
+import com.example.userservice.dto.data.TokenData;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.enums.AccountRole;
 import com.example.userservice.exception.AccountDeactivatedException;
@@ -11,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Map;
 
 import static com.example.userservice.config.RabbitMQConfig.USER_EVENTS_EXCHANGE;
@@ -27,45 +30,37 @@ public class AuthService {
     private final RabbitTemplate rabbitTemplate;
 
     @Transactional
-    public Map<String, String> registerPassenger(String email, String phone, String password) {
-        Account account = accountService.createAccount(email, phone, password, AccountRole.PASSENGER);
+    public AuthResult register(String email, String phone, String password) {
 
-        publishUserRegisteredEvent(account.getId(), email, AccountRole.PASSENGER);
+        Account account = accountService.createAccount(email, phone, password);
+
+        publishUserRegisteredEvent(account.getId(), email);
 
         return generateTokens(account);
     }
 
     @Transactional
-    public Map<String, String> registerDriver(String email, String phone, String password) {
-        Account account = accountService.createAccount(email, phone, password, AccountRole.DRIVER);
+    public AuthResult login(String email, String password) {
 
-        publishUserRegisteredEvent(account.getId(), email, AccountRole.DRIVER);
-
-        return generateTokens(account);
-    }
-
-    @Transactional(readOnly = true)
-    public Map<String, String> login(String email, String password) {
         Account account = accountService.findByEmail(email);
+
+        if (!account.isActive()) {
+            throw new AccountDeactivatedException(account.getId());
+        }
 
         if (!passwordEncoder.matches(password, account.getPasswordHash())) {
             throw new InvalidCredentialsException();
         }
 
-        if (!account.getIsActive()) {
-            throw new AccountDeactivatedException(account.getId());
-        }
-
         return generateTokens(account);
     }
 
     @Transactional
-    public Map<String, String> refreshAccessToken(String refreshToken) {
-        Long accountId = tokenService.validateAndRotateRefreshToken(refreshToken);
-        Account account = accountService.findById(accountId);
+    public AuthResult refreshTokens(String refreshToken) {
+        Account account = tokenService.validateAndRotateRefreshToken(refreshToken);
 
-        if (!account.getIsActive()) {
-            throw new AccountDeactivatedException(accountId);
+        if (!account.isActive()) {
+            throw new AccountDeactivatedException(account.getId());
         }
 
         return generateTokens(account);
@@ -76,22 +71,23 @@ public class AuthService {
         tokenService.revokeAllTokens(accountId);
     }
 
-    private Map<String, String> generateTokens(Account account) {
-        String accessToken = jwtUtil.generateAccessToken(account.getId(), account.getRole().name());
-        String refreshToken = tokenService.createRefreshToken(account.getId());
+    private AuthResult generateTokens(Account account) {
+        TokenData accessTokenData = jwtUtil.generateAccessToken(account.getId(), account.getRole().name());
+        TokenData refreshTokenData = tokenService.createRefreshToken(account);
 
-        return Map.of(
-                "accessToken", accessToken,
-                "refreshToken", refreshToken
+        return new AuthResult(
+                account,
+                accessTokenData,
+                refreshTokenData
         );
     }
 
-    private void publishUserRegisteredEvent(Long accountId, String email, AccountRole role) {
+    private void publishUserRegisteredEvent(Long accountId, String email) {
         Map<String, Object> event = Map.of(
                 "accountId", accountId,
                 "email", email,
-                "role", role.name(),
-                "timestamp", System.currentTimeMillis()
+                "role", AccountRole.USER,
+                "timestamp", Instant.now()
         );
 
         rabbitTemplate.convertAndSend(USER_EVENTS_EXCHANGE, USER_REGISTERED_ROUTING_KEY, event);

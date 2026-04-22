@@ -12,7 +12,7 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
 
     List<Vehicle> findAllByDriverAccountId(Long driverAccountId);
 
-    List<Vehicle> findAllByDriverAccountIdAndIsActiveTrue(Long driverAccountId);
+    List<Vehicle> findAllByDriverAccountIdAndActiveTrue(Long driverAccountId);
 
     Optional<Vehicle> findByIdAndDriverAccountId(Long id, Long driverAccountId);
 

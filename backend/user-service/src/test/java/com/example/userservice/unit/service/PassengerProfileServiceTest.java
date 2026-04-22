@@ -37,7 +37,7 @@ class PassengerProfileServiceTest {
     @Test
     @DisplayName("Создание профиля: успешное сохранение")
     void createProfile_Success() {
-        Account account = Account.builder().id(1L).role(AccountRole.PASSENGER).build();
+        Account account = Account.builder().id(1L).role(AccountRole.USER).build();
         PassengerProfile profile = PassengerProfile.builder()
                 .accountId(1L)
                 .firstName("Иван")

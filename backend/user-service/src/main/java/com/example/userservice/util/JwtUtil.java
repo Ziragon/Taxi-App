@@ -1,6 +1,7 @@
 package com.example.userservice.util;
 
 import com.example.userservice.config.AppProperties;
+import com.example.userservice.dto.data.TokenData;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
@@ -19,17 +21,21 @@ import java.util.UUID;
 public class JwtUtil {
 
     private final AppProperties appProperties;
+    private final Clock clock;
 
-    public String generateAccessToken(Long accountId, String role) {
-        return generateToken(accountId, role, appProperties.getAccessToken().toMillis());
+    public TokenData generateAccessToken(Long accountId, String role) {
+        Instant expiresAt = Instant.now(clock).plusMillis(appProperties.getAccessToken().toMillis());
+        String token = generateToken(accountId, role, appProperties.getAccessToken().toMillis());
+        return new TokenData(token, expiresAt);
     }
 
-    public String generateRefreshToken(Long accountId) {
-        return generateToken(accountId, null, appProperties.getRefreshToken().toMillis());
+    public TokenData generateRefreshToken() {
+        Instant expiresAt = Instant.now(clock).plusMillis(appProperties.getRefreshToken().toMillis());
+        return new TokenData(UUID.randomUUID().toString(), expiresAt);
     }
 
     private String generateToken(Long accountId, String role, long expirationMs) {
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         Instant expiration = now.plusMillis(expirationMs);
 
         var builder = Jwts.builder()

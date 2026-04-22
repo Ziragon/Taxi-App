@@ -1,19 +1,24 @@
 package com.example.userservice.dto.response;
 
+import com.example.userservice.dto.data.AccountDto;
+import com.example.userservice.dto.data.AuthResult;
+import com.example.userservice.dto.data.TokenData;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Schema(description = "Ответ с токенами")
-public class AuthResponse {
+public record AuthResponse (
 
-    @Schema(description = "Access токен (JWT)", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c")
-    private String accessToken;
+        AccountDto accountDto,
 
-    @Schema(description = "Refresh токен (JWT)", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiaWF0IjoxNTE2MjM5MDIyfQ.4Adcj0vbR-pXRlFkRHRwPq8J7fF6q5xjKq5M2qJ_8zU")
-    private String refreshToken;
+        TokenData accessTokenData,
+
+        TokenData refreshTokenData
+) {
+    public static AuthResponse from(AuthResult result) {
+        return new AuthResponse(
+                AccountDto.from(result.account()),
+                result.accessTokenData(),
+                result.refreshTokenData()
+        );
+    }
 }

@@ -1,41 +1,50 @@
 package com.example.userservice.dto.response;
 
+import com.example.userservice.entity.Vehicle;
 import com.example.userservice.entity.enums.VehicleClass;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Schema(description = "Данные транспорта")
-public class VehicleResponse {
+public record VehicleResponse (
 
     @Schema(description = "ID транспорта", example = "789")
-    private Long id;
+    Long id,
 
     @Schema(description = "ID водителя", example = "456")
-    private Long driverId;
+    Long driverId,
 
     @Schema(description = "Марка", example = "Toyota")
-    private String brand;
+    String brand,
 
     @Schema(description = "Модель", example = "Camry")
-    private String model;
+    String model,
 
     @Schema(description = "Год выпуска", example = "2020")
-    private Short year;
+    Short year,
 
     @Schema(description = "Цвет", example = "Черный")
-    private String color;
+    String color,
 
     @Schema(description = "Госномер", example = "А123БВ777")
-    private String licensePlate;
+    String licensePlate,
 
     @Schema(description = "Класс", example = "COMFORT")
-    private VehicleClass vehicleClass;
+    VehicleClass vehicleClass,
 
     @Schema(description = "Активен ли", example = "true")
-    private Boolean isActive;
+    Boolean isActive
+) {
+    public static VehicleResponse from(Vehicle vehicle) {
+        return new VehicleResponse(
+                vehicle.getId(),
+                vehicle.getDriver().getAccountId(),
+                vehicle.getBrand(),
+                vehicle.getModel(),
+                vehicle.getYear(),
+                vehicle.getColor(),
+                vehicle.getLicensePlate(),
+                vehicle.getVehicleClass(),
+                vehicle.isActive()
+        );
+    }
 }

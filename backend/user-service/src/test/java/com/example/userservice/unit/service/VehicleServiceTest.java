@@ -40,7 +40,7 @@ class VehicleServiceTest {
                 .id(1L)
                 .driver(driver)
                 .brand("Toyota")
-                .isActive(false)
+                .active(false)
                 .build();
 
         when(driverProfileService.getProfile(1L)).thenReturn(driver);
@@ -48,23 +48,23 @@ class VehicleServiceTest {
 
         Vehicle created = vehicleService.addVehicle(1L, "Toyota", "Camry", (short) 2020, "Black", "A123BC777", VehicleClass.COMFORT);
 
-        assertThat(created.getIsActive()).isFalse();
+        assertThat(created.isActive()).isFalse();
     }
 
     @Test
     @DisplayName("Установка активного автомобиля: только один активен")
     void setActiveVehicle_OnlyOneActive() {
-        Vehicle vehicle1 = Vehicle.builder().id(1L).isActive(false).build();
-        Vehicle vehicle2 = Vehicle.builder().id(2L).isActive(true).build();
-        Vehicle vehicle3 = Vehicle.builder().id(3L).isActive(false).build();
+        Vehicle vehicle1 = Vehicle.builder().id(1L).active(false).build();
+        Vehicle vehicle2 = Vehicle.builder().id(2L).active(true).build();
+        Vehicle vehicle3 = Vehicle.builder().id(3L).active(false).build();
 
         when(vehicleRepository.findAllByDriverAccountId(1L)).thenReturn(List.of(vehicle1, vehicle2, vehicle3));
 
         vehicleService.setActiveVehicle(1L, 3L);
 
-        assertThat(vehicle1.getIsActive()).isFalse();
-        assertThat(vehicle2.getIsActive()).isFalse();
-        assertThat(vehicle3.getIsActive()).isTrue();
+        assertThat(vehicle1.isActive()).isFalse();
+        assertThat(vehicle2.isActive()).isFalse();
+        assertThat(vehicle3.isActive()).isTrue();
         verify(vehicleRepository, times(3)).save(any(Vehicle.class));
     }
 }

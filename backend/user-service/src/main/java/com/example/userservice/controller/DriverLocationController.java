@@ -11,23 +11,20 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/drivers/location")
 @RequiredArgsConstructor
-@Tag(name = "Driver Location", description = "Управление геолокацией водителей")
+@Tag(name = "Driver Location", description = "Управление геолокацией водителей (Будет заменено веб-сокетами)")
 public class DriverLocationController {
 
     private final DriverLocationService driverLocationService;
 
     @PutMapping
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(
             summary = "Обновить локацию водителя",
             description = "Водитель отправляет координаты каждые 10 секунд (WebSocket или polling)",
@@ -52,8 +49,8 @@ public class DriverLocationController {
             @Valid @RequestBody UpdateLocationRequest request) {
         driverLocationService.updateLocation(
                 driverId,
-                request.getLatitude(),
-                request.getLongitude()
+                request.latitude(),
+                request.longitude()
         );
     }
 
@@ -67,7 +64,7 @@ public class DriverLocationController {
     )
     public DriverLocationResponse getLocation(@RequestHeader("X-Account-ID") Long driverId) {
         DriverLocation location = driverLocationService.getLocation(driverId);
-        return mapToResponse(location);
+        return DriverLocationResponse.from(location);
     }
 
     @GetMapping("/nearby")
@@ -83,16 +80,7 @@ public class DriverLocationController {
             @RequestParam BigDecimal longitude,
             @RequestParam(defaultValue = "5.0") BigDecimal radiusKm) {
         return driverLocationService.findNearbyDrivers(latitude, longitude, radiusKm).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
-
-    private DriverLocationResponse mapToResponse(DriverLocation location) {
-        return new DriverLocationResponse(
-                location.getDriverId(),
-                location.getLatitude(),
-                location.getLongitude(),
-                location.getUpdatedAt()
-        );
+                .map(DriverLocationResponse::from)
+                .toList();
     }
 }

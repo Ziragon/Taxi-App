@@ -1,5 +1,6 @@
 package com.example.userservice.integration;
 
+import com.example.userservice.dto.data.AuthResult;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.Vehicle;
 import com.example.userservice.entity.enums.DriverStatus;
@@ -20,7 +21,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -64,13 +64,13 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
     @Test
     @DisplayName("Полный workflow водителя: регистрация -> профиль -> транспорт -> статус -> верификация")
     void fullDriverWorkflow() {
-        Map<String, String> tokens = authService.registerDriver(
+        AuthResult result = authService.register(
                 "driver@workflow.com",
                 "+79993333333",
                 "DriverPass789"
         );
 
-        Long driverId = jwtUtil.extractAccountId(tokens.get("accessToken"));
+        Long driverId = jwtUtil.extractAccountId(result.accessTokenData().token());
 
         DriverProfile profile = driverProfileService.createProfile(
                 driverId,
@@ -80,7 +80,7 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
                 null
         );
 
-        assertThat(profile.getIsVerified()).isFalse();
+        assertThat(profile.isVerified()).isFalse();
         assertThat(profile.getStatus()).isEqualTo(DriverStatus.OFFLINE);
 
         Vehicle vehicle1 = vehicleService.addVehicle(
@@ -103,15 +103,15 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
                 VehicleClass.ECONOMY
         );
 
-        assertThat(vehicle1.getIsActive()).isFalse();
-        assertThat(vehicle2.getIsActive()).isFalse();
+        assertThat(vehicle1.isActive()).isFalse();
+        assertThat(vehicle2.isActive()).isFalse();
 
         vehicleService.setActiveVehicle(driverId, vehicle1.getId());
 
         List<Vehicle> vehicles = vehicleService.getVehiclesByDriver(driverId);
         assertThat(vehicles).hasSize(2);
-        assertThat(vehicles.stream().filter(Vehicle::getIsActive)).hasSize(1);
-        assertThat(vehicles.stream().filter(Vehicle::getIsActive).findFirst().get().getId())
+        assertThat(vehicles.stream().filter(Vehicle::isActive)).hasSize(1);
+        assertThat(vehicles.stream().filter(Vehicle::isActive).findFirst().get().getId())
                 .isEqualTo(vehicle1.getId());
 
         driverProfileService.updateStatus(driverId, DriverStatus.ONLINE);
@@ -123,34 +123,34 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
 
         driverProfileService.verifyDriver(driverId);
         DriverProfile verifiedProfile = driverProfileService.getProfile(driverId);
-        assertThat(verifiedProfile.getIsVerified()).isTrue();
+        assertThat(verifiedProfile.isVerified()).isTrue();
     }
 
     @Test
     @DisplayName("Несколько автомобилей: только один может быть активным")
     void multipleVehicles_OnlyOneActive() {
-        Map<String, String> tokens = authService.registerDriver(
+        AuthResult result = authService.register(
                 "driver2@workflow.com",
                 "+79994444444",
                 "Pass123"
         );
 
-        Long driverId = jwtUtil.extractAccountId(tokens.get("accessToken"));
+        Long driverId = jwtUtil.extractAccountId(result.accessTokenData().token());
 
         driverProfileService.createProfile(driverId, "Иван", "Иванов", "1122334455", null);
 
-        Vehicle v1 = vehicleService.addVehicle(driverId, "BMW", "X5", (short) 2022, "Gray", "C111CC777", VehicleClass.BUSINESS);
+        vehicleService.addVehicle(driverId, "BMW", "X5", (short) 2022, "Gray", "C111CC777", VehicleClass.BUSINESS);
         Vehicle v2 = vehicleService.addVehicle(driverId, "KIA", "Rio", (short) 2019, "Red", "D222DD777", VehicleClass.ECONOMY);
         Vehicle v3 = vehicleService.addVehicle(driverId, "Mercedes", "E-Class", (short) 2023, "Silver", "E333EE777", VehicleClass.BUSINESS);
 
         vehicleService.setActiveVehicle(driverId, v2.getId());
         List<Vehicle> afterFirstSet = vehicleService.getVehiclesByDriver(driverId);
-        assertThat(afterFirstSet.stream().filter(Vehicle::getIsActive)).hasSize(1);
-        assertThat(afterFirstSet.stream().filter(Vehicle::getIsActive).findFirst().get().getId()).isEqualTo(v2.getId());
+        assertThat(afterFirstSet.stream().filter(Vehicle::isActive)).hasSize(1);
+        assertThat(afterFirstSet.stream().filter(Vehicle::isActive).findFirst().get().getId()).isEqualTo(v2.getId());
 
         vehicleService.setActiveVehicle(driverId, v3.getId());
         List<Vehicle> afterSecondSet = vehicleService.getVehiclesByDriver(driverId);
-        assertThat(afterSecondSet.stream().filter(Vehicle::getIsActive)).hasSize(1);
-        assertThat(afterSecondSet.stream().filter(Vehicle::getIsActive).findFirst().get().getId()).isEqualTo(v3.getId());
+        assertThat(afterSecondSet.stream().filter(Vehicle::isActive)).hasSize(1);
+        assertThat(afterSecondSet.stream().filter(Vehicle::isActive).findFirst().get().getId()).isEqualTo(v3.getId());
     }
 }

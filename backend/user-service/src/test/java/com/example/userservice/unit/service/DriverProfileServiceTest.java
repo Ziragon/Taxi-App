@@ -36,12 +36,12 @@ class DriverProfileServiceTest {
     @Test
     @DisplayName("Создание профиля водителя: is_verified = false по умолчанию")
     void createProfile_DefaultsNotVerified() {
-        Account account = Account.builder().id(1L).role(AccountRole.DRIVER).build();
+        Account account = Account.builder().id(1L).role(AccountRole.USER).build();
         DriverProfile profile = DriverProfile.builder()
                 .accountId(1L)
                 .firstName("Сергей")
                 .licenseNumber("7712345678")
-                .isVerified(false)
+                .verified(false)
                 .status(DriverStatus.OFFLINE)
                 .build();
 
@@ -50,7 +50,7 @@ class DriverProfileServiceTest {
 
         DriverProfile created = driverProfileService.createProfile(1L, "Сергей", "Сидоров", "7712345678", null);
 
-        assertThat(created.getIsVerified()).isFalse();
+        assertThat(created.isVerified()).isFalse();
         assertThat(created.getStatus()).isEqualTo(DriverStatus.OFFLINE);
     }
 
@@ -59,7 +59,7 @@ class DriverProfileServiceTest {
     void verifyDriver_SetsVerifiedTrue() {
         DriverProfile profile = DriverProfile.builder()
                 .accountId(1L)
-                .isVerified(false)
+                .verified(false)
                 .build();
 
         when(driverProfileRepository.findById(1L)).thenReturn(Optional.of(profile));
@@ -67,7 +67,7 @@ class DriverProfileServiceTest {
 
         driverProfileService.verifyDriver(1L);
 
-        assertThat(profile.getIsVerified()).isTrue();
+        assertThat(profile.isVerified()).isTrue();
         verify(driverProfileRepository).save(profile);
     }
 

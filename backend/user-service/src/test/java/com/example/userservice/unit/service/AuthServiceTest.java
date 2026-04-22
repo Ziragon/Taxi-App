@@ -1,5 +1,7 @@
 package com.example.userservice.unit.service;
 
+import com.example.userservice.dto.data.AuthResult;
+import com.example.userservice.dto.data.TokenData;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.enums.AccountRole;
 import com.example.userservice.exception.InvalidCredentialsException;
@@ -16,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Instant;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.*;
@@ -47,52 +50,58 @@ class AuthServiceTest {
     @Test
     @DisplayName("Регистрация пассажира: успешное создание аккаунта и выдача токенов")
     void registerPassenger_Success() {
+        Instant fixedExpiry = Instant.parse("2026-12-31T23:59:59Z");
+
         Account account = Account.builder()
                 .id(1L)
                 .email("passenger@test.com")
                 .phone("+79991234567")
-                .role(AccountRole.PASSENGER)
-                .isActive(true)
+                .role(AccountRole.USER)
+                .active(true)
                 .build();
 
-        when(accountService.createAccount(anyString(), anyString(), anyString(), any(AccountRole.class)))
+        when(accountService.createAccount(anyString(), anyString(), anyString()))
                 .thenReturn(account);
-        when(jwtUtil.generateAccessToken(anyLong(), anyString())).thenReturn("access-token");
-        when(tokenService.createRefreshToken(anyLong())).thenReturn("refresh-token");
+        when(jwtUtil.generateAccessToken(anyLong(), anyString()))
+                .thenReturn(new TokenData("access-token", fixedExpiry));
+        when(tokenService.createRefreshToken(account))
+                .thenReturn(new TokenData("refresh-token", fixedExpiry));
 
-        Map<String, String> tokens = authService.registerPassenger(
+        AuthResult result = authService.register(
                 "passenger@test.com",
                 "+79991234567",
                 "password123"
         );
 
-        assertThat(tokens).containsKeys("accessToken", "refreshToken");
-        assertThat(tokens.get("accessToken")).isEqualTo("access-token");
-        assertThat(tokens.get("refreshToken")).isEqualTo("refresh-token");
+        assertThat(result.accessTokenData().token()).isEqualTo("access-token");
+        assertThat(result.refreshTokenData().token()).isEqualTo("refresh-token");
 
-        verify(accountService).createAccount("passenger@test.com", "+79991234567", "password123", AccountRole.PASSENGER);
+        verify(accountService).createAccount("passenger@test.com", "+79991234567", "password123");
         verify(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Map.class));
     }
 
     @Test
     @DisplayName("Логин: успешная авторизация с валидными данными")
     void login_Success() {
+        Instant fixedExpiry = Instant.parse("2026-12-31T23:59:59Z");
+
         Account account = Account.builder()
                 .id(1L)
                 .email("user@test.com")
                 .passwordHash("hashed-password")
-                .role(AccountRole.PASSENGER)
-                .isActive(true)
+                .role(AccountRole.USER)
+                .active(true)
                 .build();
 
         when(accountService.findByEmail("user@test.com")).thenReturn(account);
         when(passwordEncoder.matches("password123", "hashed-password")).thenReturn(true);
-        when(jwtUtil.generateAccessToken(1L, "PASSENGER")).thenReturn("access-token");
-        when(tokenService.createRefreshToken(1L)).thenReturn("refresh-token");
+        when(jwtUtil.generateAccessToken(anyLong(), anyString()))
+                .thenReturn(new TokenData("access-token", fixedExpiry));
+        when(tokenService.createRefreshToken(account))
+                .thenReturn(new TokenData("refresh-token", fixedExpiry));
 
-        Map<String, String> tokens = authService.login("user@test.com", "password123");
+        authService.login("user@test.com", "password123");
 
-        assertThat(tokens).containsKeys("accessToken", "refreshToken");
         verify(passwordEncoder).matches("password123", "hashed-password");
     }
 
@@ -115,21 +124,24 @@ class AuthServiceTest {
     @Test
     @DisplayName("Refresh токен: успешная ротация")
     void refreshToken_Success() {
+        Instant fixedExpiry = Instant.parse("2026-12-31T23:59:59Z");
+
         Account account = Account.builder()
                 .id(1L)
-                .role(AccountRole.DRIVER)
-                .isActive(true)
+                .role(AccountRole.USER)
+                .active(true)
                 .build();
 
-        when(tokenService.validateAndRotateRefreshToken("old-refresh-token")).thenReturn(1L);
-        when(accountService.findById(1L)).thenReturn(account);
-        when(jwtUtil.generateAccessToken(1L, "DRIVER")).thenReturn("new-access-token");
-        when(tokenService.createRefreshToken(1L)).thenReturn("new-refresh-token");
+        when(tokenService.validateAndRotateRefreshToken("old-refresh-token")).thenReturn(account);
+        when(jwtUtil.generateAccessToken(anyLong(), anyString()))
+                .thenReturn(new TokenData("new-access-token", fixedExpiry));
+        when(tokenService.createRefreshToken(account))
+                .thenReturn(new TokenData("new-refresh-token", fixedExpiry));
 
-        Map<String, String> tokens = authService.refreshAccessToken("old-refresh-token");
+        AuthResult result = authService.refreshTokens("old-refresh-token");
 
-        assertThat(tokens.get("accessToken")).isEqualTo("new-access-token");
-        assertThat(tokens.get("refreshToken")).isEqualTo("new-refresh-token");
+        assertThat(result.accessTokenData().token()).isEqualTo("new-access-token");
+        assertThat(result.refreshTokenData().token()).isEqualTo("new-refresh-token");
         verify(tokenService).validateAndRotateRefreshToken("old-refresh-token");
     }
 }
