@@ -1,5 +1,6 @@
 package com.example.userservice.integration;
 
+import com.example.userservice.dto.response.AuthResponse;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.Vehicle;
 import com.example.userservice.entity.enums.DriverStatus;
@@ -64,13 +65,13 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
     @Test
     @DisplayName("Полный workflow водителя: регистрация -> профиль -> транспорт -> статус -> верификация")
     void fullDriverWorkflow() {
-        Map<String, String> tokens = authService.register(
+        AuthResponse tokens = authService.register(
                 "driver@workflow.com",
                 "+79993333333",
                 "DriverPass789"
         );
 
-        Long driverId = jwtUtil.extractAccountId(tokens.get("accessToken"));
+        Long driverId = jwtUtil.extractAccountId(tokens.accessToken());
 
         DriverProfile profile = driverProfileService.createProfile(
                 driverId,
@@ -129,13 +130,13 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
     @Test
     @DisplayName("Несколько автомобилей: только один может быть активным")
     void multipleVehicles_OnlyOneActive() {
-        Map<String, String> tokens = authService.register(
+        AuthResponse tokens = authService.register(
                 "driver2@workflow.com",
                 "+79994444444",
                 "Pass123"
         );
 
-        Long driverId = jwtUtil.extractAccountId(tokens.get("accessToken"));
+        Long driverId = jwtUtil.extractAccountId(tokens.accessToken());
 
         driverProfileService.createProfile(driverId, "Иван", "Иванов", "1122334455", null);
 

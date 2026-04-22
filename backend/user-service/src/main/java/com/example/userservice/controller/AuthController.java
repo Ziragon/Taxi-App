@@ -14,9 +14,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -50,13 +49,16 @@ public class AuthController {
                     @ApiResponse(responseCode = "422", description = "Ошибка валидации")
             }
     )
-    public AuthResponse registerPassenger(@Valid @RequestBody RegisterRequest request) {
-        Map<String, String> tokens = authService.register(
+    public ResponseEntity<AuthResponse> registerPassenger(
+            @Valid @RequestBody RegisterRequest request
+    ) {
+        AuthResponse response = authService.register(
                 request.getEmail(),
                 request.getPhone(),
                 request.getPassword()
         );
-        return new AuthResponse(tokens.get("accessToken"), tokens.get("refreshToken"));
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login")
@@ -80,9 +82,12 @@ public class AuthController {
                     @ApiResponse(responseCode = "403", description = "Аккаунт заблокирован")
             }
     )
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        Map<String, String> tokens = authService.login(request.getEmail(), request.getPassword());
-        return new AuthResponse(tokens.get("accessToken"), tokens.get("refreshToken"));
+    public ResponseEntity<AuthResponse> login(
+            @Valid @RequestBody LoginRequest request
+    ) {
+        AuthResponse response = authService.login(request.getEmail(), request.getPassword());
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/refresh")
@@ -104,9 +109,12 @@ public class AuthController {
                     @ApiResponse(responseCode = "401", description = "Недействительный или истёкший refresh токен")
             }
     )
-    public AuthResponse refresh(@Valid @RequestBody RefreshTokenRequest request) {
-        Map<String, String> tokens = authService.refreshAccessToken(request.getRefreshToken());
-        return new AuthResponse(tokens.get("accessToken"), tokens.get("refreshToken"));
+    public ResponseEntity<AuthResponse> refresh(
+            @Valid @RequestBody RefreshTokenRequest request
+    ) {
+        AuthResponse response = authService.refreshAccessToken(request.getRefreshToken());
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/logout")
@@ -119,7 +127,11 @@ public class AuthController {
                     @ApiResponse(responseCode = "401", description = "Не авторизован")
             }
     )
-    public void logout(@RequestHeader("X-Account-ID") Long accountId) {
+    public ResponseEntity<Void> logout(
+            @RequestHeader("X-Account-ID") Long accountId
+    ) {
         authService.logout(accountId);
+
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1,5 +1,6 @@
 package com.example.userservice.integration;
 
+import com.example.userservice.dto.response.AuthResponse;
 import com.example.userservice.entity.PassengerProfile;
 import com.example.userservice.repository.AccountRepository;
 import com.example.userservice.repository.PassengerProfileRepository;
@@ -49,13 +50,13 @@ class PassengerWorkflowIntegrationTest extends BaseIntegrationTest{
     @Test
     @DisplayName("Полный workflow пассажира: регистрация -> профиль -> обновление -> рейтинг")
     void fullPassengerWorkflow() {
-        Map<String, String> tokens = authService.register(
+        AuthResponse tokens = authService.register(
                 "passenger@workflow.com",
                 "+79995555555",
                 "PassPass123"
         );
 
-        Long passengerId = jwtUtil.extractAccountId(tokens.get("accessToken"));
+        Long passengerId = jwtUtil.extractAccountId(tokens.accessToken());
 
         PassengerProfile profile = passengerProfileService.createProfile(
                 passengerId,
@@ -89,13 +90,13 @@ class PassengerWorkflowIntegrationTest extends BaseIntegrationTest{
     @Test
     @DisplayName("Пересчёт рейтинга: математическая точность")
     void ratingCalculation_Precision() {
-        Map<String, String> tokens = authService.register(
+        AuthResponse tokens = authService.register(
                 "rating@test.com",
                 "+79996666666",
                 "Test123"
         );
 
-        Long passengerId = jwtUtil.extractAccountId(tokens.get("accessToken"));
+        Long passengerId = jwtUtil.extractAccountId(tokens.accessToken());
         passengerProfileService.createProfile(passengerId, "Test", "User", null);
 
         passengerProfileService.updateRating(passengerId, new BigDecimal("4.50"));

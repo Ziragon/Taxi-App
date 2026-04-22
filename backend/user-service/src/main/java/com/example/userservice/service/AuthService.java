@@ -1,5 +1,6 @@
 package com.example.userservice.service;
 
+import com.example.userservice.dto.response.AuthResponse;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.enums.AccountRole;
 import com.example.userservice.exception.AccountDeactivatedException;
@@ -27,7 +28,7 @@ public class AuthService {
     private final RabbitTemplate rabbitTemplate;
 
     @Transactional
-    public Map<String, String> register(String email, String phone, String password) {
+    public AuthResponse register(String email, String phone, String password) {
         Account account = accountService.createAccount(email, phone, password);
 
         publishUserRegisteredEvent(account.getId(), email);
@@ -36,7 +37,7 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, String> login(String email, String password) {
+    public AuthResponse login(String email, String password) {
         Account account = accountService.findByEmail(email);
 
         if (!passwordEncoder.matches(password, account.getPasswordHash())) {
@@ -51,7 +52,7 @@ public class AuthService {
     }
 
     @Transactional
-    public Map<String, String> refreshAccessToken(String refreshToken) {
+    public AuthResponse refreshAccessToken(String refreshToken) {
         Long accountId = tokenService.validateAndRotateRefreshToken(refreshToken);
         Account account = accountService.findById(accountId);
 
@@ -67,13 +68,13 @@ public class AuthService {
         tokenService.revokeAllTokens(accountId);
     }
 
-    private Map<String, String> generateTokens(Account account) {
+    private AuthResponse generateTokens(Account account) {
         String accessToken = jwtUtil.generateAccessToken(account.getId(), account.getRole().name());
         String refreshToken = tokenService.createRefreshToken(account.getId());
 
-        return Map.of(
-                "accessToken", accessToken,
-                "refreshToken", refreshToken
+        return new AuthResponse(
+                accessToken,
+                refreshToken
         );
     }
 

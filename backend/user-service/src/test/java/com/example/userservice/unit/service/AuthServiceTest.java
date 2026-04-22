@@ -1,5 +1,6 @@
 package com.example.userservice.unit.service;
 
+import com.example.userservice.dto.response.AuthResponse;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.enums.AccountRole;
 import com.example.userservice.exception.InvalidCredentialsException;
@@ -60,15 +61,18 @@ class AuthServiceTest {
         when(jwtUtil.generateAccessToken(anyLong(), anyString())).thenReturn("access-token");
         when(tokenService.createRefreshToken(anyLong())).thenReturn("refresh-token");
 
-        Map<String, String> tokens = authService.register(
+        AuthResponse tokens = authService.register(
                 "passenger@test.com",
                 "+79991234567",
                 "password123"
         );
 
-        assertThat(tokens).containsKeys("accessToken", "refreshToken");
-        assertThat(tokens.get("accessToken")).isEqualTo("access-token");
-        assertThat(tokens.get("refreshToken")).isEqualTo("refresh-token");
+        assertThat(tokens).satisfies(response -> {
+            assertThat(response.accessToken()).isNotBlank();
+            assertThat(response.refreshToken()).isNotBlank();
+        });
+        assertThat(tokens.accessToken()).isEqualTo("access-token");
+        assertThat(tokens.refreshToken()).isEqualTo("refresh-token");
 
         verify(accountService).createAccount("passenger@test.com", "+79991234567", "password123");
         verify(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Map.class));
@@ -90,9 +94,12 @@ class AuthServiceTest {
         when(jwtUtil.generateAccessToken(1L, "USER")).thenReturn("access-token");
         when(tokenService.createRefreshToken(1L)).thenReturn("refresh-token");
 
-        Map<String, String> tokens = authService.login("user@test.com", "password123");
+        AuthResponse tokens = authService.login("user@test.com", "password123");
 
-        assertThat(tokens).containsKeys("accessToken", "refreshToken");
+        assertThat(tokens).satisfies(response -> {
+            assertThat(response.accessToken()).isNotBlank();
+            assertThat(response.refreshToken()).isNotBlank();
+        });
         verify(passwordEncoder).matches("password123", "hashed-password");
     }
 
@@ -126,10 +133,10 @@ class AuthServiceTest {
         when(jwtUtil.generateAccessToken(1L, "USER")).thenReturn("new-access-token");
         when(tokenService.createRefreshToken(1L)).thenReturn("new-refresh-token");
 
-        Map<String, String> tokens = authService.refreshAccessToken("old-refresh-token");
+        AuthResponse tokens = authService.refreshAccessToken("old-refresh-token");
 
-        assertThat(tokens.get("accessToken")).isEqualTo("new-access-token");
-        assertThat(tokens.get("refreshToken")).isEqualTo("new-refresh-token");
+        assertThat(tokens.accessToken()).isEqualTo("new-access-token");
+        assertThat(tokens.refreshToken()).isEqualTo("new-refresh-token");
         verify(tokenService).validateAndRotateRefreshToken("old-refresh-token");
     }
 }
