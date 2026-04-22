@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class GlowOrb extends StatelessWidget {
   const GlowOrb({super.key, required this.size, required this.color});
@@ -45,16 +46,9 @@ class GlassCard extends StatelessWidget {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: const Color(0xFF151518).withOpacity(0.88),
+            color: const Color(0xFF151518).withOpacity(0.8),
             borderRadius: BorderRadius.circular(radius),
             border: Border.all(color: Colors.white.withOpacity(borderOpacity)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.4),
-                blurRadius: 40,
-                offset: const Offset(0, 20),
-              ),
-            ],
           ),
           child: child,
         ),
@@ -66,40 +60,70 @@ class GlassCard extends StatelessWidget {
 class CustomTextField extends StatelessWidget {
   const CustomTextField({
     super.key,
+    required this.label,
     required this.hintText,
     required this.icon,
     this.keyboardType = TextInputType.text,
-    this.controller,
+    required this.controller,
     this.onChanged,
+    this.inputFormatters,
+    this.textCapitalization = TextCapitalization.none,
+    this.obscureText = false,
   });
 
+  final String label;
   final String hintText;
   final IconData icon;
   final TextInputType keyboardType;
-  final TextEditingController? controller;
-  final ValueChanged<String>? onChanged;
+  final TextEditingController controller;
+  final Function(String)? onChanged;
+  final List<TextInputFormatter>? inputFormatters;
+  final TextCapitalization textCapitalization;
+  final bool obscureText;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0A0A0C),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        style: const TextStyle(color: Colors.white, fontSize: 16),
-        onChanged: onChanged,
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          icon: Icon(icon, color: const Color(0xFFFFC107), size: 22),
-          hintText: hintText,
-          hintStyle: const TextStyle(color: Colors.white38, fontSize: 15),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.4),
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+            ),
+          ),
         ),
-      ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.06)),
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            onChanged: onChanged,
+            inputFormatters: inputFormatters,
+            textCapitalization: textCapitalization,
+            obscureText: obscureText,
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+            decoration: InputDecoration(
+              icon: Icon(icon, color: const Color(0xFFFFC107), size: 20),
+              border: InputBorder.none,
+              hintText: hintText,
+              hintStyle: TextStyle(color: Colors.white.withOpacity(0.1)),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -109,35 +133,34 @@ class PrimaryButton extends StatelessWidget {
     super.key,
     required this.label,
     required this.onPressed,
-    this.color = const Color(0xFFFFC107),
-    this.textColor = Colors.black,
     this.enabled = true,
   });
 
   final String label;
   final VoidCallback? onPressed;
-  final Color color;
-  final Color textColor;
   final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      child: FilledButton(
+      height: 60,
+      child: ElevatedButton(
         onPressed: enabled ? onPressed : null,
-        style: FilledButton.styleFrom(
-          backgroundColor: enabled ? color : color.withOpacity(0.45),
-          foregroundColor: textColor,
-          padding: const EdgeInsets.symmetric(vertical: 22),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFFFC107),
+          foregroundColor: Colors.black,
+          disabledBackgroundColor: Colors.white.withOpacity(0.05),
+          disabledForegroundColor: Colors.white.withOpacity(0.2),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(20),
           ),
-          elevation: 0,
+          elevation: enabled ? 8 : 0,
+          shadowColor: const Color(0xFFFFC107).withOpacity(0.4),
         ),
         child: Text(
           label,
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
         ),
       ),
     );
@@ -189,15 +212,15 @@ class StepBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFFFC107).withOpacity(0.15),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: const Color(0xFFFFC107).withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFFFFC107).withOpacity(0.2)),
       ),
       child: Text(
-        'Шаг $step из $total',
+        'ШАГ $step ИЗ $total',
         style: const TextStyle(
           color: Color(0xFFFFC107),
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1,
         ),
       ),
     );

@@ -2,6 +2,10 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:arbuz_express/screens/profile_screen.dart';
+import 'package:arbuz_express/screens/homeScreens/verification_banner.dart';
+import 'package:arbuz_express/screens/homeScreens/search_results_list.dart';
+import 'package:arbuz_express/screens/homeScreens/address_input_row.dart';
+import 'package:arbuz_express/screens/homeScreens/collapsible_bottom_card.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/destination_marker.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/tariff_selector.dart';
@@ -464,46 +468,11 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
             ),
           ),
           if (widget.showVerificationBanner)
-            Positioned(
+            const Positioned(
               top: 76,
               left: 0,
               right: 0,
-              child: SafeArea(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFC107).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: const Color(0xFFFFC107).withOpacity(0.4),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.info_outline_rounded,
-                        color: Color(0xFFFFC107),
-                        size: 22,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Ваши данные на проверке. Это займёт 5–10 минут.',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              child: SafeArea(child: VerificationBanner()),
             ),
           SafeArea(
             child: Column(
@@ -512,54 +481,9 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
                 if (_searchResults.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: GlassCard(
-                      padding: EdgeInsets.zero,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 300),
-                        child: ListView.separated(
-                          shrinkWrap: false,
-                          itemCount: _searchResults.length,
-                          separatorBuilder: (_, __) =>
-                              const Divider(color: Colors.white10, height: 1),
-                          itemBuilder: (context, index) {
-                            final item = _searchResults[index];
-                            final name = item['display_name'].split(',')[0];
-                            final desc = item['display_name']
-                                .split(',')
-                                .skip(1)
-                                .join(',')
-                                .trim();
-                            return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 4,
-                              ),
-                              leading: Icon(
-                                Icons.location_on_rounded,
-                                color: Colors.white.withOpacity(0.5),
-                              ),
-                              title: Text(
-                                name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              subtitle: Text(
-                                desc,
-                                style: const TextStyle(
-                                  color: Colors.white38,
-                                  fontSize: 12,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              onTap: () => _selectAddress(item),
-                            );
-                          },
-                        ),
-                      ),
+                    child: SearchResultsList(
+                      results: _searchResults,
+                      onSelect: _selectAddress,
                     ),
                   ),
                 const Spacer(),
@@ -569,92 +493,51 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
                     left: 16,
                     right: 16,
                   ),
-                  child: GlassCard(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        GestureDetector(
-                          onTap: () =>
-                              setState(() => _isCollapsed = !_isCollapsed),
-                          child: Container(
-                            width: 40,
-                            height: 4,
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white24,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 300),
-                          child: _isCollapsed
-                              ? const SizedBox(
-                                  width: double.infinity,
-                                  height: 20,
-                                  child: Center(
-                                    child: Text(
-                                      'Развернуть',
-                                      style: TextStyle(
-                                        color: Colors.white38,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : Column(
-                                  children: [
-                                    _buildInputRow(
-                                      _fromController,
-                                      'Откуда',
-                                      Icons.my_location_rounded,
-                                      true,
-                                    ),
-                                    const Divider(
-                                      color: Colors.white10,
-                                      height: 1,
-                                    ),
-                                    _buildInputRow(
-                                      _toController,
-                                      'Куда едем?',
-                                      Icons.location_on_outlined,
-                                      false,
-                                    ),
-                                    if (_showTariffs) ...[
-                                      const SizedBox(height: 16),
-                                      TariffSelector(
-                                        selectedTariff: _selectedTariff,
-                                        onTariffSelected: (index) => setState(
-                                          () => _selectedTariff = index,
-                                        ),
-                                      ),
-                                    ],
-                                    const SizedBox(height: 16),
-                                    Row(
-                                      children: [
-                                        CircleIconButton(
-                                          icon: Icons.tune_rounded,
-                                          onTap: () {},
-                                          color: const Color(0xFF1A1A1E),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: PrimaryButton(
-                                            label: 'Заказать',
-                                            onPressed: _showTariffs
-                                                ? () {}
-                                                : null,
-                                            enabled: _showTariffs,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ],
-                    ),
+                  child: CollapsibleBottomCard(
+                    isCollapsed: _isCollapsed,
+                    onToggle: () =>
+                        setState(() => _isCollapsed = !_isCollapsed),
+                    fromController: _fromController,
+                    toController: _toController,
+                    fromHint: 'Откуда',
+                    toHint: 'Куда едем?',
+                    fromIcon: Icons.my_location_rounded,
+                    toIcon: Icons.location_on_outlined,
+                    onGetCurrentLocation: _getCurrentLocation,
+                    onFromChanged: (v) {
+                      final trimmed = v.trim();
+                      if (trimmed.isEmpty) {
+                        if (_debounce?.isActive ?? false) _debounce!.cancel();
+                        setState(() {
+                          _currentPosition = null;
+                          _routePoints = [];
+                          _searchResults = [];
+                        });
+                      } else {
+                        setState(() {});
+                        _scheduleSearch(v, true);
+                      }
+                    },
+                    onToChanged: (v) {
+                      final trimmed = v.trim();
+                      if (trimmed.isEmpty) {
+                        if (_debounce?.isActive ?? false) _debounce!.cancel();
+                        setState(() {
+                          _toPosition = null;
+                          _routePoints = [];
+                          _searchResults = [];
+                          _showTariffs = false;
+                        });
+                      } else {
+                        setState(() => _showTariffs = false);
+                        _scheduleSearch(v, false);
+                      }
+                    },
+                    showTariffs: _showTariffs,
+                    selectedTariff: _selectedTariff,
+                    onTariffSelected: (index) =>
+                        setState(() => _selectedTariff = index),
+                    onOrderPressed: _showTariffs ? () {} : null,
                   ),
                 ),
               ],
@@ -662,69 +545,6 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildInputRow(
-    TextEditingController controller,
-    String hint,
-    IconData icon,
-    bool isFrom,
-  ) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          color: isFrom ? const Color(0xFFFFC107) : Colors.white70,
-          size: 20,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: TextField(
-            controller: controller,
-            style: const TextStyle(color: Colors.white, fontSize: 15),
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              hintText: hint,
-              hintStyle: const TextStyle(color: Colors.white38),
-            ),
-            onChanged: (v) {
-              final trimmedV = v.trim();
-              if (trimmedV.isEmpty) {
-                if (_debounce?.isActive ?? false) _debounce!.cancel();
-                setState(() {
-                  if (!isFrom) {
-                    _showTariffs = false;
-                  }
-                  if (isFrom) {
-                    _currentPosition = null;
-                  } else {
-                    _toPosition = null;
-                  }
-                  _routePoints = [];
-                  _searchResults = [];
-                });
-              } else {
-                setState(() {
-                  if (!isFrom) {
-                    _showTariffs = false;
-                  }
-                });
-                _scheduleSearch(v, isFrom);
-              }
-            },
-          ),
-        ),
-        if (isFrom)
-          IconButton(
-            icon: const Icon(
-              Icons.gps_fixed_rounded,
-              color: Color(0xFFFFC107),
-              size: 20,
-            ),
-            onPressed: _getCurrentLocation,
-          ),
-      ],
     );
   }
 }
