@@ -1,6 +1,6 @@
 package com.example.userservice.integration;
 
-import com.example.userservice.dto.response.AuthResponse;
+import com.example.userservice.dto.data.AuthResult;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.enums.AccountRole;
 import com.example.userservice.repository.AccountRepository;
@@ -44,32 +44,32 @@ class AuthFlowIntegrationTest extends BaseIntegrationTest{
     @Test
     @DisplayName("Полный flow: регистрация -> логин -> refresh -> logout")
     void fullAuthFlow() {
-        AuthResponse registerTokens = authService.register(
+        AuthResult registerResult = authService.register(
                 "integration@test.com",
                 "+79991111111",
                 "TestPass123"
         );
 
-        assertThat(registerTokens).satisfies(response -> {
-            assertThat(response.accessToken()).isNotBlank();
-            assertThat(response.refreshToken()).isNotBlank();
+        assertThat(registerResult).satisfies(result -> {
+            assertThat(result.accessTokenData().token()).isNotBlank();
+            assertThat(result.refreshTokenData().token()).isNotBlank();
         });
-        Long accountId = jwtUtil.extractAccountId(registerTokens.accessToken());
+        Long accountId = jwtUtil.extractAccountId(registerResult.accessTokenData().token());
 
         Account account = accountRepository.findById(accountId).orElseThrow();
         assertThat(account.getEmail()).isEqualTo("integration@test.com");
         assertThat(account.getRole()).isEqualTo(AccountRole.USER);
         assertThat(account.isActive()).isTrue();
 
-        AuthResponse loginTokens = authService.login("integration@test.com", "TestPass123");
-        assertThat(loginTokens).satisfies(response -> {
-            assertThat(response.accessToken()).isNotBlank();
-            assertThat(response.refreshToken()).isNotBlank();
+        AuthResult loginResult = authService.login("integration@test.com", "TestPass123");
+        assertThat(loginResult).satisfies(result -> {
+            assertThat(result.accessTokenData().token()).isNotBlank();
+            assertThat(result.refreshTokenData().token()).isNotBlank();
         });
 
-        String oldRefreshToken = loginTokens.refreshToken();
-        AuthResponse refreshedTokens = authService.refreshAccessToken(oldRefreshToken);
-        assertThat(refreshedTokens.accessToken()).isNotEqualTo(loginTokens.accessToken());
+        String oldRefreshToken = loginResult.refreshTokenData().token();
+        AuthResult refreshedResult = authService.refreshTokens(oldRefreshToken);
+        assertThat(refreshedResult.accessTokenData().token()).isNotEqualTo(loginResult.accessTokenData().token());
 
         long activeTokensBeforeLogout = refreshTokenRepository.countByAccountIdAndRevokedFalse(accountId);
         assertThat(activeTokensBeforeLogout).isGreaterThan(0);
@@ -83,16 +83,16 @@ class AuthFlowIntegrationTest extends BaseIntegrationTest{
     @Test
     @DisplayName("Ротация токенов: старый refresh становится revoked")
     void refreshTokenRotation() {
-        AuthResponse tokens = authService.register(
+        AuthResult result = authService.register(
                 "driver@test.com",
                 "+79992222222",
                 "DriverPass456"
         );
 
-        String refreshToken = tokens.refreshToken();
-        Long accountId = jwtUtil.extractAccountId(tokens.accessToken());
+        String refreshToken = result.refreshTokenData().token();
+        Long accountId = jwtUtil.extractAccountId(result.accessTokenData().token());
 
-        authService.refreshAccessToken(refreshToken);
+        authService.refreshTokens(refreshToken);
 
         long activeTokens = refreshTokenRepository.countByAccountIdAndRevokedFalse(accountId);
         assertThat(activeTokens).isEqualTo(1);

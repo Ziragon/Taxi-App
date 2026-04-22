@@ -1,6 +1,6 @@
 package com.example.userservice.integration;
 
-import com.example.userservice.dto.response.AuthResponse;
+import com.example.userservice.dto.data.AuthResult;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.Vehicle;
 import com.example.userservice.entity.enums.DriverStatus;
@@ -21,7 +21,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -65,13 +64,13 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
     @Test
     @DisplayName("Полный workflow водителя: регистрация -> профиль -> транспорт -> статус -> верификация")
     void fullDriverWorkflow() {
-        AuthResponse tokens = authService.register(
+        AuthResult result = authService.register(
                 "driver@workflow.com",
                 "+79993333333",
                 "DriverPass789"
         );
 
-        Long driverId = jwtUtil.extractAccountId(tokens.accessToken());
+        Long driverId = jwtUtil.extractAccountId(result.accessTokenData().token());
 
         DriverProfile profile = driverProfileService.createProfile(
                 driverId,
@@ -130,17 +129,17 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
     @Test
     @DisplayName("Несколько автомобилей: только один может быть активным")
     void multipleVehicles_OnlyOneActive() {
-        AuthResponse tokens = authService.register(
+        AuthResult result = authService.register(
                 "driver2@workflow.com",
                 "+79994444444",
                 "Pass123"
         );
 
-        Long driverId = jwtUtil.extractAccountId(tokens.accessToken());
+        Long driverId = jwtUtil.extractAccountId(result.accessTokenData().token());
 
         driverProfileService.createProfile(driverId, "Иван", "Иванов", "1122334455", null);
 
-        Vehicle v1 = vehicleService.addVehicle(driverId, "BMW", "X5", (short) 2022, "Gray", "C111CC777", VehicleClass.BUSINESS);
+        vehicleService.addVehicle(driverId, "BMW", "X5", (short) 2022, "Gray", "C111CC777", VehicleClass.BUSINESS);
         Vehicle v2 = vehicleService.addVehicle(driverId, "KIA", "Rio", (short) 2019, "Red", "D222DD777", VehicleClass.ECONOMY);
         Vehicle v3 = vehicleService.addVehicle(driverId, "Mercedes", "E-Class", (short) 2023, "Silver", "E333EE777", VehicleClass.BUSINESS);
 

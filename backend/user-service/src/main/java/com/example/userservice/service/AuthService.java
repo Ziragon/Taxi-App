@@ -56,12 +56,11 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResult refreshAccessToken(String refreshToken) {
-        Long accountId = tokenService.validateAndRotateRefreshToken(refreshToken);
-        Account account = accountService.findById(accountId);
+    public AuthResult refreshTokens(String refreshToken) {
+        Account account = tokenService.validateAndRotateRefreshToken(refreshToken);
 
         if (!account.isActive()) {
-            throw new AccountDeactivatedException(accountId);
+            throw new AccountDeactivatedException(account.getId());
         }
 
         return generateTokens(account);

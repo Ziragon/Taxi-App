@@ -111,7 +111,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> refresh(
             @Valid @RequestBody RefreshTokenRequest request
     ) {
-        AuthResult result = authService.refreshAccessToken(request.getRefreshToken());
+        AuthResult result = authService.refreshTokens(request.getRefreshToken());
 
         return ResponseEntity.ok(AuthResponse.from(result));
     }

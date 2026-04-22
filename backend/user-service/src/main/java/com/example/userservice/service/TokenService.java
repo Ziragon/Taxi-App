@@ -46,9 +46,7 @@ public class TokenService {
     }
 
     @Transactional
-    public Long validateAndRotateRefreshToken(String rawToken) {
-
-        Long accountId = jwtUtil.extractAccountId(rawToken);
+    public Account validateAndRotateRefreshToken(String rawToken) {
 
         String tokenHash = hashToken(rawToken);
 
@@ -63,7 +61,7 @@ public class TokenService {
         storedToken.setRevoked(true);
         refreshTokenRepository.save(storedToken);
 
-        return accountId;
+        return storedToken.getAccount();
     }
 
     @Transactional
