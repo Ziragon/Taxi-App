@@ -2,7 +2,6 @@ package com.example.gatewayservice.util;
 
 import com.example.gatewayservice.config.AppProperties;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
@@ -18,19 +17,15 @@ public class JwtUtil {
     private final AppProperties appProperties;
 
     public Claims parseToken(String token) {
-        try {
-            return Jwts.parser()
-                    .verifyWith(getSecretKey())
-                    .requireIssuer(appProperties.getIssuer())
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
-        } catch (JwtException e) {
-            throw new IllegalArgumentException("Invalid JWT token", e);
-        }
+        return Jwts.parser()
+                .verifyWith(getSecretKey())
+                .requireIssuer(appProperties.issuer())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     private SecretKey getSecretKey() {
-        return Keys.hmacShaKeyFor(appProperties.getSecret().getBytes(StandardCharsets.UTF_8));
+        return Keys.hmacShaKeyFor(appProperties.secret().getBytes(StandardCharsets.UTF_8));
     }
 }

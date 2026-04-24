@@ -1,30 +1,19 @@
 package com.example.gatewayservice.config;
 
-import jakarta.validation.constraints.NotBlank;
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 
-@Getter
-@Setter
-@Validated
 @ConfigurationProperties(prefix = "gateway")
-public class AppProperties {
+public record AppProperties (
 
-    @NotBlank
-    private String secret;
+    String secret,
 
-    @NotBlank
-    private String issuer;
+    String issuer,
 
-    @NotBlank
-    private String header;
+    String header,
 
-    @NotBlank
-    private String headerKey;
+    String headerKey,
 
-    private List<String> openRoutes;
-}
+    List<String> openRoutes
+) {}

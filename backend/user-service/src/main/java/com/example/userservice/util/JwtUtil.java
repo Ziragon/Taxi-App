@@ -24,13 +24,13 @@ public class JwtUtil {
     private final Clock clock;
 
     public TokenData generateAccessToken(Long accountId, String role) {
-        Instant expiresAt = Instant.now(clock).plusMillis(appProperties.getAccessToken().toMillis());
-        String token = generateToken(accountId, role, appProperties.getAccessToken().toMillis());
+        Instant expiresAt = Instant.now(clock).plusMillis(appProperties.accessToken().toMillis());
+        String token = generateToken(accountId, role, appProperties.accessToken().toMillis());
         return new TokenData(token, expiresAt);
     }
 
     public TokenData generateRefreshToken() {
-        Instant expiresAt = Instant.now(clock).plusMillis(appProperties.getRefreshToken().toMillis());
+        Instant expiresAt = Instant.now(clock).plusMillis(appProperties.refreshToken().toMillis());
         return new TokenData(UUID.randomUUID().toString(), expiresAt);
     }
 
@@ -41,7 +41,7 @@ public class JwtUtil {
         var builder = Jwts.builder()
                 .subject(accountId.toString())
                 .claim("role", role)
-                .issuer(appProperties.getIssuer())
+                .issuer(appProperties.issuer())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiration))
                 .signWith(getSecretKey());
@@ -55,7 +55,7 @@ public class JwtUtil {
         try {
             return Jwts.parser()
                     .verifyWith(getSecretKey())
-                    .requireIssuer(appProperties.getIssuer())
+                    .requireIssuer(appProperties.issuer())
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
@@ -68,11 +68,7 @@ public class JwtUtil {
         return Long.parseLong(parseToken(token).getSubject());
     }
 
-    public boolean isTokenExpired(String token) {
-        return parseToken(token).getExpiration().before(new Date());
-    }
-
     private SecretKey getSecretKey() {
-        return Keys.hmacShaKeyFor(appProperties.getSecret().getBytes(StandardCharsets.UTF_8));
+        return Keys.hmacShaKeyFor(appProperties.secret().getBytes(StandardCharsets.UTF_8));
     }
 }

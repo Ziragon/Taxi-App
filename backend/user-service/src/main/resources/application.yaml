@@ -64,6 +64,8 @@ gateway:
     expiration: 30m
   refresh-token:
     expiration: 7d
+
+gateway-auth:
   header: ${JWT_HEADER:X-Gateway-Header}
   header-key: ${HEADER_KEY:dev-secret-key-for-microservices}
 

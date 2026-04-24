@@ -3,7 +3,6 @@ package com.example.gatewayservice.security;
 import com.example.gatewayservice.config.AppProperties;
 import com.example.gatewayservice.util.JwtUtil;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -14,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.server.PathContainer;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
-import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.util.pattern.PathPatternParser;
 import reactor.core.publisher.Mono;
@@ -70,7 +68,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                             h.remove("X-User-Id");
                             h.remove("X-User-Role");
                             h.remove("X-User-Anonymous");
-                            h.remove(appProperties.getHeader());
+                            h.remove(appProperties.header());
                             h.remove(HttpHeaders.AUTHORIZATION);
 
                             if (!isAnonymous) {
@@ -78,7 +76,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                                 h.add("X-User-Role", role);
                             }
                             h.add("X-User-Anonymous", String.valueOf(isAnonymous));
-                            h.add(appProperties.getHeader(), appProperties.getHeaderKey());
+                            h.add(appProperties.header(), appProperties.headerKey());
                         })
                         .build())
                 .build();
@@ -93,7 +91,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     private boolean isOpenPath(String path) {
-        return appProperties.getOpenRoutes().stream()
+        return appProperties.openRoutes().stream()
                 .anyMatch(pattern -> parser.parse(pattern).matches(PathContainer.parsePath(path)));
     }
 

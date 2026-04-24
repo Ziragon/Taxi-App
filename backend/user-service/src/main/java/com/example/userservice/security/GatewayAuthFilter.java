@@ -1,6 +1,6 @@
 package com.example.userservice.security;
 
-import com.example.userservice.config.AppProperties;
+import com.example.userservice.config.GatewayAuthProperties;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,7 +24,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GatewayAuthFilter extends OncePerRequestFilter {
 
-    private final AppProperties appProperties;
+    private final GatewayAuthProperties gatewayAuthProperties;
 
     @Override
     protected void doFilterInternal(
@@ -39,8 +39,8 @@ public class GatewayAuthFilter extends OncePerRequestFilter {
                 ? List.of(new SimpleGrantedAuthority(role))
                 : Collections.emptyList();
 
-        String gatewayHeader = request.getHeader(appProperties.getHeader());
-        if (!appProperties.getHeaderKey().equals(gatewayHeader)) {
+        String gatewayHeader = request.getHeader(gatewayAuthProperties.header());
+        if (!gatewayAuthProperties.headerKey().equals(gatewayHeader)) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
