@@ -4,16 +4,16 @@ import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:arbuz_express/screens/profile_screen.dart';
 import 'package:arbuz_express/screens/homeScreens/verification_banner.dart';
 import 'package:arbuz_express/screens/homeScreens/search_results_list.dart';
-import 'package:arbuz_express/screens/homeScreens/address_input_row.dart';
 import 'package:arbuz_express/screens/homeScreens/collapsible_bottom_card.dart';
+import 'package:arbuz_express/screens/homeScreens/active_order_card.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/destination_marker.dart';
-import 'package:arbuz_express/CustomTextField/HomeMapScreen/tariff_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
+import 'stats_bottom_sheet.dart';
 
 class HomeMapScreen extends StatefulWidget {
   const HomeMapScreen({
@@ -34,16 +34,25 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
   final TextEditingController _fromController = TextEditingController();
   final TextEditingController _toController = TextEditingController();
   final MapController _mapController = MapController();
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   LatLng? _currentPosition;
   LatLng? _toPosition;
   List<LatLng> _routePoints = [];
   List<dynamic> _searchResults = [];
   bool _isSearchingFrom = true;
   int _selectedTariff = 0;
-  bool _showTariffs = false;
   bool _isCollapsed = false;
   Timer? _debounce;
+
+  int _nearbyCarsCount = 0;
+  String _weatherTariff = '0 ₽';
+  String _distanceTariff = '0 ₽';
+  double _totalTariff = 0;
+  double _routeDistanceKm = 0;
+  int _weatherSurchargeRaw = 0;
+  int _distanceBaseRaw = 0;
+
+  bool _isOrderAccepted = false;
+  Map<String, String> _orderOptions = {};
 
   Future<void> _getCurrentLocation() async {
     try {
@@ -118,7 +127,6 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
       } else {
         _toPosition = pos;
         _toController.text = finalName;
-        _showTariffs = true;
       }
       _searchResults = [];
     });
@@ -131,7 +139,6 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
     setState(() {
       _toController.text = 'Определение адреса...';
       _searchResults = [];
-      _showTariffs = false;
     });
     try {
       final url = Uri.parse(
@@ -181,13 +188,11 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
           setState(() {
             _toPosition = point;
             _toController.text = name.isNotEmpty ? name : 'Указанная точка';
-            _showTariffs = true;
           });
         } else {
           setState(() {
             _toPosition = point;
             _toController.text = 'Указанная точка';
-            _showTariffs = true;
           });
         }
         _updateRoute();
@@ -210,10 +215,12 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
         final data = json.decode(response.body);
         if (data['routes'].isNotEmpty) {
           final List coordinates = data['routes'][0]['geometry']['coordinates'];
+          final distanceMeters = data['routes'][0]['distance'] as double;
           setState(() {
             _routePoints = coordinates
                 .map((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
                 .toList();
+            _routeDistanceKm = distanceMeters / 1000;
           });
           try {
             final bounds = LatLngBounds.fromPoints([
@@ -229,9 +236,73 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
               ),
             );
           } catch (e) {}
+          await _updateTariffInfo();
         }
       }
     } catch (e) {}
+  }
+
+  Future<void> _updateTariffInfo() async {
+    _distanceBaseRaw = (_routeDistanceKm * 30).round();
+    int weatherSurcharge = 0;
+    if (_currentPosition != null) {
+      try {
+        final weatherUrl = Uri.parse(
+          'https://api.open-meteo.com/v1/forecast?latitude=${_currentPosition!.latitude}&longitude=${_currentPosition!.longitude}&current_weather=true',
+        );
+        final weatherResponse = await http.get(weatherUrl);
+        if (weatherResponse.statusCode == 200) {
+          final weatherData = json.decode(weatherResponse.body);
+          final temperature = weatherData['current_weather']['temperature'];
+          if (temperature < -10) {
+            weatherSurcharge = 100;
+          } else if (temperature < 0) {
+            weatherSurcharge = 40;
+          } else if (temperature > 30) {
+            weatherSurcharge = 80;
+          }
+        }
+      } catch (e) {}
+    }
+    _weatherSurchargeRaw = weatherSurcharge;
+    final total = 50 + _distanceBaseRaw + weatherSurcharge;
+    final carsCount = (20 + (_routeDistanceKm * 2).round()).clamp(5, 80);
+    setState(() {
+      _weatherTariff = '$weatherSurcharge ₽';
+      _distanceTariff = '$_distanceBaseRaw ₽';
+      _totalTariff = total.toDouble();
+      _nearbyCarsCount = carsCount;
+    });
+  }
+
+  void _showStatsDialogSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatsBottomSheet(
+        nearbyCars: _nearbyCarsCount,
+        weatherTariff: _weatherTariff,
+        distanceTariff: _distanceTariff,
+        distanceBaseRaw: _distanceBaseRaw,
+        weatherSurchargeRaw: _weatherSurchargeRaw,
+        selectedTariff: _selectedTariff,
+        totalTariff: _totalTariff,
+        onAccept: (options) {
+          setState(() {
+            _isOrderAccepted = true;
+            _orderOptions = options;
+          });
+        },
+      ),
+    );
+  }
+
+  void _cancelOrder() {
+    setState(() {
+      _isOrderAccepted = false;
+      _orderOptions = {};
+    });
   }
 
   @override
@@ -244,206 +315,67 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final showTariffs =
+        !_isOrderAccepted && _currentPosition != null && _toPosition != null;
+
     return Scaffold(
-      key: _scaffoldKey,
       backgroundColor: const Color(0xFF0A0A0C),
       resizeToAvoidBottomInset: false,
-      drawer: Drawer(
-        backgroundColor: const Color(0xFF0A0A0C),
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(color: Color(0xFF1A1A1E)),
-              child: const Row(
-                children: [
-                  Icon(
-                    Icons.directions_car_rounded,
-                    color: Color(0xFFFFC107),
-                    size: 48,
-                  ),
-                  SizedBox(width: 16),
-                  Text(
-                    'Arbuz Express',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home_rounded, color: Colors.white70),
-              title: const Text(
-                'Главная',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.history_rounded, color: Colors.white70),
-              title: const Text(
-                'История поездок',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.favorite_rounded,
-                color: Colors.white70,
-              ),
-              title: const Text(
-                'Избранные адреса',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.account_balance_wallet_rounded,
-                color: Colors.white70,
-              ),
-              title: const Text(
-                'Платежи и тарифы',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              onTap: () => Navigator.pop(context),
-            ),
-            const Divider(color: Colors.white10, height: 1),
-            ListTile(
-              leading: const Icon(
-                Icons.settings_rounded,
-                color: Colors.white70,
-              ),
-              title: const Text(
-                'Настройки',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.headset_mic_rounded,
-                color: Colors.white70,
-              ),
-              title: const Text(
-                'Поддержка',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              onTap: () => Navigator.pop(context),
-            ),
-          ],
-        ),
-      ),
       body: Stack(
         children: [
           Positioned.fill(
-            child: ColorFiltered(
-              colorFilter: const ColorFilter.matrix([
-                -1.0,
-                0.0,
-                0.0,
-                0.0,
-                255.0,
-                0.0,
-                -1.0,
-                0.0,
-                0.0,
-                255.0,
-                0.0,
-                0.0,
-                -1.0,
-                0.0,
-                255.0,
-                0.0,
-                0.0,
-                0.0,
-                1.0,
-                0.0,
-              ]),
-              child: FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: _initialCenter,
-                  initialZoom: 14.5,
-                  minZoom: 10.0,
-                  maxZoom: 18.0,
-                  cameraConstraint: CameraConstraint.contain(
-                    bounds: LatLngBounds(
-                      const LatLng(-90, -180),
-                      const LatLng(90, 180),
-                    ),
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _initialCenter,
+                initialZoom: 14.5,
+                minZoom: 10.0,
+                maxZoom: 18.0,
+                cameraConstraint: CameraConstraint.contain(
+                  bounds: LatLngBounds(
+                    const LatLng(-90, -180),
+                    const LatLng(90, 180),
                   ),
-                  onLongPress: (_, point) => _setDestinationFromMap(point),
                 ),
-                children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.arbuzexpress.app',
-                    retinaMode: true,
-                  ),
-                  if (_routePoints.isNotEmpty)
-                    PolylineLayer(
-                      polylines: [
-                        Polyline(
-                          points: _routePoints,
-                          strokeWidth: 11.0,
-                          color: Colors.white.withOpacity(0.65),
-                          strokeCap: StrokeCap.round,
-                          strokeJoin: StrokeJoin.round,
-                        ),
-                        Polyline(
-                          points: _routePoints,
-                          strokeWidth: 6.5,
-                          gradientColors: [
-                            const Color(0xFF003EF8),
-                            const Color(0xFF00A8DD),
-                          ],
-                          borderColor: const Color(0xFFFFFFFF),
-                          borderStrokeWidth: 3.0,
-                          strokeCap: StrokeCap.round,
-                          strokeJoin: StrokeJoin.round,
-                        ),
-                      ],
-                    ),
-                  MarkerLayer(
-                    markers: [
-                      if (_currentPosition != null)
-                        Marker(
-                          point: _currentPosition!,
-                          width: 56,
-                          height: 70,
-                          child: const PickupMarker(),
-                        ),
-                      if (_toPosition != null)
-                        Marker(
-                          point: _toPosition!,
-                          width: 44,
-                          height: 44,
-                          child: const DestinationMarker(),
-                        ),
+                onLongPress: (_, point) => _setDestinationFromMap(point),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.arbuzexpress.app',
+                  retinaMode: true,
+                ),
+                if (_routePoints.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: _routePoints,
+                        strokeWidth: 5.0,
+                        color: const Color(0xFFFFC107),
+                        strokeCap: StrokeCap.round,
+                        strokeJoin: StrokeJoin.round,
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            top: 0,
-            left: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.only(left: 16, top: 16),
-                child: CircleIconButton(
-                  icon: Icons.menu_rounded,
-                  onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                  color: const Color(0xFF1A1A1E),
+                MarkerLayer(
+                  markers: [
+                    if (_currentPosition != null)
+                      Marker(
+                        point: _currentPosition!,
+                        width: 56,
+                        height: 70,
+                        child: const PickupMarker(),
+                      ),
+                    if (_toPosition != null)
+                      Marker(
+                        point: _toPosition!,
+                        width: 44,
+                        height: 44,
+                        child: const DestinationMarker(),
+                      ),
+                  ],
                 ),
-              ),
+              ],
             ),
           ),
           Positioned(
@@ -478,7 +410,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 16),
-                if (_searchResults.isNotEmpty)
+                if (_searchResults.isNotEmpty && !_isOrderAccepted)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: SearchResultsList(
@@ -487,58 +419,79 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
                     ),
                   ),
                 const Spacer(),
+                const SizedBox(height: 12),
                 Padding(
                   padding: EdgeInsets.only(
                     bottom: MediaQuery.of(context).viewInsets.bottom + 16,
                     left: 16,
                     right: 16,
                   ),
-                  child: CollapsibleBottomCard(
-                    isCollapsed: _isCollapsed,
-                    onToggle: () =>
-                        setState(() => _isCollapsed = !_isCollapsed),
-                    fromController: _fromController,
-                    toController: _toController,
-                    fromHint: 'Откуда',
-                    toHint: 'Куда едем?',
-                    fromIcon: Icons.my_location_rounded,
-                    toIcon: Icons.location_on_outlined,
-                    onGetCurrentLocation: _getCurrentLocation,
-                    onFromChanged: (v) {
-                      final trimmed = v.trim();
-                      if (trimmed.isEmpty) {
-                        if (_debounce?.isActive ?? false) _debounce!.cancel();
-                        setState(() {
-                          _currentPosition = null;
-                          _routePoints = [];
-                          _searchResults = [];
-                        });
-                      } else {
-                        setState(() {});
-                        _scheduleSearch(v, true);
-                      }
-                    },
-                    onToChanged: (v) {
-                      final trimmed = v.trim();
-                      if (trimmed.isEmpty) {
-                        if (_debounce?.isActive ?? false) _debounce!.cancel();
-                        setState(() {
-                          _toPosition = null;
-                          _routePoints = [];
-                          _searchResults = [];
-                          _showTariffs = false;
-                        });
-                      } else {
-                        setState(() => _showTariffs = false);
-                        _scheduleSearch(v, false);
-                      }
-                    },
-                    showTariffs: _showTariffs,
-                    selectedTariff: _selectedTariff,
-                    onTariffSelected: (index) =>
-                        setState(() => _selectedTariff = index),
-                    onOrderPressed: _showTariffs ? () {} : null,
-                  ),
+                  child: _isOrderAccepted
+                      ? ActiveOrderCard(
+                          driverName: _orderOptions['driverName'] ?? 'Никита',
+                          carModel:
+                              _orderOptions['carModel'] ?? 'Hyundai Solaris',
+                          carNumber: _orderOptions['carNumber'] ?? 'А123ВС',
+                          waitTime: '5-7 мин',
+                          avatarUrl: _orderOptions['avatarUrl'],
+                          onCall: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Звонок водителю...'),
+                              ),
+                            );
+                          },
+                          onIAmHere: _cancelOrder,
+                        )
+                      : CollapsibleBottomCard(
+                          isCollapsed: _isCollapsed,
+                          onToggle: () =>
+                              setState(() => _isCollapsed = !_isCollapsed),
+                          fromController: _fromController,
+                          toController: _toController,
+                          fromHint: 'Откуда',
+                          toHint: 'Куда едем?',
+                          fromIcon: Icons.my_location_rounded,
+                          toIcon: Icons.location_on_outlined,
+                          onGetCurrentLocation: _getCurrentLocation,
+                          onFromChanged: (v) {
+                            final trimmed = v.trim();
+                            if (trimmed.isEmpty) {
+                              if (_debounce?.isActive ?? false)
+                                _debounce!.cancel();
+                              setState(() {
+                                _currentPosition = null;
+                                _routePoints = [];
+                                _searchResults = [];
+                              });
+                            } else {
+                              setState(() {});
+                              _scheduleSearch(v, true);
+                            }
+                          },
+                          onToChanged: (v) {
+                            final trimmed = v.trim();
+                            if (trimmed.isEmpty) {
+                              if (_debounce?.isActive ?? false)
+                                _debounce!.cancel();
+                              setState(() {
+                                _toPosition = null;
+                                _routePoints = [];
+                                _searchResults = [];
+                              });
+                            } else {
+                              setState(() {});
+                              _scheduleSearch(v, false);
+                            }
+                          },
+                          showTariffs: showTariffs,
+                          selectedTariff: _selectedTariff,
+                          onTariffSelected: (index) =>
+                              setState(() => _selectedTariff = index),
+                          onOrderPressed: showTariffs
+                              ? _showStatsDialogSheet
+                              : null,
+                        ),
                 ),
               ],
             ),
