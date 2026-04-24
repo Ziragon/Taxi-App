@@ -9,6 +9,7 @@ class StatsBottomSheet extends StatefulWidget {
   final int weatherSurchargeRaw;
   final int selectedTariff;
   final double totalTariff;
+  final Function(Map<String, String>) onAccept;
 
   const StatsBottomSheet({
     super.key,
@@ -19,6 +20,7 @@ class StatsBottomSheet extends StatefulWidget {
     required this.weatherSurchargeRaw,
     required this.selectedTariff,
     required this.totalTariff,
+    required this.onAccept,
   });
 
   @override
@@ -27,6 +29,9 @@ class StatsBottomSheet extends StatefulWidget {
 
 class _StatsBottomSheetState extends State<StatsBottomSheet> {
   String _paymentMethod = 'Наличные';
+  String _hookahOption = 'Не надо';
+  String _driverOption = 'По умолчанию';
+  String _musicOption = 'Реп';
 
   @override
   Widget build(BuildContext context) {
@@ -41,12 +46,24 @@ class _StatsBottomSheetState extends State<StatsBottomSheet> {
       'Снежанна',
     ];
     final randomDriver = driverNames[widget.nearbyCars % driverNames.length];
+    final displayDriver = _driverOption == 'Никита' ? 'Никита' : randomDriver;
     final tariffSurcharge = widget.selectedTariff == 0
         ? 0
         : widget.selectedTariff == 1
         ? 170
         : 550;
     final totalWithTariff = (widget.totalTariff + tariffSurcharge).round();
+
+    final carModels = [
+      'Hyundai Solaris',
+      'Kia Rio',
+      'Skoda Rapid',
+      'Lada Vesta',
+      'Toyota Camry',
+    ];
+    final carNumbers = ['А123ВС', 'М777УН', 'О999ОО', 'Т543ХТ', 'Е321КЕ'];
+    final finalCarModel = carModels[widget.nearbyCars % carModels.length];
+    final finalCarNumber = carNumbers[widget.nearbyCars % carNumbers.length];
 
     return Container(
       decoration: const BoxDecoration(color: Colors.transparent),
@@ -249,12 +266,84 @@ class _StatsBottomSheetState extends State<StatsBottomSheet> {
                       ],
                     ),
                     Text(
-                      randomDriver,
+                      displayDriver,
                       style: const TextStyle(
                         color: Color(0xFFFFC107),
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
+                    ),
+                  ],
+                ),
+                const Divider(color: Colors.white10, height: 24),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Разогреть кальян?',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    Row(
+                      children: [
+                        _buildOptionChip('Да', _hookahOption, (value) {
+                          setState(() => _hookahOption = value);
+                        }),
+                        const SizedBox(width: 8),
+                        _buildOptionChip('Не надо', _hookahOption, (value) {
+                          setState(() => _hookahOption = value);
+                        }),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Водитель',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    Row(
+                      children: [
+                        _buildOptionChip('По умолчанию', _driverOption, (
+                          value,
+                        ) {
+                          setState(() => _driverOption = value);
+                        }),
+                        const SizedBox(width: 8),
+                        _buildOptionChip('Никита', _driverOption, (value) {
+                          setState(() => _driverOption = value);
+                        }),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Музыка',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    Row(
+                      children: [
+                        _buildOptionChip('Реп', _musicOption, (value) {
+                          setState(() => _musicOption = value);
+                        }),
+                        const SizedBox(width: 8),
+                        _buildOptionChip('Поп', _musicOption, (value) {
+                          setState(() => _musicOption = value);
+                        }),
+                        const SizedBox(width: 8),
+                        _buildOptionChip('Глухой водитель', _musicOption, (
+                          value,
+                        ) {
+                          setState(() => _musicOption = value);
+                        }),
+                      ],
                     ),
                   ],
                 ),
@@ -407,8 +496,21 @@ class _StatsBottomSheetState extends State<StatsBottomSheet> {
                 SizedBox(
                   width: double.infinity,
                   child: PrimaryButton(
-                    label: 'ПОНЯТНО',
-                    onPressed: () => Navigator.pop(context),
+                    label: 'ПРИНЯТЬ',
+                    onPressed: () {
+                      widget.onAccept({
+                        'paymentMethod': _paymentMethod,
+                        'hookah': _hookahOption,
+                        'driverOption': _driverOption,
+                        'music': _musicOption,
+                        'driverName': displayDriver,
+                        'carModel': finalCarModel,
+                        'carNumber': finalCarNumber,
+                        'avatarUrl':
+                            'https://avatars.mds.yandex.net/i?id=fd7b56ab40f07b18eb7defbfb2d2eaa2_l-5075316-images-thumbs&n=13',
+                      });
+                      Navigator.pop(context);
+                    },
                   ),
                 ),
               ],
@@ -416,6 +518,40 @@ class _StatsBottomSheetState extends State<StatsBottomSheet> {
           ),
           const SizedBox(height: 20),
         ],
+      ),
+    );
+  }
+
+  Widget _buildOptionChip(
+    String label,
+    String selected,
+    Function(String) onSelected,
+  ) {
+    final isSelected = selected == label;
+    return GestureDetector(
+      onTap: () => onSelected(label),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFFFFC107).withOpacity(0.2)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFFFFC107)
+                : Colors.white.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFFFFC107) : Colors.white70,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
       ),
     );
   }
