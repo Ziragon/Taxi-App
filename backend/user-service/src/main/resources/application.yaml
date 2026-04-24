@@ -63,7 +63,7 @@ gateway:
   access-token:
     expiration: 30m
   refresh-token:
-    expiration: 24h
+    expiration: 7d
   header: ${JWT_HEADER:X-Gateway-Header}
   header-key: ${HEADER_KEY:dev-secret-key-for-microservices}
 
@@ -87,3 +87,8 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+
+logging:
+  level:
+    root: INFO
+    org.hibernate: INFO
