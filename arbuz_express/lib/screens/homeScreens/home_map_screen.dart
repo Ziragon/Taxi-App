@@ -5,6 +5,7 @@ import 'package:arbuz_express/screens/profile_screen.dart';
 import 'package:arbuz_express/screens/homeScreens/verification_banner.dart';
 import 'package:arbuz_express/screens/homeScreens/search_results_list.dart';
 import 'package:arbuz_express/screens/homeScreens/collapsible_bottom_card.dart';
+import 'package:arbuz_express/screens/homeScreens/active_order_card.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/destination_marker.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +50,9 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
   double _routeDistanceKm = 0;
   int _weatherSurchargeRaw = 0;
   int _distanceBaseRaw = 0;
+
+  bool _isOrderAccepted = false;
+  Map<String, String> _orderOptions = {};
 
   Future<void> _getCurrentLocation() async {
     try {
@@ -284,8 +288,21 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
         weatherSurchargeRaw: _weatherSurchargeRaw,
         selectedTariff: _selectedTariff,
         totalTariff: _totalTariff,
+        onAccept: (options) {
+          setState(() {
+            _isOrderAccepted = true;
+            _orderOptions = options;
+          });
+        },
       ),
     );
+  }
+
+  void _cancelOrder() {
+    setState(() {
+      _isOrderAccepted = false;
+      _orderOptions = {};
+    });
   }
 
   @override
@@ -298,7 +315,8 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final showTariffs = _currentPosition != null && _toPosition != null;
+    final showTariffs =
+        !_isOrderAccepted && _currentPosition != null && _toPosition != null;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0C),
@@ -392,7 +410,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 16),
-                if (_searchResults.isNotEmpty)
+                if (_searchResults.isNotEmpty && !_isOrderAccepted)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: SearchResultsList(
@@ -408,52 +426,72 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
                     left: 16,
                     right: 16,
                   ),
-                  child: CollapsibleBottomCard(
-                    isCollapsed: _isCollapsed,
-                    onToggle: () =>
-                        setState(() => _isCollapsed = !_isCollapsed),
-                    fromController: _fromController,
-                    toController: _toController,
-                    fromHint: 'Откуда',
-                    toHint: 'Куда едем?',
-                    fromIcon: Icons.my_location_rounded,
-                    toIcon: Icons.location_on_outlined,
-                    onGetCurrentLocation: _getCurrentLocation,
-                    onFromChanged: (v) {
-                      final trimmed = v.trim();
-                      if (trimmed.isEmpty) {
-                        if (_debounce?.isActive ?? false) _debounce!.cancel();
-                        setState(() {
-                          _currentPosition = null;
-                          _routePoints = [];
-                          _searchResults = [];
-                        });
-                      } else {
-                        setState(() {});
-                        _scheduleSearch(v, true);
-                      }
-                    },
-                    onToChanged: (v) {
-                      final trimmed = v.trim();
-                      if (trimmed.isEmpty) {
-                        if (_debounce?.isActive ?? false) _debounce!.cancel();
-                        setState(() {
-                          _toPosition = null;
-                          _routePoints = [];
-                          _searchResults = [];
-                        });
-                      } else {
-                        setState(() {});
-                        _scheduleSearch(v, false);
-                      }
-                    },
-                    showTariffs: showTariffs,
-                    selectedTariff: _selectedTariff,
-                    onTariffSelected: (index) =>
-                        setState(() => _selectedTariff = index),
-                    onOrderPressed: showTariffs ? () {} : null,
-                    onStatsPressed: showTariffs ? _showStatsDialogSheet : null,
-                  ),
+                  child: _isOrderAccepted
+                      ? ActiveOrderCard(
+                          driverName: _orderOptions['driverName'] ?? 'Никита',
+                          carModel:
+                              _orderOptions['carModel'] ?? 'Hyundai Solaris',
+                          carNumber: _orderOptions['carNumber'] ?? 'А123ВС',
+                          waitTime: '5-7 мин',
+                          avatarUrl: _orderOptions['avatarUrl'],
+                          onCall: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Звонок водителю...'),
+                              ),
+                            );
+                          },
+                          onIAmHere: _cancelOrder,
+                        )
+                      : CollapsibleBottomCard(
+                          isCollapsed: _isCollapsed,
+                          onToggle: () =>
+                              setState(() => _isCollapsed = !_isCollapsed),
+                          fromController: _fromController,
+                          toController: _toController,
+                          fromHint: 'Откуда',
+                          toHint: 'Куда едем?',
+                          fromIcon: Icons.my_location_rounded,
+                          toIcon: Icons.location_on_outlined,
+                          onGetCurrentLocation: _getCurrentLocation,
+                          onFromChanged: (v) {
+                            final trimmed = v.trim();
+                            if (trimmed.isEmpty) {
+                              if (_debounce?.isActive ?? false)
+                                _debounce!.cancel();
+                              setState(() {
+                                _currentPosition = null;
+                                _routePoints = [];
+                                _searchResults = [];
+                              });
+                            } else {
+                              setState(() {});
+                              _scheduleSearch(v, true);
+                            }
+                          },
+                          onToChanged: (v) {
+                            final trimmed = v.trim();
+                            if (trimmed.isEmpty) {
+                              if (_debounce?.isActive ?? false)
+                                _debounce!.cancel();
+                              setState(() {
+                                _toPosition = null;
+                                _routePoints = [];
+                                _searchResults = [];
+                              });
+                            } else {
+                              setState(() {});
+                              _scheduleSearch(v, false);
+                            }
+                          },
+                          showTariffs: showTariffs,
+                          selectedTariff: _selectedTariff,
+                          onTariffSelected: (index) =>
+                              setState(() => _selectedTariff = index),
+                          onOrderPressed: showTariffs
+                              ? _showStatsDialogSheet
+                              : null,
+                        ),
                 ),
               ],
             ),
