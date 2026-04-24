@@ -1,3 +1,30 @@
 spring:
   application:
     name: gateway-service
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: user-service
+              uri: ${USER_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/v1/auth/**, /api/v1/drivers/location, /api/v1/profiles/**, /api/v1/vehicles/**
+
+server:
+  port: 8000
+  shutdown: graceful
+
+gateway:
+  secret: ${JWT_SECRET:dev-secret-key-min-32-chars-for-hmac-sha256}
+  issuer: ${JWT_ISSUER:user-service}
+  header: ${JWT_HEADER:X-Gateway-Header}
+  header-key: ${HEADER_KEY:dev-secret-key-for-microservices}
+  open-routes:
+    - api/v1/login
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
