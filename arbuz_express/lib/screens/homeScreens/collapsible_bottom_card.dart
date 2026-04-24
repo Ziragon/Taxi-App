@@ -1,4 +1,3 @@
-// collapsible_bottom_card.dart
 import 'package:flutter/material.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/tariff_selector.dart';
@@ -20,7 +19,6 @@ class CollapsibleBottomCard extends StatelessWidget {
   final int selectedTariff;
   final ValueChanged<int> onTariffSelected;
   final VoidCallback? onOrderPressed;
-  final VoidCallback? onStatsPressed;
 
   const CollapsibleBottomCard({
     super.key,
@@ -39,7 +37,6 @@ class CollapsibleBottomCard extends StatelessWidget {
     required this.selectedTariff,
     required this.onTariffSelected,
     this.onOrderPressed,
-    this.onStatsPressed,
   });
 
   @override
@@ -104,8 +101,8 @@ class CollapsibleBottomCard extends StatelessWidget {
                         children: [
                           if (showTariffs)
                             CircleIconButton(
-                              icon: Icons.tune_rounded,
-                              onTap: onStatsPressed ?? () {},
+                              icon: Icons.map_rounded,
+                              onTap: () {},
                               color: const Color(0xFF1A1A1E),
                             ),
                           if (showTariffs) const SizedBox(width: 12),
