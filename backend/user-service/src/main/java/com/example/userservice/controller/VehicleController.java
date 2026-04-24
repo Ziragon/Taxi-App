@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -50,7 +51,7 @@ public class VehicleController {
             }
     )
     public ResponseEntity<VehicleResponse> addVehicle(
-            @RequestHeader("X-Account-ID") Long driverId,
+            @AuthenticationPrincipal Long driverId,
             @Valid @RequestBody AddVehicleRequest request
     ) {
         Vehicle vehicle = vehicleService.addVehicle(
@@ -74,7 +75,7 @@ public class VehicleController {
                     @ApiResponse(responseCode = "200", description = "Список автомобилей")
             }
     )
-    public List<VehicleResponse> getVehicles(@RequestHeader("X-Account-ID") Long driverId) {
+    public List<VehicleResponse> getVehicles(@AuthenticationPrincipal Long driverId) {
         return vehicleService.getVehiclesByDriver(driverId).stream()
                 .map(VehicleResponse::from)
                 .toList();
@@ -129,7 +130,7 @@ public class VehicleController {
             }
     )
     public ResponseEntity<Void> setActiveVehicle(
-            @RequestHeader("X-Account-ID") Long driverId,
+            @AuthenticationPrincipal Long driverId,
             @PathVariable Long vehicleId
     ) {
         vehicleService.setActiveVehicle(driverId, vehicleId);
