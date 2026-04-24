@@ -6,15 +6,25 @@ spring:
     gateway:
       server:
         webflux:
+          default-filters:
+            - PreserveHostHeader
           routes:
             - id: user-service
-              uri: ${USER_SERVICE_URL:http://localhost:8081}
+              uri: ${USER_SERVICE_URL:http://localhost:8080}
               predicates:
                 - Path=/api/v1/auth/**, /api/v1/drivers/location, /api/v1/profiles/**, /api/v1/vehicles/**
+
+            - id: user-service-docs
+              uri: ${USER_SERVICE_URL:http://localhost:8080}
+              predicates:
+                - Path=/user-service/v3/api-docs
+              filters:
+                - RewritePath=/user-service/v3/api-docs, /v3/api-docs
 
 server:
   port: 8000
   shutdown: graceful
+  forward-headers-strategy: framework
 
 gateway:
   secret: ${JWT_SECRET:dev-secret-key-min-32-chars-for-hmac-sha256}
@@ -24,8 +34,22 @@ gateway:
   open-routes:
     - /api/v1/auth/**
     - /actuator/**
-    - /v3/api-docs/**
     - /swagger-ui/**
+    - /swagger-ui.html
+    - /user-service/v3/api-docs
+    - /webjars/**
+    - /v3/api-docs/**
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    urls:
+      - name: user-service
+        url: /user-service/v3/api-docs
 
 logging:
   level:
