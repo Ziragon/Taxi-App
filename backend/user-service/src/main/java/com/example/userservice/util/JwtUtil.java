@@ -40,14 +40,11 @@ public class JwtUtil {
 
         var builder = Jwts.builder()
                 .subject(accountId.toString())
+                .claim("role", role)
                 .issuer(appProperties.getIssuer())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiration))
                 .signWith(getSecretKey());
-
-        if (role != null) {
-            builder.claim("role", role);
-        }
 
         builder.id(UUID.randomUUID().toString());
 
