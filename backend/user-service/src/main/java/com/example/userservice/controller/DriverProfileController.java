@@ -1,12 +1,11 @@
 package com.example.userservice.controller;
 
+import com.example.shared.security.UserPrincipal;
 import com.example.userservice.dto.request.CreateDriverProfileRequest;
 import com.example.userservice.dto.request.UpdateDriverProfileRequest;
 import com.example.userservice.dto.request.UpdateDriverStatusRequest;
 import com.example.userservice.dto.response.DriverProfileResponse;
 import com.example.userservice.entity.DriverProfile;
-import com.example.userservice.entity.enums.AccountRole;
-import com.example.userservice.security.UserPrincipal;
 import com.example.userservice.service.DriverProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;

@@ -1,10 +1,10 @@
 package com.example.userservice.controller;
 
+import com.example.shared.security.UserPrincipal;
 import com.example.userservice.dto.request.CreatePassengerProfileRequest;
 import com.example.userservice.dto.request.UpdatePassengerProfileRequest;
 import com.example.userservice.dto.response.PassengerProfileResponse;
 import com.example.userservice.entity.PassengerProfile;
-import com.example.userservice.security.UserPrincipal;
 import com.example.userservice.service.PassengerProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;

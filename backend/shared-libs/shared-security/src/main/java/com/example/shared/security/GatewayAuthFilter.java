@@ -1,6 +1,5 @@
-package com.example.userservice.security;
+package com.example.shared.security;
 
-import com.example.userservice.config.GatewayAuthProperties;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

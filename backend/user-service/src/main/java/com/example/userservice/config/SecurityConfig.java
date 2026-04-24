@@ -1,6 +1,6 @@
 package com.example.userservice.config;
 
-import com.example.userservice.security.GatewayAuthFilter;
+import com.example.shared.security.GatewayAuthFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

@@ -1,10 +1,10 @@
 package com.example.userservice.controller;
 
+import com.example.shared.security.UserPrincipal;
 import com.example.userservice.dto.request.AddVehicleRequest;
 import com.example.userservice.dto.request.UpdateVehicleRequest;
 import com.example.userservice.dto.response.VehicleResponse;
 import com.example.userservice.entity.Vehicle;
-import com.example.userservice.security.UserPrincipal;
 import com.example.userservice.service.VehicleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;

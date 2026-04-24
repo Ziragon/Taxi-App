@@ -1,6 +1,8 @@
-package com.example.userservice.security;
+package com.example.shared.security;
 
 public record UserPrincipal(
+
         Long userId,
+
         String role
 ) {}

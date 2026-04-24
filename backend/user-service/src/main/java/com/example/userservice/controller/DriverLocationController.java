@@ -1,9 +1,9 @@
 package com.example.userservice.controller;
 
+import com.example.shared.security.UserPrincipal;
 import com.example.userservice.dto.request.UpdateLocationRequest;
 import com.example.userservice.dto.response.DriverLocationResponse;
 import com.example.userservice.entity.DriverLocation;
-import com.example.userservice.security.UserPrincipal;
 import com.example.userservice.service.DriverLocationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
