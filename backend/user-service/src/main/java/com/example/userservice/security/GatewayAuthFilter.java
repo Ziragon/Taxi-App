@@ -33,17 +33,22 @@ public class GatewayAuthFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
-        String userIdStr = request.getHeader("X-User-Id");
-        String role = request.getHeader("X-User-Role");
-        List<GrantedAuthority> authorities = role != null
-                ? List.of(new SimpleGrantedAuthority(role))
-                : Collections.emptyList();
-
         String gatewayHeader = request.getHeader(gatewayAuthProperties.header());
         if (!gatewayAuthProperties.headerKey().equals(gatewayHeader)) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
+
+        if ("true".equals(request.getHeader("X-User-Anonymous"))) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String userIdStr = request.getHeader("X-User-Id");
+        String role = request.getHeader("X-User-Role");
+        List<GrantedAuthority> authorities = role != null
+                ? List.of(new SimpleGrantedAuthority(role))
+                : Collections.emptyList();
 
         if (userIdStr != null) {
             try {
