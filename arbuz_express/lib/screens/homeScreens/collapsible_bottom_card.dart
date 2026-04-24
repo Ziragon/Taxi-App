@@ -1,3 +1,4 @@
+// collapsible_bottom_card.dart
 import 'package:flutter/material.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/tariff_selector.dart';
@@ -19,6 +20,7 @@ class CollapsibleBottomCard extends StatelessWidget {
   final int selectedTariff;
   final ValueChanged<int> onTariffSelected;
   final VoidCallback? onOrderPressed;
+  final VoidCallback? onStatsPressed;
 
   const CollapsibleBottomCard({
     super.key,
@@ -37,6 +39,7 @@ class CollapsibleBottomCard extends StatelessWidget {
     required this.selectedTariff,
     required this.onTariffSelected,
     this.onOrderPressed,
+    this.onStatsPressed,
   });
 
   @override
@@ -90,7 +93,7 @@ class CollapsibleBottomCard extends StatelessWidget {
                         onChanged: onToChanged,
                       ),
                       if (showTariffs) ...[
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         TariffSelector(
                           selectedTariff: selectedTariff,
                           onTariffSelected: onTariffSelected,
@@ -99,12 +102,13 @@ class CollapsibleBottomCard extends StatelessWidget {
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          CircleIconButton(
-                            icon: Icons.tune_rounded,
-                            onTap: () {},
-                            color: const Color(0xFF1A1A1E),
-                          ),
-                          const SizedBox(width: 12),
+                          if (showTariffs)
+                            CircleIconButton(
+                              icon: Icons.tune_rounded,
+                              onTap: onStatsPressed ?? () {},
+                              color: const Color(0xFF1A1A1E),
+                            ),
+                          if (showTariffs) const SizedBox(width: 12),
                           Expanded(
                             child: PrimaryButton(
                               label: 'Заказать',
