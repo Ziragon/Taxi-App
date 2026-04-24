@@ -4,6 +4,7 @@ import com.example.userservice.dto.request.AddVehicleRequest;
 import com.example.userservice.dto.request.UpdateVehicleRequest;
 import com.example.userservice.dto.response.VehicleResponse;
 import com.example.userservice.entity.Vehicle;
+import com.example.userservice.security.UserPrincipal;
 import com.example.userservice.service.VehicleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -51,11 +52,11 @@ public class VehicleController {
             }
     )
     public ResponseEntity<VehicleResponse> addVehicle(
-            @AuthenticationPrincipal Long driverId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody AddVehicleRequest request
     ) {
         Vehicle vehicle = vehicleService.addVehicle(
-                driverId,
+                principal.userId(),
                 request.brand(),
                 request.model(),
                 request.year(),
@@ -75,8 +76,10 @@ public class VehicleController {
                     @ApiResponse(responseCode = "200", description = "Список автомобилей")
             }
     )
-    public List<VehicleResponse> getVehicles(@AuthenticationPrincipal Long driverId) {
-        return vehicleService.getVehiclesByDriver(driverId).stream()
+    public List<VehicleResponse> getVehicles(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return vehicleService.getVehiclesByDriver(principal.userId()).stream()
                 .map(VehicleResponse::from)
                 .toList();
     }
@@ -105,6 +108,7 @@ public class VehicleController {
             }
     )
     public ResponseEntity<VehicleResponse> updateVehicle(
+            @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long vehicleId,
             @Valid @RequestBody UpdateVehicleRequest request
     ) {
@@ -130,10 +134,10 @@ public class VehicleController {
             }
     )
     public ResponseEntity<Void> setActiveVehicle(
-            @AuthenticationPrincipal Long driverId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long vehicleId
     ) {
-        vehicleService.setActiveVehicle(driverId, vehicleId);
+        vehicleService.setActiveVehicle(principal.userId(), vehicleId);
 
         return ResponseEntity.noContent().build();
     }
@@ -147,6 +151,7 @@ public class VehicleController {
             }
     )
     public ResponseEntity<Void> deleteVehicle(
+            @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long vehicleId
     ) {
         vehicleService.deleteVehicle(vehicleId);

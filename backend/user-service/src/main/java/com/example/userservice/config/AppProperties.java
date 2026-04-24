@@ -12,7 +12,7 @@ import java.time.Duration;
 @Getter
 @Setter
 @Validated
-@ConfigurationProperties(prefix = "jwt")
+@ConfigurationProperties(prefix = "gateway")
 public class AppProperties {
 
     @NotBlank
@@ -38,4 +38,10 @@ public class AppProperties {
             return expiration.toMillis();
         }
     }
+
+    @NotBlank
+    private String header;
+
+    @NotBlank
+    private String headerKey;
 }
