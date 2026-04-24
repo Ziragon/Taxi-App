@@ -22,7 +22,10 @@ gateway:
   header: ${JWT_HEADER:X-Gateway-Header}
   header-key: ${HEADER_KEY:dev-secret-key-for-microservices}
   open-routes:
-    - /api/v1/login
+    - /api/v1/auth/**
+    - /actuator/**
+    - /v3/api-docs/**
+    - /swagger-ui/**
 
 logging:
   level:
