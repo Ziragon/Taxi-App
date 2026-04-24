@@ -2,6 +2,7 @@ spring:
   application:
     name: user-service
 
+
   jpa:
     open-in-view: false
     properties:
@@ -77,6 +78,10 @@ springdoc:
     filter: true
     operations-sorter: method
     tags-sorter: alpha
+
+app:
+  gateway:
+    url: ${GATEWAY_URL:http://localhost:8000}
 
 management:
   endpoints:

@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -45,7 +46,7 @@ public class DriverLocationController {
             }
     )
     public void updateLocation(
-            @RequestHeader("X-Account-ID") Long driverId,
+            @AuthenticationPrincipal Long driverId,
             @Valid @RequestBody UpdateLocationRequest request) {
         driverLocationService.updateLocation(
                 driverId,
@@ -62,10 +63,11 @@ public class DriverLocationController {
                     @ApiResponse(responseCode = "404", description = "Локация не найдена")
             }
     )
-    public DriverLocationResponse getLocation(@RequestHeader("X-Account-ID") Long driverId) {
+    public DriverLocationResponse getLocation(@AuthenticationPrincipal Long driverId) {
         DriverLocation location = driverLocationService.getLocation(driverId);
         return DriverLocationResponse.from(location);
     }
+
 
     @GetMapping("/nearby")
     @Operation(

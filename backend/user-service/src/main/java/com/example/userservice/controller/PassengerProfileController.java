@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -46,7 +47,7 @@ public class PassengerProfileController {
             }
     )
     public ResponseEntity<PassengerProfileResponse> createProfile(
-            @RequestHeader("X-Account-ID") Long accountId,
+            @AuthenticationPrincipal Long accountId,
             @Valid @RequestBody CreatePassengerProfileRequest request
     ) {
         PassengerProfile profile = passengerProfileService.createProfile(
@@ -69,7 +70,7 @@ public class PassengerProfileController {
             }
     )
     public ResponseEntity<PassengerProfileResponse> getProfile(
-            @RequestHeader("X-Account-ID") Long accountId
+            @AuthenticationPrincipal Long accountId
     ) {
         PassengerProfile profile = passengerProfileService.getProfile(accountId);
 
@@ -98,7 +99,7 @@ public class PassengerProfileController {
             }
     )
     public ResponseEntity<PassengerProfileResponse> updateProfile(
-            @RequestHeader("X-Account-ID") Long accountId,
+            @AuthenticationPrincipal Long accountId,
             @Valid @RequestBody UpdatePassengerProfileRequest request
     ) {
         PassengerProfile profile = passengerProfileService.updateProfile(

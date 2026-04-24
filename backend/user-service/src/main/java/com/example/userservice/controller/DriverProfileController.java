@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -47,7 +48,7 @@ public class DriverProfileController {
             }
     )
     public ResponseEntity<DriverProfileResponse> createProfile(
-            @RequestHeader("X-Account-ID") Long accountId,
+            @AuthenticationPrincipal Long accountId,
             @Valid @RequestBody CreateDriverProfileRequest request
     ) {
         DriverProfile profile = driverProfileService.createProfile(
@@ -61,6 +62,7 @@ public class DriverProfileController {
         return ResponseEntity.ok(DriverProfileResponse.from(profile));
     }
 
+
     @GetMapping
     @Operation(
             summary = "Получить профиль водителя",
@@ -70,7 +72,7 @@ public class DriverProfileController {
             }
     )
     public ResponseEntity<DriverProfileResponse> getProfile(
-            @RequestHeader("X-Account-ID") Long accountId
+            @AuthenticationPrincipal Long accountId
     ) {
         DriverProfile profile = driverProfileService.getProfile(accountId);
 
@@ -98,7 +100,7 @@ public class DriverProfileController {
             }
     )
     public ResponseEntity<DriverProfileResponse> updateProfile(
-            @RequestHeader("X-Account-ID") Long accountId,
+            @AuthenticationPrincipal Long accountId,
             @Valid @RequestBody UpdateDriverProfileRequest request
     ) {
         DriverProfile profile = driverProfileService.updateProfile(
@@ -131,7 +133,7 @@ public class DriverProfileController {
             }
     )
     public ResponseEntity<Void> updateStatus(
-            @RequestHeader("X-Account-ID") Long accountId,
+            @AuthenticationPrincipal Long accountId,
             @Valid @RequestBody UpdateDriverStatusRequest request) {
 
         driverProfileService.updateStatus(accountId, request.status());
@@ -156,3 +158,4 @@ public class DriverProfileController {
         return ResponseEntity.noContent().build();
     }
 }
+

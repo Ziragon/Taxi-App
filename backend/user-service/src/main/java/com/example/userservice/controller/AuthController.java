@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -126,7 +127,7 @@ public class AuthController {
             }
     )
     public ResponseEntity<Void> logout(
-            @RequestHeader("X-Account-ID") Long accountId
+            @AuthenticationPrincipal Long accountId
     ) {
         authService.logout(accountId);
 
