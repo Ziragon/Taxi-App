@@ -37,7 +37,7 @@ public class TokenService {
         RefreshToken refreshToken = RefreshToken.builder()
                 .account(accountService.findById(account.getId()))
                 .tokenHash(tokenHash)
-                .expiresAt(Instant.now(clock).plusMillis(appProperties.getRefreshToken().toMillis()))
+                .expiresAt(Instant.now(clock).plusMillis(appProperties.refreshToken().toMillis()))
                 .revoked(false)
                 .build();
 
@@ -67,11 +67,6 @@ public class TokenService {
     @Transactional
     public void revokeAllTokens(Long accountId) {
         refreshTokenRepository.revokeAllByAccountId(accountId);
-    }
-
-    @Transactional
-    public void cleanupExpiredTokens() {
-        refreshTokenRepository.deleteAllExpired(Instant.now(clock));
     }
 
     private String hashToken(String rawToken) {

@@ -1,5 +1,6 @@
 package com.example.userservice.controller;
 
+import com.example.shared.security.UserPrincipal;
 import com.example.userservice.dto.request.CreatePassengerProfileRequest;
 import com.example.userservice.dto.request.UpdatePassengerProfileRequest;
 import com.example.userservice.dto.response.PassengerProfileResponse;
@@ -47,11 +48,11 @@ public class PassengerProfileController {
             }
     )
     public ResponseEntity<PassengerProfileResponse> createProfile(
-            @AuthenticationPrincipal Long accountId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreatePassengerProfileRequest request
     ) {
         PassengerProfile profile = passengerProfileService.createProfile(
-                accountId,
+                principal.userId(),
                 request.firstName(),
                 request.lastName(),
                 request.photoUrl()
@@ -70,9 +71,9 @@ public class PassengerProfileController {
             }
     )
     public ResponseEntity<PassengerProfileResponse> getProfile(
-            @AuthenticationPrincipal Long accountId
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        PassengerProfile profile = passengerProfileService.getProfile(accountId);
+        PassengerProfile profile = passengerProfileService.getProfile(principal.userId());
 
         return ResponseEntity.ok(PassengerProfileResponse.from(profile));
     }
@@ -99,11 +100,11 @@ public class PassengerProfileController {
             }
     )
     public ResponseEntity<PassengerProfileResponse> updateProfile(
-            @AuthenticationPrincipal Long accountId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody UpdatePassengerProfileRequest request
     ) {
         PassengerProfile profile = passengerProfileService.updateProfile(
-                accountId,
+                principal.userId(),
                 request.firstName(),
                 request.lastName(),
                 request.photoUrl()

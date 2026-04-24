@@ -1,5 +1,6 @@
 package com.example.userservice.controller;
 
+import com.example.shared.security.UserPrincipal;
 import com.example.userservice.dto.request.CreateDriverProfileRequest;
 import com.example.userservice.dto.request.UpdateDriverProfileRequest;
 import com.example.userservice.dto.request.UpdateDriverStatusRequest;
@@ -14,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -48,11 +50,11 @@ public class DriverProfileController {
             }
     )
     public ResponseEntity<DriverProfileResponse> createProfile(
-            @AuthenticationPrincipal Long accountId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreateDriverProfileRequest request
     ) {
         DriverProfile profile = driverProfileService.createProfile(
-                accountId,
+                principal.userId(),
                 request.firstName(),
                 request.lastName(),
                 request.licenseNumber(),
@@ -72,9 +74,9 @@ public class DriverProfileController {
             }
     )
     public ResponseEntity<DriverProfileResponse> getProfile(
-            @AuthenticationPrincipal Long accountId
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        DriverProfile profile = driverProfileService.getProfile(accountId);
+        DriverProfile profile = driverProfileService.getProfile(principal.userId());
 
         return ResponseEntity.ok(DriverProfileResponse.from(profile));
     }
@@ -100,11 +102,11 @@ public class DriverProfileController {
             }
     )
     public ResponseEntity<DriverProfileResponse> updateProfile(
-            @AuthenticationPrincipal Long accountId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody UpdateDriverProfileRequest request
     ) {
         DriverProfile profile = driverProfileService.updateProfile(
-                accountId,
+                principal.userId(),
                 request.firstName(),
                 request.lastName(),
                 request.licenseNumber(),
@@ -133,10 +135,10 @@ public class DriverProfileController {
             }
     )
     public ResponseEntity<Void> updateStatus(
-            @AuthenticationPrincipal Long accountId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody UpdateDriverStatusRequest request) {
 
-        driverProfileService.updateStatus(accountId, request.status());
+        driverProfileService.updateStatus(principal.userId(), request.status());
 
         return ResponseEntity.noContent().build();
     }
@@ -150,7 +152,9 @@ public class DriverProfileController {
                     @ApiResponse(responseCode = "403", description = "Недостаточно прав")
             }
     )
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<Void> verifyDriver(
+            @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long driverId
     ) {
         driverProfileService.verifyDriver(driverId);

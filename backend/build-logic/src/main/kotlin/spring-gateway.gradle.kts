@@ -13,4 +13,5 @@ dependencyManagement {
 
 dependencies {
     implementation(libs.findLibrary("spring-cloud-starter-gateway").get())
+    implementation(libs.findLibrary("springdoc-webflux-ui").get())
 }

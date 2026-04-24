@@ -1,5 +1,6 @@
 package com.example.userservice.controller;
 
+import com.example.shared.security.UserPrincipal;
 import com.example.userservice.dto.request.UpdateLocationRequest;
 import com.example.userservice.dto.response.DriverLocationResponse;
 import com.example.userservice.entity.DriverLocation;
@@ -46,10 +47,10 @@ public class DriverLocationController {
             }
     )
     public void updateLocation(
-            @AuthenticationPrincipal Long driverId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody UpdateLocationRequest request) {
         driverLocationService.updateLocation(
-                driverId,
+                principal.userId(),
                 request.latitude(),
                 request.longitude()
         );
@@ -63,8 +64,10 @@ public class DriverLocationController {
                     @ApiResponse(responseCode = "404", description = "Локация не найдена")
             }
     )
-    public DriverLocationResponse getLocation(@AuthenticationPrincipal Long driverId) {
-        DriverLocation location = driverLocationService.getLocation(driverId);
+    public DriverLocationResponse getLocation(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        DriverLocation location = driverLocationService.getLocation(principal.userId());
         return DriverLocationResponse.from(location);
     }
 

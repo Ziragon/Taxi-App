@@ -57,31 +57,24 @@ server:
   shutdown: graceful
   forward-headers-strategy: framework
 
-jwt:
+gateway:
   secret: ${JWT_SECRET:dev-secret-key-min-32-chars-for-hmac-sha256}
   issuer: ${JWT_ISSUER:user-service}
   access-token:
     expiration: 30m
   refresh-token:
-    expiration: 24h
+    expiration: 7d
+
+gateway-auth:
+  header: ${JWT_HEADER:X-Gateway-Header}
+  header-key: ${HEADER_KEY:dev-secret-key-for-microservices}
 
 springdoc:
   api-docs:
     enabled: true
     path: /v3/api-docs
   swagger-ui:
-    enabled: true
-    path: /swagger-ui.html
-    doc-expansion: list
-    try-it-out-enabled: true
-    display-request-duration: true
-    filter: true
-    operations-sorter: method
-    tags-sorter: alpha
-
-app:
-  gateway:
-    url: ${GATEWAY_URL:http://localhost:8000}
+    enabled: false
 
 management:
   endpoints:
@@ -96,3 +89,8 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+
+logging:
+  level:
+    root: INFO
+    org.hibernate: INFO
