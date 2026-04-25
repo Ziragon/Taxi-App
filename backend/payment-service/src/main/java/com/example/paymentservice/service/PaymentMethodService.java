@@ -6,6 +6,7 @@ import com.example.paymentservice.exception.DuplicatePaymentMethodException;
 import com.example.paymentservice.exception.PaymentMethodNotActiveException;
 import com.example.paymentservice.exception.PaymentMethodNotFoundException;
 import com.example.paymentservice.repository.PaymentMethodRepository;
+import com.stripe.model.Customer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,30 +18,46 @@ import java.util.List;
 public class PaymentMethodService {
 
     private final PaymentMethodRepository paymentMethodRepository;
+    private final StripeService stripeService;
 
     @Transactional
     public PaymentMethod addPaymentMethod(Long passengerId,
-                                          String stripeCustomerId,
                                           String stripePaymentMethodId,
-                                          String cardBrand,
-                                          String lastFour) {
+                                          boolean setAsDefault) {
         if (paymentMethodRepository.existsByPassengerIdAndStripePaymentMethodId(passengerId, stripePaymentMethodId)) {
-            throw new DuplicatePaymentMethodException(passengerId, lastFour);
+            throw new DuplicatePaymentMethodException(
+                    "Payment method already exists for passenger: %s".formatted(passengerId)
+            );
         }
 
+        Customer customer = stripeService.getOrCreateCustomer(passengerId);
+
+        com.stripe.model.PaymentMethod stripePaymentMethod = stripeService.attachPaymentMethodToCustomer(
+                stripePaymentMethodId,
+                customer.getId()
+        );
+
         boolean isFirst = paymentMethodRepository.findAllByPassengerId(passengerId).isEmpty();
+        boolean shouldBeDefault = isFirst || setAsDefault;
 
         PaymentMethod paymentMethod = PaymentMethod.builder()
                 .passengerId(passengerId)
-                .stripeCustomerId(stripeCustomerId)
+                .stripeCustomerId(customer.getId())
                 .stripePaymentMethodId(stripePaymentMethodId)
-                .cardBrand(cardBrand)
-                .lastFour(lastFour)
-                .defaultvalue(isFirst)
+                .cardBrand(stripePaymentMethod.getCard().getBrand())
+                .lastFour(stripePaymentMethod.getCard().getLast4())
+                .defaultvalue(shouldBeDefault)
                 .active(true)
                 .build();
 
-        return paymentMethodRepository.save(paymentMethod);
+        PaymentMethod saved = paymentMethodRepository.save(paymentMethod);
+
+        if (shouldBeDefault) {
+            paymentMethodRepository.clearDefaultForPassenger(passengerId);
+            stripeService.setDefaultPaymentMethod(customer.getId(), stripePaymentMethodId);
+        }
+
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -79,6 +96,11 @@ public class PaymentMethodService {
 
         paymentMethod.setDefaultvalue(true);
         paymentMethodRepository.save(paymentMethod);
+
+        stripeService.setDefaultPaymentMethod(
+                paymentMethod.getStripeCustomerId(),
+                paymentMethod.getStripePaymentMethodId()
+        );
     }
 
     @Transactional
@@ -88,6 +110,8 @@ public class PaymentMethodService {
         if (paymentMethod.isDefaultvalue()) {
             throw new DefaultPaymentMethodException(passengerId);
         }
+
+        stripeService.detachPaymentMethod(paymentMethod.getStripePaymentMethodId());
 
         paymentMethodRepository.deactivateById(paymentMethodId);
     }

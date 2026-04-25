@@ -38,3 +38,4 @@ out/
 
 ### Config files ###
 docker/pgadmin/servers.json
+**/application-local.yaml

@@ -1,24 +1,33 @@
 package com.example.paymentservice.service;
 
+import com.example.paymentservice.entity.PaymentMethod;
 import com.example.paymentservice.entity.Transaction;
 import com.example.paymentservice.entity.enums.TransactionStatus;
 import com.example.paymentservice.entity.enums.TransactionType;
 import com.example.paymentservice.exception.InvalidPaymentOperationException;
+import com.example.paymentservice.exception.PaymentProcessingException;
 import com.example.paymentservice.exception.TransactionNotFoundException;
 import com.example.paymentservice.repository.TransactionRepository;
+import com.stripe.model.PaymentIntent;
+import com.stripe.model.Refund;
+import com.stripe.model.Transfer;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final PaymentMethodService paymentMethodService;
+    private final DriverPayoutAccountService driverPayoutAccountService;
+    private final StripeService stripeService;
 
     @Transactional
     public Transaction createCharge(Long tripId,
@@ -26,27 +35,50 @@ public class TransactionService {
                                     Long driverId,
                                     Long paymentMethodId,
                                     BigDecimal amount,
-                                    String currency,
-                                    String stripePaymentIntentId) {
+                                    String currency) {
+        PaymentMethod paymentMethod = paymentMethodId != null
+                ? paymentMethodService.getById(paymentMethodId)
+                : paymentMethodService.getDefaultForPassenger(passengerId);
+
+        if (!paymentMethod.isActive()) {
+            throw new PaymentProcessingException("Payment method is not active");
+        }
+
+        PaymentIntent paymentIntent = stripeService.createPaymentIntent(
+                amount,
+                currency,
+                paymentMethod.getStripeCustomerId(),
+                paymentMethod.getStripePaymentMethodId(),
+                tripId
+        );
+
+        TransactionStatus status = resolvePaymentIntentStatus(paymentIntent.getStatus());
+
         Transaction transaction = Transaction.builder()
                 .tripId(tripId)
                 .passengerId(passengerId)
                 .driverId(driverId)
-                .paymentMethod(paymentMethodService.getById(paymentMethodId))
+                .paymentMethod(paymentMethod)
                 .type(TransactionType.CHARGE)
                 .amount(amount)
                 .currency(currency)
-                .status(TransactionStatus.PENDING)
-                .stripePaymentIntentId(stripePaymentIntentId)
+                .status(status)
+                .stripePaymentIntentId(paymentIntent.getId())
                 .build();
 
-        return transactionRepository.save(transaction);
+        Transaction saved = transactionRepository.save(transaction);
+
+        log.info("Charge created for trip {} with status {}", tripId, status);
+
+        // TODO: отправить PaymentSucceededEvent / PaymentFailedEvent в RabbitMQ
+
+        return saved;
     }
 
     @Transactional
     public Transaction createRefund(Long originalTransactionId,
                                     BigDecimal amount,
-                                    String stripePaymentIntentId) {
+                                    String reason) {
         Transaction original = getById(originalTransactionId);
 
         if (original.getStatus() != TransactionStatus.SUCCEEDED) {
@@ -54,6 +86,25 @@ public class TransactionService {
                     "Transaction",
                     "only succeeded transactions can be refunded"
             );
+        }
+
+        if (amount.compareTo(original.getAmount()) > 0) {
+            throw new InvalidPaymentOperationException(
+                    "Refund amount",
+                    "cannot exceed original transaction amount"
+            );
+        }
+
+        Refund stripeRefund = stripeService.createRefund(
+                original.getStripePaymentIntentId(),
+                amount
+        );
+
+        TransactionStatus refundStatus = resolveRefundStatus(stripeRefund.getStatus());
+
+        if (refundStatus == TransactionStatus.SUCCEEDED) {
+            original.setStatus(TransactionStatus.REFUNDED);
+            transactionRepository.save(original);
         }
 
         Transaction refund = Transaction.builder()
@@ -64,11 +115,17 @@ public class TransactionService {
                 .type(TransactionType.REFUND)
                 .amount(amount)
                 .currency(original.getCurrency())
-                .status(TransactionStatus.PENDING)
-                .stripePaymentIntentId(stripePaymentIntentId)
+                .status(refundStatus)
+                .stripePaymentIntentId(stripeRefund.getId())
                 .build();
 
-        return transactionRepository.save(refund);
+        Transaction saved = transactionRepository.save(refund);
+
+        log.info("Refund created for transaction {} with status {}", originalTransactionId, refundStatus);
+
+        // TODO: отправить RefundSucceededEvent в RabbitMQ
+
+        return saved;
     }
 
     @Transactional
@@ -76,8 +133,16 @@ public class TransactionService {
                                     Long passengerId,
                                     Long driverId,
                                     BigDecimal amount,
-                                    String currency,
-                                    String stripePaymentIntentId) {
+                                    String currency) {
+        var payoutAccount = driverPayoutAccountService.getVerifiedDefaultForDriver(driverId);
+
+        Transfer transfer = stripeService.createTransfer(
+                amount,
+                currency,
+                payoutAccount.getStripeAccountId(),
+                tripId
+        );
+
         Transaction payout = Transaction.builder()
                 .tripId(tripId)
                 .passengerId(passengerId)
@@ -85,11 +150,17 @@ public class TransactionService {
                 .type(TransactionType.PAYOUT)
                 .amount(amount)
                 .currency(currency)
-                .status(TransactionStatus.PENDING)
-                .stripePaymentIntentId(stripePaymentIntentId)
+                .status(TransactionStatus.SUCCEEDED)
+                .stripePaymentIntentId(transfer.getId())
                 .build();
 
-        return transactionRepository.save(payout);
+        Transaction saved = transactionRepository.save(payout);
+
+        log.info("Payout created for driver {} trip {}", driverId, tripId);
+
+        // TODO: отправить PayoutSucceededEvent в RabbitMQ
+
+        return saved;
     }
 
     @Transactional
@@ -148,5 +219,26 @@ public class TransactionService {
     @Transactional(readOnly = true)
     public List<Transaction> getByStatus(TransactionStatus status) {
         return transactionRepository.findAllByStatus(status);
+    }
+
+    private TransactionStatus resolvePaymentIntentStatus(String stripeStatus) {
+        return switch (stripeStatus) {
+            case "succeeded" -> TransactionStatus.SUCCEEDED;
+            case "processing" -> TransactionStatus.PENDING;
+            case "requires_payment_method",
+                 "requires_confirmation",
+                 "requires_action" -> throw new PaymentProcessingException(
+                    "Payment requires additional action: %s".formatted(stripeStatus)
+            );
+            default -> TransactionStatus.FAILED;
+        };
+    }
+
+    private TransactionStatus resolveRefundStatus(String stripeStatus) {
+        return switch (stripeStatus) {
+            case "succeeded" -> TransactionStatus.SUCCEEDED;
+            case "failed", "canceled" -> TransactionStatus.FAILED;
+            default -> TransactionStatus.PENDING;
+        };
     }
 }

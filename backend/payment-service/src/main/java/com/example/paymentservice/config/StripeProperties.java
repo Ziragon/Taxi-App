@@ -9,9 +9,6 @@ import org.springframework.validation.annotation.Validated;
 public record StripeProperties(
 
         @NotBlank
-        String apiKey,
-
-        @NotBlank
-        String webhookSecret
+        String apiKey
 ) {
 }

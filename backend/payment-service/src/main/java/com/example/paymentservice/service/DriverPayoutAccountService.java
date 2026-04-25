@@ -5,40 +5,49 @@ import com.example.paymentservice.exception.DriverPayoutAccountNotFoundException
 import com.example.paymentservice.exception.DuplicatePaymentMethodException;
 import com.example.paymentservice.exception.PayoutAccountNotVerifiedException;
 import com.example.paymentservice.repository.DriverPayoutAccountRepository;
+import com.stripe.model.Account;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DriverPayoutAccountService {
 
     private final DriverPayoutAccountRepository driverPayoutAccountRepository;
+    private final StripeService stripeService;
 
     @Transactional
-    public DriverPayoutAccount addPayoutAccount(Long driverId,
-                                                String stripeAccountId,
-                                                String lastFour) {
-        if (driverPayoutAccountRepository.existsByDriverIdAndStripeAccountId(driverId, stripeAccountId)) {
+    public DriverPayoutAccount addPayoutAccount(Long driverId, String lastFour) {
+
+        Account stripeAccount = stripeService.getOrCreateConnectAccount(driverId);
+
+        if (driverPayoutAccountRepository.existsByDriverIdAndStripeAccountId(driverId, stripeAccount.getId())) {
             throw new DuplicatePaymentMethodException(
-                    "Payout account already exists for driver %s with account: %s"
-                            .formatted(driverId, stripeAccountId)
+                    "Payout account already exists for driver: %s".formatted(driverId)
             );
         }
 
         boolean isFirst = driverPayoutAccountRepository.findAllByDriverId(driverId).isEmpty();
+        boolean isVerified = stripeService.isAccountVerified(stripeAccount.getId());
 
         DriverPayoutAccount payoutAccount = DriverPayoutAccount.builder()
                 .driverId(driverId)
-                .stripeAccountId(stripeAccountId)
+                .stripeAccountId(stripeAccount.getId())
                 .lastFour(lastFour)
-                .verified(false)
+                .verified(isVerified)
                 .defaultvalue(isFirst)
                 .build();
 
-        return driverPayoutAccountRepository.save(payoutAccount);
+        DriverPayoutAccount saved = driverPayoutAccountRepository.save(payoutAccount);
+
+        log.info("Payout account added for driver {} verified={}", driverId, isVerified);
+
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -88,12 +97,36 @@ public class DriverPayoutAccountService {
     }
 
     @Transactional
+    public void syncVerificationStatus(Long payoutAccountId) {
+        DriverPayoutAccount account = getById(payoutAccountId);
+
+        boolean isVerified = stripeService.isAccountVerified(account.getStripeAccountId());
+
+        driverPayoutAccountRepository.updateVerificationStatus(payoutAccountId, isVerified);
+
+        log.info("Synced verification status for payout account {} verified={}", payoutAccountId, isVerified);
+    }
+
+    @Transactional
     public void verify(Long payoutAccountId) {
+        DriverPayoutAccount account = getById(payoutAccountId);
+
+        boolean isVerified = stripeService.isAccountVerified(account.getStripeAccountId());
+
+        if (!isVerified) {
+            throw new PayoutAccountNotVerifiedException(
+                    "Account is not verified in Stripe: %s".formatted(payoutAccountId)
+            );
+        }
+
         driverPayoutAccountRepository.updateVerificationStatus(payoutAccountId, true);
+
+        log.info("Payout account {} verified manually", payoutAccountId);
     }
 
     @Transactional
     public void unverify(Long payoutAccountId) {
         driverPayoutAccountRepository.updateVerificationStatus(payoutAccountId, false);
+        log.info("Payout account {} unverified", payoutAccountId);
     }
 }
