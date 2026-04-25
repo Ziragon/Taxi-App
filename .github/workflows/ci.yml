@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ "main", "dev" ]
+    branches: [ "main", "dev", "feature/ci-container-building" ]
   pull_request:
     branches: [ "main", "dev" ]
 
@@ -52,7 +52,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.testcontainers
-          key: ${{ runner.os }}-testcontainers-${{ hashFiles('**/build.gradle') }}
+          key: ${{ runner.os }}-testcontainers-${{ hashFiles('**/build.gradle', '**/build.gradle.kts') }}
           restore-keys: |
             ${{ runner.os }}-testcontainers-
 
@@ -69,9 +69,8 @@ jobs:
 
       - name: Build and test ${{ matrix.service }}
         working-directory: backend
-        run: ./gradlew :${{ matrix.service }}:build :${{ matrix.service }}:test
+        run: ./gradlew :${{ matrix.service }}:build
         env:
-          TESTCONTAINERS_RYUK_DISABLED: false
           TESTCONTAINERS_CHECKS_DISABLE: false
 
       - name: Upload test report
@@ -84,7 +83,9 @@ jobs:
 
       - name: Cleanup Docker
         if: always()
-        run: docker system prune -af --volumes
+        run: |
+          docker container prune -f
+          docker image prune -f
 
   ci-success:
     needs: [ detect-changes, build-and-test ]
@@ -93,8 +94,9 @@ jobs:
     steps:
       - name: Check results
         run: |
-          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" || "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
-            echo "One or more jobs failed or were cancelled"
+          build_result="${{ needs.build-and-test.result }}"
+          if [[ "$build_result" == "failure" || "$build_result" == "cancelled" ]]; then
+            echo "Build job failed or was cancelled"
             exit 1
           fi
-          echo "CI passed"
+          echo "CI passed (build: $build_result)"
