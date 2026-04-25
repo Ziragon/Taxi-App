@@ -1,4 +1,5 @@
-import 'package:arbuz_express/screens/homeScreens/home_map_screen.dart';
+import 'package:arbuz_express/screens/driver_map_screen.dart';
+import 'package:arbuz_express/screens/home_map_screen.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -370,15 +371,28 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
                       PrimaryButton(
                         label: 'Завершить регистрацию',
                         onPressed: _isFormValid
-                            ? () => Navigator.of(context).pushAndRemoveUntil(
-                                MaterialPageRoute(
-                                  builder: (_) => HomeMapScreen(
-                                    isDriver: widget.isDriver,
-                                    showVerificationBanner: widget.isDriver,
-                                  ),
-                                ),
-                                (route) => false,
-                              )
+                            ? () {
+                                if (widget.isDriver) {
+                                  Navigator.of(context).pushAndRemoveUntil(
+                                    MaterialPageRoute(
+                                      builder: (_) => const DriverMapScreen(
+                                        showVerificationBanner: true,
+                                      ),
+                                    ),
+                                    (route) => false,
+                                  );
+                                } else {
+                                  Navigator.of(context).pushAndRemoveUntil(
+                                    MaterialPageRoute(
+                                      builder: (_) => const HomeMapScreen(
+                                        isDriver: false,
+                                        showVerificationBanner: false,
+                                      ),
+                                    ),
+                                    (route) => false,
+                                  );
+                                }
+                              }
                             : null,
                         enabled: _isFormValid,
                       ),
