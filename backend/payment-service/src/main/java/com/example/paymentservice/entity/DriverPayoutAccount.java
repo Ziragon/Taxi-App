@@ -36,7 +36,7 @@ public class DriverPayoutAccount {
 
     @Builder.Default
     @Column(name = "is_default", nullable = false)
-    private boolean isDefault = false;
+    private boolean defaultvalue = false;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
