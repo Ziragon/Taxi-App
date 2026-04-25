@@ -10,7 +10,18 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
-@Table(name = "transactions")
+@Table(
+        name = "transactions",
+        indexes = {
+                @Index(name = "idx_transactions_trip_id", columnList = "trip_id"),
+                @Index(name = "idx_transactions_passenger_id", columnList = "passenger_id"),
+                @Index(name = "idx_transactions_driver_id", columnList = "driver_id"),
+                @Index(name = "idx_transactions_status", columnList = "status"),
+                @Index(name = "idx_transactions_stripe_payment_intent_id", columnList = "stripe_payment_intent_id", unique = true),
+                @Index(name = "idx_transactions_passenger_id_status", columnList = "passenger_id, status"),
+                @Index(name = "idx_transactions_driver_id_status", columnList = "driver_id, status")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -43,11 +54,12 @@ public class Transaction {
     @Column(name = "currency", nullable = false, length = 3)
     private String currency;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private TransactionStatus status;
+    private TransactionStatus status = TransactionStatus.PENDING;
 
-    @Column(name = "stripe_payment_intent_id")
+    @Column(name = "stripe_payment_intent_id", unique = true)
     private String stripePaymentIntentId;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -7,7 +7,15 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 
 @Entity
-@Table(name = "driver_payout_accounts")
+@Table(
+        name = "driver_payout_accounts",
+        indexes = {
+                @Index(name = "idx_driver_payout_accounts_driver_id", columnList = "driver_id"),
+                @Index(name = "idx_driver_payout_accounts_stripe_account_id", columnList = "stripe_account_id", unique = true),
+                @Index(name = "idx_driver_payout_accounts_driver_id_is_default", columnList = "driver_id, is_default"),
+                @Index(name = "idx_driver_payout_accounts_driver_id_is_verified", columnList = "driver_id, is_verified")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,7 +32,7 @@ public class DriverPayoutAccount {
     @Column(name = "driver_id", nullable = false)
     private Long driverId;
 
-    @Column(name = "stripe_account_id", nullable = false)
+    @Column(name = "stripe_account_id", nullable = false, unique = true)
     private String stripeAccountId;
 
     @Column(name = "last_four", length = 4)
