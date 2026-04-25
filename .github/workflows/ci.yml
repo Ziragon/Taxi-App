@@ -60,7 +60,6 @@ jobs:
       fail-fast: false
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.services) }}
-          - payment-service
 
     steps:
       - uses: actions/checkout@v4
