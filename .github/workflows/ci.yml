@@ -81,14 +81,74 @@ jobs:
           path: backend/${{ matrix.service }}/build/reports/tests/test/**
           retention-days: 7
 
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: jar-${{ matrix.service }}
+          path: backend/${{ matrix.service }}/build/libs/${{ matrix.service }}.jar
+          retention-days: 1
+
       - name: Cleanup Docker
         if: always()
         run: |
           docker container prune -f
           docker image prune -f
 
+  build-and-push:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/feature/ci-container-building'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - gateway-service
+          - user-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: jar-${{ matrix.service }}
+          path: backend/${{ matrix.service }}/build/libs/
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=sha,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            JAR_PATH=${{ matrix.service }}/build/libs/${{ matrix.service }}.jar
+
   ci-success:
-    needs: [ detect-changes, build-and-test ]
+    needs: [ detect-changes, build-and-test, build-and-push ]
     if: always()
     runs-on: ubuntu-latest
     steps:
