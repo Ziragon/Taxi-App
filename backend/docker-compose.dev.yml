@@ -79,6 +79,22 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  gateway-service:
+    image: ghcr.io/ziragon/taxi-app/gateway-service:dev
+    ports:
+      - "8000:8000"
+    environment:
+      - USER_SERVICE_URL=http://user-service:8080
+
+  user-service:
+    image: ghcr.io/ziragon/taxi-app/user-service:dev
+    ports:
+      - "8080:8000"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/user_db
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+
 volumes:
   postgres_data:
   redis_data:
