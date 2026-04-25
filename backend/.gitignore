@@ -41,3 +41,4 @@ docker/pgadmin/servers.json
 
 ### Nginx ###
 nginx/certs/
+**/application-local.yaml

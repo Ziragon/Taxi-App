@@ -10,6 +10,9 @@ dependencies {
     testImplementation(libs.findLibrary("testcontainers-postgresql").get())
     testImplementation(libs.findLibrary("testcontainers-rabbitmq").get())
     testImplementation(libs.findLibrary("testcontainers-redis").get())
+    testImplementation(libs.findLibrary("boot-webmvc-test").get())
+    testImplementation(libs.findLibrary("boot-starter-security-test").get())
+    testImplementation(libs.findLibrary("testcontainers-jdbc").get())
 }
 
 tasks.named<Test>("test") {

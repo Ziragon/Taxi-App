@@ -4,7 +4,7 @@ spring:
       on-profile: test
 
   datasource:
-    url: jdbc:tc:postgresql:17-alpine:///user_db?TC_DAEMON=true
+    url: jdbc:tc:postgresql:17-alpine:///payment_db&loggerLevel=OFF
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
     username: test
     password: test
@@ -32,11 +32,10 @@ spring:
       port: ${REDIS_PORT:6379}
 
   rabbitmq:
-    listener:
-      simple:
-        auto-startup: false
-      direct:
-        auto-startup: false
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
 
   jackson:
     date-format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
@@ -46,18 +45,23 @@ spring:
       fail-on-unknown-properties: false
 
 jwt:
-  secret: test-secret-key-for-unit-tests-must-be-at-least-32-characters-long
-  issuer: user-service-test
+  secret: test-secret-key-for-integration-tests-must-be-at-least-32-characters-long
+  issuer: payment-service-test
   access-token:
     expiration: 5m
   refresh-token:
     expiration: 10m
 
+stripe:
+  api-key: ${STRIPE_API_KEY:sk_test_placeholder}
+
 logging:
   level:
     root: INFO
-    com.example.userservice: DEBUG
+    com.example.paymentservice: DEBUG
     org.springframework.test: INFO
     org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.testcontainers: INFO
     com.github.dockerjava: WARN
+    org.apache.http: WARN

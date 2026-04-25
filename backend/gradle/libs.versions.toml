@@ -7,6 +7,8 @@ spring-dependency-management = "1.1.7"
 
 jjwt = "0.13.0"
 springdoc = "3.0.3"
+stripe = "32.0.0"
+testcontainers = "1.19.7"
 
 [libraries]
 boot-starter = { group = "org.springframework.boot", name = "spring-boot-starter" }
@@ -17,7 +19,7 @@ boot-starter-actuator = { group = "org.springframework.boot", name = "spring-boo
 boot-starter-validation = { group = "org.springframework.boot", name = "spring-boot-starter-validation" }
 
 boot-starter-security = { group = "org.springframework.boot", name = "spring-boot-starter-security" }
-
+boot-starter-security-test = { group = "org.springframework.security", name = "spring-security-test"}
 boot-starter-data-jpa = { group = "org.springframework.boot", name = "spring-boot-starter-data-jpa" }
 boot-starter-data-redis = { group = "org.springframework.boot", name = "spring-boot-starter-data-redis" }
 boot-starter-amqp = { group = "org.springframework.boot", name = "spring-boot-starter-amqp" }
@@ -28,6 +30,8 @@ boot-configuration-processor = { group = "org.springframework.boot", name = "spr
 
 boot-starter-test = { group = "org.springframework.boot", name = "spring-boot-starter-test" }
 boot-testcontainers = { group = "org.springframework.boot", name = "spring-boot-testcontainers" }
+boot-webmvc-test = { group = "org.springframework.boot", name = "spring-boot-webmvc-test" }
+testcontainers-jdbc = { module = "org.testcontainers:jdbc", version.ref = "testcontainers" }
 
 jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind" }
 
@@ -56,6 +60,9 @@ jjwt-jackson = { group = "io.jsonwebtoken", name = "jjwt-jackson", version.ref =
 # OpenAPI Swagger
 springdoc-webmvc-ui = { group = "org.springdoc", name = "springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 springdoc-webflux-ui = { group = "org.springdoc", name = "springdoc-openapi-starter-webflux-ui", version.ref = "springdoc" }
+
+# Stripe
+stripe-java = { group = "com.stripe", name = "stripe-java", version.ref = "stripe" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
