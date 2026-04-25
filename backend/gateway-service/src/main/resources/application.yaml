@@ -51,6 +51,9 @@ springdoc:
       - name: user-service
         url: /user-service/v3/api-docs
 
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
