@@ -11,4 +11,3 @@ dependencies {
     implementation(project(":shared-libs:shared-exceptions"))
     implementation(project(":shared-libs:shared-security"))
 }
-
