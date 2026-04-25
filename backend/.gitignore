@@ -38,3 +38,6 @@ out/
 
 ### Config files ###
 docker/pgadmin/servers.json
+
+### Nginx ###
+nginx/certs/
