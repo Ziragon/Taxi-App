@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:arbuz_express/screens/profile_screen.dart';
-import 'package:arbuz_express/screens/homeScreens/verification_banner.dart';
-import 'package:arbuz_express/screens/homeScreens/search_results_list.dart';
-import 'package:arbuz_express/screens/homeScreens/collapsible_bottom_card.dart';
-import 'package:arbuz_express/screens/homeScreens/active_order_card.dart';
+import 'package:arbuz_express/screens/homeScreensWidgets/verification_banner.dart';
+import 'package:arbuz_express/screens/homeScreensWidgets/search_results_list.dart';
+import 'package:arbuz_express/screens/homeScreensWidgets/collapsible_bottom_card.dart';
+import 'package:arbuz_express/screens/homeScreensWidgets/active_order_card.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/destination_marker.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +13,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
-import 'stats_bottom_sheet.dart';
+import 'homeScreensWidgets/stats_bottom_sheet.dart';
 
 class HomeMapScreen extends StatefulWidget {
   const HomeMapScreen({

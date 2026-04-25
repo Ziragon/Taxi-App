@@ -8,13 +8,13 @@ import 'package:http/http.dart' as http;
 
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:arbuz_express/screens/profile_screen.dart';
-import 'package:arbuz_express/screens/homeScreens/verification_banner.dart';
+import 'package:arbuz_express/screens/homeScreensWidgets/verification_banner.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
 
-import '../CustomTextField/HomeMapScreen/car_marker.dart';
-import '../CustomTextField/HomeMapScreen/driver_online_toggle.dart';
-import '../CustomTextField/HomeMapScreen/incoming_order_dialog.dart';
-import '../CustomTextField/HomeMapScreen/driver_active_order_panel.dart';
+import 'driverScreensWidgets/car_marker.dart';
+import 'driverScreensWidgets/driver_online_toggle.dart';
+import 'driverScreensWidgets/incoming_order_dialog.dart';
+import 'driverScreensWidgets/driver_active_order_panel.dart';
 
 class DriverMapScreen extends StatefulWidget {
   final bool showVerificationBanner;
