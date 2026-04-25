@@ -9,7 +9,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "payment_methods")
+@Table(
+        name = "payment_methods",
+        indexes = {
+                @Index(name = "idx_payment_methods_passenger_id", columnList = "passenger_id"),
+                @Index(name = "idx_payment_methods_stripe_payment_method_id", columnList = "stripe_payment_method_id", unique = true),
+                @Index(name = "idx_payment_methods_passenger_id_is_default", columnList = "passenger_id, is_default"),
+                @Index(name = "idx_payment_methods_passenger_id_is_active", columnList = "passenger_id, is_active")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -29,7 +37,7 @@ public class PaymentMethod {
     @Column(name = "stripe_customer_id", nullable = false)
     private String stripeCustomerId;
 
-    @Column(name = "stripe_payment_method_id", nullable = false)
+    @Column(name = "stripe_payment_method_id", nullable = false, unique = true)
     private String stripePaymentMethodId;
 
     @Column(name = "card_brand")
