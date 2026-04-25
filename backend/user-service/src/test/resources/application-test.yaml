@@ -32,8 +32,10 @@ spring:
       port: 6379
 
   rabbitmq:
-    host: localhost
-
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
 
   jackson:
     date-format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
