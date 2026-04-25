@@ -6,6 +6,8 @@ import 'package:arbuz_express/screens/homeScreensWidgets/verification_banner.dar
 import 'package:arbuz_express/screens/homeScreensWidgets/search_results_list.dart';
 import 'package:arbuz_express/screens/homeScreensWidgets/collapsible_bottom_card.dart';
 import 'package:arbuz_express/screens/homeScreensWidgets/active_order_card.dart';
+import 'package:arbuz_express/screens/homeScreensWidgets/notifications_panel.dart';
+import 'package:arbuz_express/screens/homeScreensWidgets/notifications_button.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/destination_marker.dart';
 import 'package:flutter/material.dart';
@@ -54,6 +56,11 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
   bool _isOrderAccepted = false;
   Map<String, String> _orderOptions = {};
 
+  @override
+  void initState() {
+    super.initState();
+  }
+
   Future<void> _getCurrentLocation() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -70,7 +77,9 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
       });
       _mapController.move(_currentPosition!, 15.0);
       _updateRoute();
-    } catch (e) {}
+    } catch (e) {
+      debugPrint('Error getting location: $e');
+    }
   }
 
   void _scheduleSearch(String query, bool isFrom) {
@@ -99,7 +108,9 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
           _isSearchingFrom = isFrom;
         });
       }
-    } catch (e) {}
+    } catch (e) {
+      debugPrint('Error getting suggestions: $e');
+    }
   }
 
   void _selectAddress(dynamic item) {
@@ -201,6 +212,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
       setState(() {
         _toController.text = '';
       });
+      debugPrint('Error setting destination: $e');
     }
   }
 
@@ -235,11 +247,15 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
                 maxZoom: 15.0,
               ),
             );
-          } catch (e) {}
+          } catch (e) {
+            debugPrint('Error fitting camera: $e');
+          }
           await _updateTariffInfo();
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      debugPrint('Error updating route: $e');
+    }
   }
 
   Future<void> _updateTariffInfo() async {
@@ -262,7 +278,9 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
             weatherSurcharge = 80;
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        debugPrint('Error getting weather: $e');
+      }
     }
     _weatherSurchargeRaw = weatherSurcharge;
     final total = 50 + _distanceBaseRaw + weatherSurcharge;
@@ -303,6 +321,14 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
       _isOrderAccepted = false;
       _orderOptions = {};
     });
+  }
+
+  void _showNotifications() {
+    showDialog(
+      context: context,
+      builder: (context) =>
+          NotificationsPanel(onClose: () => Navigator.pop(context)),
+    );
   }
 
   @override
@@ -376,6 +402,16 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
                   ],
                 ),
               ],
+            ),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16, top: 16),
+                child: NotificationsButton(onPressed: _showNotifications),
+              ),
             ),
           ),
           Positioned(
