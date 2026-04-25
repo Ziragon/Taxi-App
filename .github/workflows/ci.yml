@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
+      services: ${{ steps.set-matrix.outputs.services }}
     steps:
       - uses: actions/checkout@v4
 
@@ -21,23 +22,44 @@ jobs:
             backend:
               - 'backend/**'
               - '.github/workflows/**'
+            gateway-service:
+              - 'backend/gateway-service/**'
+              - '.github/workflows/**'
+            user-service:
+              - 'backend/user-service/**'
+              - '.github/workflows/**'
+            trip-service:
+              - 'backend/trip-service/**'
+              - '.github/workflows/**'
+            payment-service:
+              - 'backend/payment-service/**'
+              - '.github/workflows/**'
+
+      - name: Set matrix
+        id: set-matrix
+        run: |
+          services=()
+          [[ "${{ steps.filter.outputs.gateway-service }}" == "true" ]] && services+=("gateway-service")
+          [[ "${{ steps.filter.outputs.user-service }}" == "true" ]] && services+=("user-service")
+          [[ "${{ steps.filter.outputs.trip-service }}" == "true" ]] && services+=("trip-service")
+          [[ "${{ steps.filter.outputs.payment-service }}" == "true" ]] && services+=("payment-service")
+
+          json=$(printf '%s\n' "${services[@]}" | jq -R . | jq -cs .)
+          echo "services=$json" >> $GITHUB_OUTPUT
 
   build-and-test:
     needs: detect-changes
-    if: needs.detect-changes.outputs.backend == 'true'
+    if: needs.detect-changes.outputs.backend == 'true' && needs.detect-changes.outputs.services != '[]'
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: read
       packages: read
-    
+
     strategy:
       fail-fast: false
       matrix:
-        service:
-          - gateway-service
-          - user-service
-          - trip-service
+        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
           - payment-service
 
     steps:
@@ -95,8 +117,10 @@ jobs:
           docker image prune -f
 
   build-and-push:
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    needs: [ detect-changes, build-and-test ]
+    if: |
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') &&
+      needs.detect-changes.outputs.services != '[]'
     runs-on: ubuntu-latest
 
     permissions:
@@ -106,9 +130,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service:
-          - gateway-service
-          - user-service
+        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
+        exclude:
+          - service: trip-service
 
     steps:
       - uses: actions/checkout@v4
@@ -153,10 +177,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check results
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: |
-          build_result="${{ needs.build-and-test.result }}"
-          if [[ "$build_result" == "failure" || "$build_result" == "cancelled" ]]; then
-            echo "Build job failed or was cancelled"
-            exit 1
-          fi
-          echo "CI passed (build: $build_result)"
+          echo "Build job was failed or was cancelled"
+          exit 1
+
+      - name: Success
+        run: echo "CI passed"
