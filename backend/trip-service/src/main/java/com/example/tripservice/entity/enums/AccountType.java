@@ -1,6 +1,6 @@
 package com.example.tripservice.entity.enums;
 
-public enum AccountStatus {
+public enum AccountType {
     PASSENGER,
     DRIVER,
     SYSTEM
