@@ -40,7 +40,7 @@ public class PaymentMethod {
 
     @Builder.Default
     @Column(name = "is_default", nullable = false)
-    private boolean isDefault = false;
+    private boolean defaultvalue = false;
 
     @Builder.Default
     @Column(name = "is_active", nullable = false)
