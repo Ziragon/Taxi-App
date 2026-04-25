@@ -37,6 +37,7 @@ jobs:
         service:
           - gateway-service
           - user-service
+          - trip-service
           
     steps:
       - uses: actions/checkout@v4
