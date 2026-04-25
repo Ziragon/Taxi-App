@@ -9,6 +9,8 @@ import 'package:http/http.dart' as http;
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:arbuz_express/screens/profile_screen.dart';
 import 'package:arbuz_express/screens/homeScreensWidgets/verification_banner.dart';
+import 'package:arbuz_express/screens/menuScreens/notifications_panel.dart';
+import 'package:arbuz_express/screens/menuScreens/notifications_button.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
 
 import 'driverScreensWidgets/car_marker.dart';
@@ -221,6 +223,14 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
     }
   }
 
+  void _showNotifications() {
+    showDialog(
+      context: context,
+      builder: (context) =>
+          NotificationsPanel(onClose: () => Navigator.pop(context)),
+    );
+  }
+
   @override
   void dispose() {
     _searchTimer?.cancel();
@@ -285,6 +295,16 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
                   ],
                 ),
               ],
+            ),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16, top: 16),
+                child: NotificationsButton(onPressed: _showNotifications),
+              ),
             ),
           ),
           Positioned(
