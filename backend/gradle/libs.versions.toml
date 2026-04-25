@@ -7,6 +7,7 @@ spring-dependency-management = "1.1.7"
 
 jjwt = "0.13.0"
 springdoc = "3.0.3"
+stripe = "32.0.0"
 
 [libraries]
 boot-starter = { group = "org.springframework.boot", name = "spring-boot-starter" }
@@ -56,6 +57,9 @@ jjwt-jackson = { group = "io.jsonwebtoken", name = "jjwt-jackson", version.ref =
 # OpenAPI Swagger
 springdoc-webmvc-ui = { group = "org.springdoc", name = "springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 springdoc-webflux-ui = { group = "org.springdoc", name = "springdoc-openapi-starter-webflux-ui", version.ref = "springdoc" }
+
+# Stripe
+stripe-java = { group = "com.stripe", name = "stripe-java", version.ref = "stripe" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
