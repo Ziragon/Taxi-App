@@ -40,6 +40,10 @@ public class PaymentMethodService {
         boolean isFirst = paymentMethodRepository.findAllByPassengerId(passengerId).isEmpty();
         boolean shouldBeDefault = isFirst || setAsDefault;
 
+        if (shouldBeDefault) {
+            paymentMethodRepository.clearDefaultForPassenger(passengerId);
+        }
+
         PaymentMethod paymentMethod = PaymentMethod.builder()
                 .passengerId(passengerId)
                 .stripeCustomerId(customer.getId())
@@ -53,7 +57,6 @@ public class PaymentMethodService {
         PaymentMethod saved = paymentMethodRepository.save(paymentMethod);
 
         if (shouldBeDefault) {
-            paymentMethodRepository.clearDefaultForPassenger(passengerId);
             stripeService.setDefaultPaymentMethod(customer.getId(), stripePaymentMethodId);
         }
 

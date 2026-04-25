@@ -8,8 +8,6 @@ public record AddPayoutAccountRequest(
 
         @NotBlank(message = "Stripe Account ID обязателен")
         @Schema(description = "ID аккаунта Stripe Connect", example = "acct_1234567890")
-        String stripeAccountId,
+        String stripeAccountId
 
-        @Schema(description = "Последние 4 цифры реквизита", example = "4242")
-        String lastFour
 ) {}
