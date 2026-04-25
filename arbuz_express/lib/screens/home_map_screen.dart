@@ -6,8 +6,8 @@ import 'package:arbuz_express/screens/homeScreensWidgets/verification_banner.dar
 import 'package:arbuz_express/screens/homeScreensWidgets/search_results_list.dart';
 import 'package:arbuz_express/screens/homeScreensWidgets/collapsible_bottom_card.dart';
 import 'package:arbuz_express/screens/homeScreensWidgets/active_order_card.dart';
-import 'package:arbuz_express/screens/homeScreensWidgets/notifications_panel.dart';
-import 'package:arbuz_express/screens/homeScreensWidgets/notifications_button.dart';
+import 'package:arbuz_express/screens/menuScreens/notifications_panel.dart';
+import 'package:arbuz_express/screens/menuScreens/notifications_button.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/destination_marker.dart';
 import 'package:flutter/material.dart';
