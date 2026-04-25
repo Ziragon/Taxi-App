@@ -41,6 +41,10 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
   final String _mockClientRating = '4.9';
   String _mockFromAddress = 'Комсомольская улица, 2';
   final String _mockToAddress = 'ул. Кирова, 113';
+  final Map<String, String> _mockPreferences = {
+    'Кальян': 'разогреть',
+    'Музыка': 'глухой водитель',
+  };
 
   @override
   void initState() {
@@ -92,6 +96,8 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
         rating: _mockClientRating,
         fromAddress: _mockFromAddress,
         toAddress: _mockToAddress,
+        preferences: _mockPreferences,
+        price: '₽ 500',
         onAccept: () {
           Navigator.pop(context);
           _acceptOrder();
@@ -281,7 +287,6 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
               ],
             ),
           ),
-
           Positioned(
             top: 0,
             right: 0,
@@ -303,7 +308,6 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
               ),
             ),
           ),
-
           if (widget.showVerificationBanner)
             const Positioned(
               top: 86,
@@ -311,7 +315,6 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
               right: 0,
               child: SafeArea(child: VerificationBanner()),
             ),
-
           if (_isOrderActive)
             Positioned(
               bottom: 0,
@@ -323,13 +326,13 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
                   child: DriverActiveOrderPanel(
                     clientName: _mockClientName,
                     fromAddress: _mockFromAddress,
+                    price: '₽ 500',
                     onArrived: _finishOrCancelOrder,
                     onCancel: _finishOrCancelOrder,
                   ),
                 ),
               ),
             ),
-
           if (!_isOrderActive)
             Positioned(
               bottom: 30,

@@ -4,6 +4,7 @@ import 'package:arbuz_express/widgets/app_ui.dart';
 class DriverActiveOrderPanel extends StatelessWidget {
   final String clientName;
   final String fromAddress;
+  final String price;
   final VoidCallback onArrived;
   final VoidCallback onCancel;
 
@@ -11,6 +12,7 @@ class DriverActiveOrderPanel extends StatelessWidget {
     super.key,
     required this.clientName,
     required this.fromAddress,
+    required this.price,
     required this.onArrived,
     required this.onCancel,
   });
@@ -31,7 +33,11 @@ class DriverActiveOrderPanel extends StatelessWidget {
                   color: const Color(0xFFFFC107).withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.person_rounded, color: Color(0xFFFFC107), size: 28),
+                child: const Icon(
+                  Icons.person_rounded,
+                  color: Color(0xFFFFC107),
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -39,15 +45,15 @@ class DriverActiveOrderPanel extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Едем к клиенту', 
+                      'Едем к клиенту',
                       style: TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      clientName, 
+                      clientName,
                       style: const TextStyle(
-                        color: Colors.white, 
-                        fontSize: 18, 
+                        color: Colors.white,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -56,9 +62,7 @@ class DriverActiveOrderPanel extends StatelessWidget {
               ),
               CircleIconButton(
                 icon: Icons.phone_rounded,
-                onTap: () {
-                  // Логика звонка
-                },
+                onTap: () {},
                 color: const Color(0xFF1A1A1E),
               ),
             ],
@@ -66,15 +70,68 @@ class DriverActiveOrderPanel extends StatelessWidget {
           const Divider(color: Colors.white10, height: 24),
           Row(
             children: [
-              const Icon(Icons.location_on_rounded, color: Color(0xFFFFC107), size: 20),
+              const Icon(
+                Icons.location_on_rounded,
+                color: Color(0xFFFFC107),
+                size: 20,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  fromAddress, 
+                  fromAddress,
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFC107).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFFFFC107).withOpacity(0.2),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFC107).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.attach_money_rounded,
+                        color: Color(0xFFFFC107),
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'К получению',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  price,
+                  style: const TextStyle(
+                    color: Color(0xFFFFC107),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
           Row(
@@ -85,7 +142,9 @@ class DriverActiveOrderPanel extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.redAccent,
                     side: BorderSide(color: Colors.redAccent.withOpacity(0.3)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   child: const Text('Отмена'),
@@ -94,13 +153,10 @@ class DriverActiveOrderPanel extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 flex: 2,
-                child: PrimaryButton(
-                  label: 'Я на месте',
-                  onPressed: onArrived,
-                ),
+                child: PrimaryButton(label: 'Я на месте', onPressed: onArrived),
               ),
             ],
-          )
+          ),
         ],
       ),
     );
