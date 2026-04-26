@@ -56,6 +56,9 @@ server:
   shutdown: graceful
   forward-headers-strategy: framework
 
+osrm:
+  base-url: ${OSRM_BASE_URL:http://localhost:5000}
+
 gateway-auth:
   header: ${JWT_HEADER:X-Gateway-Header}
   header-key: ${HEADER_KEY:dev-secret-key-for-microservices}
