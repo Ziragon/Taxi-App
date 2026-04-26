@@ -1,11 +1,15 @@
 package com.example.userservice.entity;
 
+
 import com.example.userservice.entity.enums.VehicleClass;
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "vehicles")
+@Table(name = "vehicles", indexes = {
+        @Index(name = "idx_vehicles_driver_id", columnList = "driver_id"),
+        @Index(name = "idx_vehicles_license_plate", columnList = "license_plate", unique = true)
+})
 @Getter
 @Setter
 @NoArgsConstructor

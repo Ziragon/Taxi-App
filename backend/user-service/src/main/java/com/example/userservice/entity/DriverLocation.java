@@ -8,7 +8,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
-@Table(name = "driver_locations")
+@Table(name = "driver_locations", indexes = {
+        @Index(name = "idx_driver_locations_lat_lng", columnList = "latitude, longitude")
+})
 @Getter
 @Setter
 @NoArgsConstructor

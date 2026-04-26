@@ -6,6 +6,7 @@ spring:
     open-in-view: false
     properties:
       hibernate:
+        ddl-auto: validate
         jdbc:
           time_zone: UTC
           batch_size: 25

@@ -9,7 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "driver_profiles")
+@Table(name = "driver_profiles", indexes = {
+        @Index(name = "idx_driver_profiles_status", columnList = "status"),
+        @Index(name = "idx_driver_profiles_license_number", columnList = "license_number", unique = true)
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -55,6 +58,10 @@ public class DriverProfile {
     @Column(name = "is_verified", nullable = false)
     private boolean verified = false;
 
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     @Builder.Default
     @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Vehicle> vehicles = new ArrayList<>();
@@ -62,3 +69,4 @@ public class DriverProfile {
     @OneToOne(mappedBy = "driver", cascade = CascadeType.ALL, orphanRemoval = true)
     private DriverLocation location;
 }
+

@@ -57,14 +57,11 @@ class VehicleServiceTest {
     @DisplayName("Установка активного автомобиля: только один активен")
     void setActiveVehicle_OnlyOneActive() {
         DriverProfile driver = DriverProfile.builder().accountId(1L).build();
-        Account account = Account.builder().id(1L).build();
-        driver.setAccount(account);
 
         Vehicle vehicle1 = Vehicle.builder().id(1L).active(false).driver(driver).build();
         Vehicle vehicle2 = Vehicle.builder().id(2L).active(true).driver(driver).build();
         Vehicle vehicle3 = Vehicle.builder().id(3L).active(false).driver(driver).build();
 
-        when(vehicleRepository.findByIdWithDriver(3L)).thenReturn(Optional.of(vehicle3));
         when(vehicleRepository.findAllByDriverAccountId(1L)).thenReturn(List.of(vehicle1, vehicle2, vehicle3));
 
         vehicleService.setActiveVehicle(1L, 3L);
@@ -72,6 +69,7 @@ class VehicleServiceTest {
         assertThat(vehicle1.isActive()).isFalse();
         assertThat(vehicle2.isActive()).isFalse();
         assertThat(vehicle3.isActive()).isTrue();
+        verify(vehicleRepository).findAllByDriverAccountId(1L);
         verify(vehicleRepository, times(3)).save(any(Vehicle.class));
     }
 

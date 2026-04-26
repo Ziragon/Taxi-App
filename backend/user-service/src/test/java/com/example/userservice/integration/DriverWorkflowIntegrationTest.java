@@ -107,6 +107,8 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
         assertThat(vehicle2.isActive()).isFalse();
 
         vehicleService.setActiveVehicle(driverId, vehicle1.getId());
+        entityManager.flush();
+        entityManager.clear();
 
         List<Vehicle> vehicles = vehicleService.getVehiclesByDriver(driverId);
         assertThat(vehicles).hasSize(2);
@@ -114,6 +116,7 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
         assertThat(vehicles.stream().filter(Vehicle::isActive).findFirst().get().getId())
                 .isEqualTo(vehicle1.getId());
 
+        driverProfileService.verifyDriver(driverId);
         driverProfileService.updateStatus(driverId, DriverStatus.ONLINE);
         entityManager.flush();
         entityManager.clear();

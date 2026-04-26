@@ -1,16 +1,15 @@
 package com.example.userservice.service;
 
+import com.example.shared.exception.common.ResourceNotFoundException;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.PassengerProfile;
-import com.example.userservice.exception.ProfileNotFoundException;
+import com.example.userservice.exception.ProfileAlreadyExistsException;
 import com.example.userservice.repository.PassengerProfileRepository;
-import com.example.userservice.util.RatingCalculator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +20,10 @@ public class PassengerProfileService {
 
     @Transactional
     public PassengerProfile createProfile(Long accountId, String firstName, String lastName, String photoUrl) {
+        if (passengerProfileRepository.existsById(accountId)) {
+            throw new ProfileAlreadyExistsException("Passenger");
+        }
+
         Account account = accountService.findById(accountId);
 
         PassengerProfile profile = PassengerProfile.builder()
@@ -38,7 +41,7 @@ public class PassengerProfileService {
     @Transactional(readOnly = true)
     public PassengerProfile getProfile(Long accountId) {
         return passengerProfileRepository.findById(accountId)
-                .orElseThrow(() -> new ProfileNotFoundException("Passenger", accountId));
+                .orElseThrow(() -> new ResourceNotFoundException("Passenger profile", accountId));
     }
 
     @Transactional
@@ -54,13 +57,9 @@ public class PassengerProfileService {
 
     @Transactional
     public void updateRating(Long accountId, BigDecimal newTripRating) {
-        PassengerProfile profile = getProfile(accountId);
-
-        profile.setAverageRating(RatingCalculator.calculate(
-                profile.getAverageRating(),
-                profile.getTotalTrips(),
-                newTripRating
-        ));
-        profile.setTotalTrips(profile.getTotalTrips() + 1);
+        if (!passengerProfileRepository.existsById(accountId)) {
+            throw new ResourceNotFoundException("Passenger profile", accountId);
+        }
+        passengerProfileRepository.updateRating(accountId, newTripRating);
     }
 }

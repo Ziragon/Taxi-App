@@ -1,5 +1,6 @@
 package com.example.userservice.unit.service;
 
+import com.example.shared.exception.common.ResourceNotFoundException;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.PassengerProfile;
 import com.example.userservice.entity.enums.AccountRole;
@@ -55,32 +56,24 @@ class PassengerProfileServiceTest {
     }
 
     @Test
-    @DisplayName("Обновление рейтинга: корректный пересчёт среднего")
-    void updateRating_CalculatesCorrectAverage() {
-        PassengerProfile profile = PassengerProfile.builder()
-                .accountId(1L)
-                .averageRating(new BigDecimal("4.50"))
-                .totalTrips(2)
-                .build();
-
-        when(passengerProfileRepository.findById(1L)).thenReturn(Optional.of(profile));
+    @DisplayName("Обновление рейтинга: вызывает update query")
+    void updateRating_CallsRepositoryUpdate() {
+        when(passengerProfileRepository.existsById(1L)).thenReturn(true);
 
         passengerProfileService.updateRating(1L, new BigDecimal("5.00"));
 
-        assertThat(profile.getAverageRating()).isEqualByComparingTo("4.67");
-        assertThat(profile.getTotalTrips()).isEqualTo(3);
-
-        verify(passengerProfileRepository).findById(1L);
+        verify(passengerProfileRepository).existsById(1L);
+        verify(passengerProfileRepository).updateRating(1L, new BigDecimal("5.00"));
         verifyNoMoreInteractions(passengerProfileRepository);
     }
 
     @Test
-    @DisplayName("Получение профиля: профиль не найден -> ProfileNotFoundException")
+    @DisplayName("Получение профиля: профиль не найден -> ResourceNotFoundException")
     void getProfile_NotFound() {
         when(passengerProfileRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> passengerProfileService.getProfile(999L))
-                .isInstanceOf(ProfileNotFoundException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Passenger profile");
     }
 }

@@ -26,6 +26,9 @@ import static org.assertj.core.api.Assertions.*;
 class PassengerWorkflowIntegrationTest extends BaseIntegrationTest{
 
     @Autowired
+    private jakarta.persistence.EntityManager entityManager;
+
+    @Autowired
     private AuthService authService;
 
     @Autowired
@@ -81,6 +84,9 @@ class PassengerWorkflowIntegrationTest extends BaseIntegrationTest{
         passengerProfileService.updateRating(passengerId, new BigDecimal("4.00"));
         passengerProfileService.updateRating(passengerId, new BigDecimal("5.00"));
 
+        entityManager.flush();
+        entityManager.clear();
+
         PassengerProfile afterRatings = passengerProfileService.getProfile(passengerId);
         assertThat(afterRatings.getTotalTrips()).isEqualTo(3);
         assertThat(afterRatings.getAverageRating()).isEqualByComparingTo("4.67");
@@ -99,16 +105,22 @@ class PassengerWorkflowIntegrationTest extends BaseIntegrationTest{
         passengerProfileService.createProfile(passengerId, "Test", "User", null);
 
         passengerProfileService.updateRating(passengerId, new BigDecimal("4.50"));
+        entityManager.flush();
+        entityManager.clear();
         PassengerProfile after1 = passengerProfileService.getProfile(passengerId);
         assertThat(after1.getAverageRating()).isEqualByComparingTo("4.50");
         assertThat(after1.getTotalTrips()).isEqualTo(1);
 
         passengerProfileService.updateRating(passengerId, new BigDecimal("5.00"));
+        entityManager.flush();
+        entityManager.clear();
         PassengerProfile after2 = passengerProfileService.getProfile(passengerId);
         assertThat(after2.getAverageRating()).isEqualByComparingTo("4.75");
         assertThat(after2.getTotalTrips()).isEqualTo(2);
 
         passengerProfileService.updateRating(passengerId, new BigDecimal("3.00"));
+        entityManager.flush();
+        entityManager.clear();
         PassengerProfile after3 = passengerProfileService.getProfile(passengerId);
         assertThat(after3.getAverageRating()).isEqualByComparingTo("4.17");
         assertThat(after3.getTotalTrips()).isEqualTo(3);

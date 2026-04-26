@@ -22,5 +22,9 @@ public record RegisterRequest (
     @NotBlank(message = "Пароль обязателен")
     @Size(min = 8, message = "Пароль должен содержать минимум 8 символов")
     @Schema(description = "Пароль (минимум 8 символов)", example = "SecurePass123")
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$",
+            message = "Пароль должен содержать минимум одну заглавную букву, одну строчную и одну цифру"
+    )
     String password
 ) {}
