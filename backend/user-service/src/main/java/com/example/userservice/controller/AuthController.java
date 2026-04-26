@@ -1,6 +1,6 @@
 package com.example.userservice.controller;
 
-import com.example.userservice.dto.data.AuthResult;
+import com.example.userservice.dto.data.AuthDto;
 import com.example.userservice.dto.request.LoginRequest;
 import com.example.userservice.dto.request.RefreshTokenRequest;
 import com.example.userservice.dto.request.RegisterRequest;
@@ -52,7 +52,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> registerPassenger(
             @Valid @RequestBody RegisterRequest request
     ) {
-        AuthResult result = authService.register(
+        AuthDto result = authService.register(
                 request.email(),
                 request.phone(),
                 request.password()
@@ -85,7 +85,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(
             @Valid @RequestBody LoginRequest request
     ) {
-        AuthResult result = authService.login(request.email(), request.password());
+        AuthDto result = authService.login(request.email(), request.password());
 
         return ResponseEntity.ok(AuthResponse.from(result));
     }
@@ -112,7 +112,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> refresh(
             @Valid @RequestBody RefreshTokenRequest request
     ) {
-        AuthResult result = authService.refreshTokens(request.refreshToken());
+        AuthDto result = authService.refreshTokens(request.refreshToken());
 
         return ResponseEntity.ok(AuthResponse.from(result));
     }

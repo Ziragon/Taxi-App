@@ -1,5 +1,6 @@
 package com.example.userservice.service;
 
+import com.example.userservice.dto.data.PassengerProfileDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.PassengerProfile;
 import com.example.userservice.exception.ProfileNotFoundException;
@@ -19,7 +20,7 @@ public class PassengerProfileService {
     private final AccountService accountService;
 
     @Transactional
-    public PassengerProfile createProfile(Long accountId, String firstName, String lastName, String photoUrl) {
+    public PassengerProfileDto createProfile(Long accountId, String firstName, String lastName, String photoUrl) {
         Account account = accountService.findById(accountId);
 
         PassengerProfile profile = PassengerProfile.builder()
@@ -31,29 +32,35 @@ public class PassengerProfileService {
                 .totalTrips(0)
                 .build();
 
-        return passengerProfileRepository.save(profile);
+        PassengerProfile saved = passengerProfileRepository.save(profile);
+        return PassengerProfileDto.from(saved);
     }
 
     @Transactional(readOnly = true)
-    public PassengerProfile getProfile(Long accountId) {
-        return passengerProfileRepository.findById(accountId)
+    public PassengerProfileDto getProfile(Long accountId) {
+        PassengerProfile profile = passengerProfileRepository.findById(accountId)
                 .orElseThrow(() -> new ProfileNotFoundException("Passenger", accountId));
+
+        return PassengerProfileDto.from(profile);
     }
 
     @Transactional
-    public PassengerProfile updateProfile(Long accountId, String firstName, String lastName, String photoUrl) {
-        PassengerProfile profile = getProfile(accountId);
+    public PassengerProfileDto updateProfile(Long accountId, String firstName, String lastName, String photoUrl) {
+        PassengerProfile profile = passengerProfileRepository.findById(accountId)
+                .orElseThrow(() -> new ProfileNotFoundException("Passenger", accountId));
 
         profile.setFirstName(firstName);
         profile.setLastName(lastName);
         profile.setPhotoUrl(photoUrl);
 
-        return passengerProfileRepository.save(profile);
+        PassengerProfile saved = passengerProfileRepository.save(profile);
+        return PassengerProfileDto.from(saved);
     }
 
     @Transactional
     public void updateRating(Long accountId, BigDecimal newTripRating) {
-        PassengerProfile profile = getProfile(accountId);
+        PassengerProfile profile = passengerProfileRepository.findById(accountId)
+                .orElseThrow(() -> new ProfileNotFoundException("Passenger", accountId));
 
         int totalTrips = profile.getTotalTrips() + 1;
         BigDecimal currentAverage = profile.getAverageRating();

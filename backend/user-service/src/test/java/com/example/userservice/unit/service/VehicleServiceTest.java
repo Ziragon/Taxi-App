@@ -1,10 +1,11 @@
 package com.example.userservice.unit.service;
 
+import com.example.userservice.dto.data.VehicleDto;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.Vehicle;
 import com.example.userservice.entity.enums.VehicleClass;
+import com.example.userservice.repository.DriverProfileRepository;
 import com.example.userservice.repository.VehicleRepository;
-import com.example.userservice.service.DriverProfileService;
 import com.example.userservice.service.VehicleService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,7 +29,7 @@ class VehicleServiceTest {
     private VehicleRepository vehicleRepository;
 
     @Mock
-    private DriverProfileService driverProfileService;
+    private DriverProfileRepository driverProfileRepository;
 
     @InjectMocks
     private VehicleService vehicleService;
@@ -43,12 +45,12 @@ class VehicleServiceTest {
                 .active(false)
                 .build();
 
-        when(driverProfileService.getProfile(1L)).thenReturn(driver);
         when(vehicleRepository.save(any(Vehicle.class))).thenReturn(vehicle);
+        when(driverProfileRepository.findById(1L)).thenReturn(Optional.of(driver));
 
-        Vehicle created = vehicleService.addVehicle(1L, "Toyota", "Camry", (short) 2020, "Black", "A123BC777", VehicleClass.COMFORT);
+        VehicleDto created = vehicleService.addVehicle(1L, "Toyota", "Camry", (short) 2020, "Black", "A123BC777", VehicleClass.COMFORT);
 
-        assertThat(created.isActive()).isFalse();
+        assertThat(created.active()).isFalse();
     }
 
     @Test

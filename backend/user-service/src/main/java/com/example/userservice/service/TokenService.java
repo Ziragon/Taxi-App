@@ -2,7 +2,7 @@ package com.example.userservice.service;
 
 
 import com.example.userservice.config.AppProperties;
-import com.example.userservice.dto.data.TokenData;
+import com.example.userservice.dto.data.TokenDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.RefreshToken;
 import com.example.userservice.exception.TokenExpiredException;
@@ -30,9 +30,9 @@ public class TokenService {
     private final Clock clock;
 
     @Transactional
-    public TokenData createRefreshToken(Account account) {
-        TokenData tokenData = jwtUtil.generateRefreshToken();
-        String tokenHash = hashToken(tokenData.token());
+    public TokenDto createRefreshToken(Account account) {
+        TokenDto tokenDto = jwtUtil.generateRefreshToken();
+        String tokenHash = hashToken(tokenDto.token());
 
         RefreshToken refreshToken = RefreshToken.builder()
                 .account(accountService.findById(account.getId()))
@@ -42,7 +42,7 @@ public class TokenService {
                 .build();
 
         refreshTokenRepository.save(refreshToken);
-        return tokenData;
+        return tokenDto;
     }
 
     @Transactional

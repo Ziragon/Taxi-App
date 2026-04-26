@@ -1,5 +1,6 @@
 package com.example.userservice.unit.service;
 
+import com.example.userservice.dto.data.PassengerProfileDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.PassengerProfile;
 import com.example.userservice.entity.enums.AccountRole;
@@ -47,10 +48,10 @@ class PassengerProfileServiceTest {
         when(accountService.findById(1L)).thenReturn(account);
         when(passengerProfileRepository.save(any(PassengerProfile.class))).thenReturn(profile);
 
-        PassengerProfile created = passengerProfileService.createProfile(1L, "Иван", "Иванов", null);
+        PassengerProfileDto created = passengerProfileService.createProfile(1L, "Иван", "Иванов", null);
 
-        assertThat(created.getFirstName()).isEqualTo("Иван");
-        assertThat(created.getLastName()).isEqualTo("Иванов");
+        assertThat(created.firstName()).isEqualTo("Иван");
+        assertThat(created.lastName()).isEqualTo("Иванов");
         verify(passengerProfileRepository).save(any(PassengerProfile.class));
     }
 

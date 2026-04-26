@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 
-public record TokenData(
+public record TokenDto(
         @Schema(description = "Строка токена")
         String token,
 

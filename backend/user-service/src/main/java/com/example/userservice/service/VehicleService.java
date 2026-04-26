@@ -1,9 +1,12 @@
 package com.example.userservice.service;
 
+import com.example.userservice.dto.data.VehicleDto;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.Vehicle;
 import com.example.userservice.entity.enums.VehicleClass;
+import com.example.userservice.exception.ProfileNotFoundException;
 import com.example.userservice.exception.VehicleNotFoundException;
+import com.example.userservice.repository.DriverProfileRepository;
 import com.example.userservice.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,15 +19,16 @@ import java.util.List;
 public class VehicleService {
 
     private final VehicleRepository vehicleRepository;
-    private final DriverProfileService driverProfileService;
+    private final DriverProfileRepository driverProfileRepository;
 
     @Transactional
-    public Vehicle addVehicle(Long driverId, String brand, String model, Short year,
+    public VehicleDto addVehicle(Long driverId, String brand, String model, Short year,
                               String color, String licensePlate, VehicleClass vehicleClass) {
-        DriverProfile driver = driverProfileService.getProfile(driverId);
+        DriverProfile profile = driverProfileRepository.findById(driverId)
+                .orElseThrow(() -> new ProfileNotFoundException("Driver", driverId));
 
         Vehicle vehicle = Vehicle.builder()
-                .driver(driver)
+                .driver(profile)
                 .brand(brand)
                 .model(model)
                 .year(year)
@@ -34,29 +38,41 @@ public class VehicleService {
                 .active(false)
                 .build();
 
-        return vehicleRepository.save(vehicle);
+        Vehicle saved = vehicleRepository.save(vehicle);
+        return VehicleDto.from(saved);
     }
 
     @Transactional(readOnly = true)
-    public Vehicle getVehicle(Long vehicleId) {
-        return vehicleRepository.findById(vehicleId)
+    public VehicleDto getVehicle(Long vehicleId) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new VehicleNotFoundException(vehicleId));
+
+        return VehicleDto.from(vehicle);
     }
 
     @Transactional(readOnly = true)
-    public List<Vehicle> getVehiclesByDriver(Long driverId) {
-        return vehicleRepository.findAllByDriverAccountId(driverId);
+    public List<VehicleDto> getVehiclesByDriver(Long driverId) {
+        List<Vehicle> vehicles = vehicleRepository.findAllByDriverAccountId(driverId);
+
+        return vehicles.stream()
+                .map(VehicleDto::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<Vehicle> getActiveVehiclesByDriver(Long driverId) {
-        return vehicleRepository.findAllByDriverAccountIdAndActiveTrue(driverId);
+    public List<VehicleDto> getActiveVehiclesByDriver(Long driverId) {
+        List<Vehicle> vehicles = vehicleRepository.findAllByDriverAccountIdAndActiveTrue(driverId);
+
+        return vehicles.stream()
+                .map(VehicleDto::from)
+                .toList();
     }
 
     @Transactional
-    public Vehicle updateVehicle(Long vehicleId, String brand, String model, Short year,
-                                 String color, String licensePlate, VehicleClass vehicleClass) {
-        Vehicle vehicle = getVehicle(vehicleId);
+    public VehicleDto updateVehicle(Long vehicleId, String brand, String model, Short year,
+                                    String color, String licensePlate, VehicleClass vehicleClass) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new VehicleNotFoundException(vehicleId));
 
         vehicle.setBrand(brand);
         vehicle.setModel(model);
@@ -65,12 +81,13 @@ public class VehicleService {
         vehicle.setLicensePlate(licensePlate);
         vehicle.setVehicleClass(vehicleClass);
 
-        return vehicleRepository.save(vehicle);
+        Vehicle saved = vehicleRepository.save(vehicle);
+        return VehicleDto.from(saved);
     }
 
     @Transactional
     public void setActiveVehicle(Long driverId, Long vehicleId) {
-        List<Vehicle> driverVehicles = getVehiclesByDriver(driverId);
+        List<Vehicle> driverVehicles = vehicleRepository.findAllByDriverAccountId(driverId);
 
         driverVehicles.forEach(v -> {
             v.setActive(v.getId().equals(vehicleId));
