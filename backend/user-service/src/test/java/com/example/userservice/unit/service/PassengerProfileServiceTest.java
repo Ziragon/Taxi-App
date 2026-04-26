@@ -64,12 +64,14 @@ class PassengerProfileServiceTest {
                 .build();
 
         when(passengerProfileRepository.findById(1L)).thenReturn(Optional.of(profile));
-        when(passengerProfileRepository.save(any(PassengerProfile.class))).thenAnswer(i -> i.getArgument(0));
 
         passengerProfileService.updateRating(1L, new BigDecimal("5.00"));
 
         assertThat(profile.getAverageRating()).isEqualByComparingTo("4.67");
         assertThat(profile.getTotalTrips()).isEqualTo(3);
+
+        verify(passengerProfileRepository).findById(1L);
+        verifyNoMoreInteractions(passengerProfileRepository);
     }
 
     @Test
