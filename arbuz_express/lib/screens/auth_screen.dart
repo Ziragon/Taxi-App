@@ -1,5 +1,6 @@
+import 'package:arbuz_express/screens/basic_registration_screen.dart';
 import 'package:arbuz_express/screens/home_map_screen.dart';
-import 'package:arbuz_express/screens/role_selection_screen.dart';
+import 'package:arbuz_express/utils/validators.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,10 +37,10 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _validateLogin() {
-    final clean = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final isPhoneValid = Validators.validatePhone(_phoneController.text);
     final passLength = _passwordController.text.length;
     setState(() {
-      _isLoginValid = clean.length == 11 && passLength >= 6;
+      _isLoginValid = isPhoneValid && passLength >= 6;
     });
   }
 
@@ -177,7 +178,8 @@ class _AuthScreenState extends State<AuthScreen> {
                               TextButton(
                                 onPressed: () => Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (_) => const RoleSelectionScreen(),
+                                    builder: (_) =>
+                                        const BasicRegistrationScreen(),
                                   ),
                                 ),
                                 style: TextButton.styleFrom(
