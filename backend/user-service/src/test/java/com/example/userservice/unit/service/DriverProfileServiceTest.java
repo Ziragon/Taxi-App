@@ -1,5 +1,6 @@
 package com.example.userservice.unit.service;
 
+import com.example.userservice.dto.data.DriverProfileDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.Vehicle;
@@ -54,10 +55,10 @@ class DriverProfileServiceTest {
         when(accountService.findById(1L)).thenReturn(account);
         when(driverProfileRepository.save(any(DriverProfile.class))).thenReturn(profile);
 
-        DriverProfile created = driverProfileService.createProfile(1L, "Сергей", "Сидоров", "7712345678", null);
+        DriverProfileDto created = driverProfileService.createProfile(1L, "Сергей", "Сидоров", "7712345678", null);
 
-        assertThat(created.isVerified()).isFalse();
-        assertThat(created.getStatus()).isEqualTo(DriverStatus.OFFLINE);
+        assertThat(created.verified()).isFalse();
+        assertThat(created.status()).isEqualTo(DriverStatus.OFFLINE);
     }
 
     @Test

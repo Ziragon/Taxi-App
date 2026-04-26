@@ -1,6 +1,7 @@
 package com.example.userservice.service;
 
 import com.example.shared.exception.common.ResourceNotFoundException;
+import com.example.userservice.dto.data.DriverProfileDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.enums.DriverStatus;
@@ -23,8 +24,8 @@ public class DriverProfileService {
     private final AccountService accountService;
 
     @Transactional
-    public DriverProfile createProfile(Long accountId, String firstName, String lastName,
-                                       String licenseNumber, String photoUrl) {
+    public DriverProfileDto createProfile(Long accountId, String firstName, String lastName,
+                                          String licenseNumber, String photoUrl) {
         if (driverProfileRepository.existsById(accountId)) {
             throw new ProfileAlreadyExistsException("Driver");
         }
@@ -47,31 +48,37 @@ public class DriverProfileService {
                 .verified(false)
                 .build();
 
-        return driverProfileRepository.save(profile);
+        DriverProfile saved = driverProfileRepository.save(profile);
+        return DriverProfileDto.from(saved);
     }
 
     @Transactional(readOnly = true)
-    public DriverProfile getProfile(Long accountId) {
-        return driverProfileRepository.findById(accountId)
+    public DriverProfileDto getProfile(Long accountId) {
+        DriverProfile profile = driverProfileRepository.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver profile", accountId));
+
+        return DriverProfileDto.from(profile);
     }
 
     @Transactional
-    public DriverProfile updateProfile(Long accountId, String firstName, String lastName,
-                                       String licenseNumber, String photoUrl) {
-        DriverProfile profile = getProfile(accountId);
+    public DriverProfileDto updateProfile(Long accountId, String firstName, String lastName,
+                                          String licenseNumber, String photoUrl) {
+        DriverProfile profile = driverProfileRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile", accountId));
 
         profile.setFirstName(firstName);
         profile.setLastName(lastName);
         profile.setLicenseNumber(licenseNumber);
         profile.setPhotoUrl(photoUrl);
 
-        return driverProfileRepository.save(profile);
+        DriverProfile saved = driverProfileRepository.save(profile);
+        return DriverProfileDto.from(saved);
     }
 
     @Transactional
     public void updateStatus(Long accountId, DriverStatus status) {
-        DriverProfile profile = getProfile(accountId);
+        DriverProfile profile = driverProfileRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile", accountId));
 
         if (status == DriverStatus.ONLINE) {
             validateOnlineRequirements(accountId, profile);
@@ -82,7 +89,9 @@ public class DriverProfileService {
 
     @Transactional
     public void verifyDriver(Long accountId) {
-        DriverProfile profile = getProfile(accountId);
+        DriverProfile profile = driverProfileRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile", accountId));
+
         profile.setVerified(true);
         driverProfileRepository.save(profile);
     }
@@ -99,7 +108,8 @@ public class DriverProfileService {
 
     @Transactional
     public void updateRating(Long accountId, BigDecimal newTripRating) {
-        DriverProfile profile = getProfile(accountId);
+        DriverProfile profile = driverProfileRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile", accountId));
 
         profile.setAverageRating(com.example.userservice.util.RatingCalculator.calculate(
                 profile.getAverageRating(),
@@ -118,11 +128,7 @@ public class DriverProfileService {
             throw new IllegalStateException("Account is not active");
         }
 
-        boolean hasActiveVehicle = vehicleRepository.findAllByDriverAccountIdAndActiveTrue(accountId)
-                .stream()
-                .anyMatch(vehicle -> true);
-
-        if (!hasActiveVehicle) {
+        if (vehicleRepository.findAllByDriverAccountIdAndActiveTrue(accountId).isEmpty()) {
             throw new IllegalStateException("Driver must have an active vehicle to go online");
         }
     }

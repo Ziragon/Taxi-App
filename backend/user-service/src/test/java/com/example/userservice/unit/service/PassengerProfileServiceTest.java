@@ -1,10 +1,11 @@
 package com.example.userservice.unit.service;
 
 import com.example.shared.exception.common.ResourceNotFoundException;
+import com.example.userservice.dto.data.PassengerProfileDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.PassengerProfile;
 import com.example.userservice.entity.enums.AccountRole;
-import com.example.userservice.exception.ProfileNotFoundException;
+import com.example.userservice.exception.ProfileAlreadyExistsException;
 import com.example.userservice.repository.PassengerProfileRepository;
 import com.example.userservice.service.AccountService;
 import com.example.userservice.service.PassengerProfileService;
@@ -45,14 +46,27 @@ class PassengerProfileServiceTest {
                 .lastName("Иванов")
                 .build();
 
+        when(passengerProfileRepository.existsById(1L)).thenReturn(false);
         when(accountService.findById(1L)).thenReturn(account);
         when(passengerProfileRepository.save(any(PassengerProfile.class))).thenReturn(profile);
 
-        PassengerProfile created = passengerProfileService.createProfile(1L, "Иван", "Иванов", null);
+        PassengerProfileDto created = passengerProfileService.createProfile(1L, "Иван", "Иванов", null);
 
-        assertThat(created.getFirstName()).isEqualTo("Иван");
-        assertThat(created.getLastName()).isEqualTo("Иванов");
+        assertThat(created.firstName()).isEqualTo("Иван");
+        assertThat(created.lastName()).isEqualTo("Иванов");
+        verify(passengerProfileRepository).existsById(1L);
+        verify(accountService).findById(1L);
         verify(passengerProfileRepository).save(any(PassengerProfile.class));
+    }
+
+    @Test
+    @DisplayName("Создание профиля: дублирующийся профиль -> ProfileAlreadyExistsException")
+    void createProfile_AlreadyExists() {
+        when(passengerProfileRepository.existsById(1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> passengerProfileService.createProfile(1L, "Иван", "Иванов", null))
+                .isInstanceOf(ProfileAlreadyExistsException.class)
+                .hasMessageContaining("Passenger");
     }
 
     @Test

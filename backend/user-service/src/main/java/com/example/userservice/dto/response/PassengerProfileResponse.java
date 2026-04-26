@@ -1,6 +1,6 @@
 package com.example.userservice.dto.response;
 
-import com.example.userservice.entity.PassengerProfile;
+import com.example.userservice.dto.data.PassengerProfileDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
@@ -26,14 +26,14 @@ public record PassengerProfileResponse (
     @Schema(description = "Количество поездок", example = "42")
     Integer totalTrips
 ) {
-    public static PassengerProfileResponse from(PassengerProfile profile) {
+    public static PassengerProfileResponse from(PassengerProfileDto profile) {
         return new PassengerProfileResponse(
-                profile.getAccountId(),
-                profile.getFirstName(),
-                profile.getLastName(),
-                profile.getPhotoUrl(),
-                profile.getAverageRating(),
-                profile.getTotalTrips()
+                profile.accountId(),
+                profile.firstName(),
+                profile.lastName(),
+                profile.photoUrl(),
+                profile.averageRating(),
+                profile.totalTrips()
         );
     }
 }

@@ -1,6 +1,6 @@
 package com.example.userservice.dto.response;
 
-import com.example.userservice.entity.Vehicle;
+import com.example.userservice.dto.data.VehicleDto;
 import com.example.userservice.entity.enums.VehicleClass;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -34,17 +34,17 @@ public record VehicleResponse (
     @Schema(description = "Активен ли", example = "true")
     Boolean isActive
 ) {
-    public static VehicleResponse from(Vehicle vehicle) {
+    public static VehicleResponse from(VehicleDto vehicle) {
         return new VehicleResponse(
-                vehicle.getId(),
-                vehicle.getDriver().getAccountId(),
-                vehicle.getBrand(),
-                vehicle.getModel(),
-                vehicle.getYear(),
-                vehicle.getColor(),
-                vehicle.getLicensePlate(),
-                vehicle.getVehicleClass(),
-                vehicle.isActive()
+                vehicle.id(),
+                vehicle.driverId(),
+                vehicle.brand(),
+                vehicle.model(),
+                vehicle.year(),
+                vehicle.color(),
+                vehicle.licensePlate(),
+                vehicle.vehicleClass(),
+                vehicle.active()
         );
     }
 }

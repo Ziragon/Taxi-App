@@ -1,11 +1,12 @@
 package com.example.userservice.unit.service;
 
+import com.example.userservice.dto.data.VehicleDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.Vehicle;
 import com.example.userservice.entity.enums.VehicleClass;
+import com.example.userservice.repository.DriverProfileRepository;
 import com.example.userservice.repository.VehicleRepository;
-import com.example.userservice.service.DriverProfileService;
 import com.example.userservice.service.VehicleService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,7 @@ class VehicleServiceTest {
     private VehicleRepository vehicleRepository;
 
     @Mock
-    private DriverProfileService driverProfileService;
+    private DriverProfileRepository driverProfileRepository;
 
     @InjectMocks
     private VehicleService vehicleService;
@@ -45,18 +46,24 @@ class VehicleServiceTest {
                 .active(false)
                 .build();
 
-        when(driverProfileService.getProfile(1L)).thenReturn(driver);
+        when(driverProfileRepository.findById(1L)).thenReturn(Optional.of(driver));
+        when(vehicleRepository.existsByLicensePlate("A123BC777")).thenReturn(false);
         when(vehicleRepository.save(any(Vehicle.class))).thenReturn(vehicle);
 
-        Vehicle created = vehicleService.addVehicle(1L, "Toyota", "Camry", (short) 2020, "Black", "A123BC777", VehicleClass.COMFORT);
+        VehicleDto created = vehicleService.addVehicle(1L, "Toyota", "Camry", (short) 2020, "Black", "A123BC777", VehicleClass.COMFORT);
 
-        assertThat(created.isActive()).isFalse();
+        assertThat(created.active()).isFalse();
+        verify(vehicleRepository).existsByLicensePlate("A123BC777");
+        verify(driverProfileRepository).findById(1L);
+        verify(vehicleRepository).save(any(Vehicle.class));
     }
 
     @Test
     @DisplayName("Установка активного автомобиля: только один активен")
     void setActiveVehicle_OnlyOneActive() {
         DriverProfile driver = DriverProfile.builder().accountId(1L).build();
+        Account account = Account.builder().id(1L).build();
+        driver.setAccount(account);
 
         Vehicle vehicle1 = Vehicle.builder().id(1L).active(false).driver(driver).build();
         Vehicle vehicle2 = Vehicle.builder().id(2L).active(true).driver(driver).build();
@@ -71,6 +78,6 @@ class VehicleServiceTest {
         assertThat(vehicle3.isActive()).isTrue();
         verify(vehicleRepository).findAllByDriverAccountId(1L);
         verify(vehicleRepository, times(3)).save(any(Vehicle.class));
+        verify(vehicleRepository).flush();
     }
-
 }

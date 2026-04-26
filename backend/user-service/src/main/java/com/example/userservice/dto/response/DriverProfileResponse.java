@@ -1,6 +1,6 @@
 package com.example.userservice.dto.response;
 
-import com.example.userservice.entity.DriverProfile;
+import com.example.userservice.dto.data.DriverProfileDto;
 import com.example.userservice.entity.enums.DriverStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -36,17 +36,17 @@ public record DriverProfileResponse (
     @Schema(description = "Верифицирован ли", example = "true")
     boolean isVerified
 ) {
-    public static DriverProfileResponse from(DriverProfile profile) {
+    public static DriverProfileResponse from(DriverProfileDto profile) {
         return new DriverProfileResponse(
-                profile.getAccountId(),
-                profile.getFirstName(),
-                profile.getLastName(),
-                profile.getPhotoUrl(),
-                profile.getLicenseNumber(),
-                profile.getStatus(),
-                profile.getAverageRating(),
-                profile.getTotalTrips(),
-                profile.isVerified()
+                profile.accountId(),
+                profile.firstName(),
+                profile.lastName(),
+                profile.photoUrl(),
+                profile.licenseNumber(),
+                profile.status(),
+                profile.averageRating(),
+                profile.totalTrips(),
+                profile.verified()
         );
     }
 }

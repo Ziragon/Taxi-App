@@ -1,8 +1,10 @@
-import 'package:arbuz_express/screens/home_map_screen.dart';
+import 'package:arbuz_express/hooks/use_auth.dart';
 import 'package:arbuz_express/screens/role_selection_screen.dart';
+import 'package:arbuz_express/screens/home_map_screen.dart';
+import 'package:arbuz_express/screens/basic_registration_screen.dart';
+import 'package:arbuz_express/utils/validators.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -12,43 +14,67 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  late final TextEditingController _phoneController;
+  late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
+  final UseAuth _useAuth = UseAuth();
+
   bool _isLoginValid = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _phoneController = TextEditingController(text: '+7');
+    _emailController = TextEditingController();
     _passwordController = TextEditingController();
-    _phoneController.addListener(_handlePrefixProtection);
-    _phoneController.addListener(_validateLogin);
+    _emailController.addListener(_validateLogin);
     _passwordController.addListener(_validateLogin);
   }
 
-  void _handlePrefixProtection() {
-    if (!_phoneController.text.startsWith('+7')) {
-      _phoneController.value = const TextEditingValue(
-        text: '+7',
-        selection: TextSelection.collapsed(offset: 2),
-      );
-    }
-  }
-
   void _validateLogin() {
-    final clean = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final isEmailValid = Validators.validateEmail(_emailController.text);
     final passLength = _passwordController.text.length;
     setState(() {
-      _isLoginValid = clean.length == 11 && passLength >= 6;
+      _isLoginValid = isEmailValid && passLength >= 6;
     });
+  }
+
+  Future<void> _handleLogin() async {
+    setState(() => _isLoading = true);
+
+    final result = await _useAuth.login(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+
+      if (result.success) {
+        if (result.hasProfile) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const HomeMapScreen()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.error ?? 'Ошибка авторизации'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 
   @override
   void dispose() {
-    _phoneController.removeListener(_handlePrefixProtection);
-    _phoneController.removeListener(_validateLogin);
+    _emailController.removeListener(_validateLogin);
     _passwordController.removeListener(_validateLogin);
-    _phoneController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -129,7 +155,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Введите номер телефона и пароль',
+                            'Введите почту и пароль',
                             style: TextStyle(
                               fontSize: 15,
                               color: Colors.white.withOpacity(0.6),
@@ -137,17 +163,11 @@ class _AuthScreenState extends State<AuthScreen> {
                           ),
                           const SizedBox(height: 28),
                           CustomTextField(
-                            label: 'Номер телефона',
-                            hintText: '+7 000 000 00 00',
-                            icon: Icons.phone_rounded,
-                            keyboardType: TextInputType.phone,
-                            controller: _phoneController,
-                            inputFormatters: [
-                              LengthLimitingTextInputFormatter(12),
-                              FilteringTextInputFormatter.allow(
-                                RegExp(r'[0-9+]'),
-                              ),
-                            ],
+                            label: 'Электронная почта',
+                            hintText: 'user@example.com',
+                            icon: Icons.email_rounded,
+                            keyboardType: TextInputType.emailAddress,
+                            controller: _emailController,
                           ),
                           const SizedBox(height: 20),
                           CustomTextField(
@@ -159,17 +179,19 @@ class _AuthScreenState extends State<AuthScreen> {
                             obscureText: true,
                           ),
                           const SizedBox(height: 28),
-                          PrimaryButton(
-                            label: 'Войти',
-                            onPressed: _isLoginValid
-                                ? () => Navigator.of(context).pushReplacement(
-                                    MaterialPageRoute(
-                                      builder: (_) => const HomeMapScreen(),
-                                    ),
-                                  )
-                                : null,
-                            enabled: _isLoginValid,
-                          ),
+                          _isLoading
+                              ? const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Color(0xFFFFC107),
+                                  ),
+                                )
+                              : PrimaryButton(
+                                  label: 'Войти',
+                                  onPressed: _isLoginValid
+                                      ? _handleLogin
+                                      : null,
+                                  enabled: _isLoginValid,
+                                ),
                           const SizedBox(height: 24),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -177,7 +199,8 @@ class _AuthScreenState extends State<AuthScreen> {
                               TextButton(
                                 onPressed: () => Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (_) => const RoleSelectionScreen(),
+                                    builder: (_) =>
+                                        const BasicRegistrationScreen(),
                                   ),
                                 ),
                                 style: TextButton.styleFrom(
