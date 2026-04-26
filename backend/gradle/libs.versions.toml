@@ -24,6 +24,8 @@ boot-starter-data-jpa = { group = "org.springframework.boot", name = "spring-boo
 boot-starter-data-redis = { group = "org.springframework.boot", name = "spring-boot-starter-data-redis" }
 boot-starter-amqp = { group = "org.springframework.boot", name = "spring-boot-starter-amqp" }
 
+boot-starter-openfeign = { group = "org.springframework.cloud", name = "spring-cloud-starter-openfeign" }
+
 boot-starter-flyway = { group = "org.springframework.boot", name = "spring-boot-starter-flyway" }
 
 boot-configuration-processor = { group = "org.springframework.boot", name = "spring-boot-configuration-processor" }
@@ -31,7 +33,7 @@ boot-configuration-processor = { group = "org.springframework.boot", name = "spr
 boot-starter-test = { group = "org.springframework.boot", name = "spring-boot-starter-test" }
 boot-testcontainers = { group = "org.springframework.boot", name = "spring-boot-testcontainers" }
 boot-webmvc-test = { group = "org.springframework.boot", name = "spring-boot-webmvc-test" }
-testcontainers-jdbc = { module = "org.testcontainers:jdbc", version.ref = "testcontainers" }
+
 awaitility = { group = "org.awaitility", name = "awaitility", version = "4.2.2" }
 
 jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind" }
@@ -45,7 +47,7 @@ flyway-core = { group = "org.flywaydb", name = "flyway-core" }
 flyway-database-postgresql = { group = "org.flywaydb", name = "flyway-database-postgresql" }
 
 testcontainers-redis = { group = "com.redis", name = "testcontainers-redis" }
-
+testcontainers-jdbc = { module = "org.testcontainers:jdbc", version.ref = "testcontainers" }
 testcontainers-junit-jupiter = { group = "org.testcontainers", name = "testcontainers-junit-jupiter" }
 testcontainers-postgresql = { group = "org.testcontainers", name = "testcontainers-postgresql" }
 testcontainers-rabbitmq = { group = "org.testcontainers", name = "testcontainers-rabbitmq" }

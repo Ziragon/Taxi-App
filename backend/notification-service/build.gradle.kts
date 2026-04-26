@@ -4,5 +4,6 @@ plugins {
     id("database-plugin")
     id("redis-plugin")
     id("rabbitmq-plugin")
+    id("openfeign-plugin")
     id("integration-testing")
 }
