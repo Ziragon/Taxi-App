@@ -1,6 +1,6 @@
 package com.example.tripservice.entity;
 
-import com.example.tripservice.dto.PriceBreakdown;
+import com.example.tripservice.dto.data.PriceBreakdown;
 import com.example.tripservice.entity.enums.TripStatus;
 import com.example.tripservice.entity.enums.VehicleClass;
 import jakarta.persistence.*;
