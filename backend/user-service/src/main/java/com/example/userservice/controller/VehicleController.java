@@ -104,6 +104,7 @@ public class VehicleController {
             ),
             responses = {
                     @ApiResponse(responseCode = "200", description = "Автомобиль обновлён"),
+                    @ApiResponse(responseCode = "403", description = "Нет доступа к этому автомобилю"),
                     @ApiResponse(responseCode = "404", description = "Автомобиль не найден")
             }
     )
@@ -113,6 +114,7 @@ public class VehicleController {
             @Valid @RequestBody UpdateVehicleRequest request
     ) {
         Vehicle vehicle = vehicleService.updateVehicle(
+                principal.userId(),
                 vehicleId,
                 request.brand(),
                 request.model(),
@@ -130,7 +132,9 @@ public class VehicleController {
             summary = "Установить активный автомобиль",
             description = "Помечает выбранный автомобиль как активный, остальные становятся неактивными",
             responses = {
-                    @ApiResponse(responseCode = "204", description = "Автомобиль активирован")
+                    @ApiResponse(responseCode = "204", description = "Автомобиль активирован"),
+                    @ApiResponse(responseCode = "403", description = "Нет доступа к этому автомобилю"),
+                    @ApiResponse(responseCode = "404", description = "Автомобиль не найден")
             }
     )
     public ResponseEntity<Void> setActiveVehicle(
@@ -147,6 +151,7 @@ public class VehicleController {
             summary = "Удалить автомобиль",
             responses = {
                     @ApiResponse(responseCode = "204", description = "Автомобиль удалён"),
+                    @ApiResponse(responseCode = "403", description = "Нет доступа к этому автомобилю"),
                     @ApiResponse(responseCode = "404", description = "Автомобиль не найден")
             }
     )
@@ -154,7 +159,7 @@ public class VehicleController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long vehicleId
     ) {
-        vehicleService.deleteVehicle(vehicleId);
+        vehicleService.deleteVehicle(principal.userId(), vehicleId);
 
         return ResponseEntity.noContent().build();
     }

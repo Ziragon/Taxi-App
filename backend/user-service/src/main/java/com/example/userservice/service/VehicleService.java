@@ -1,5 +1,6 @@
 package com.example.userservice.service;
 
+import com.example.shared.exception.common.AccessDeniedException;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.Vehicle;
 import com.example.userservice.entity.enums.VehicleClass;
@@ -54,9 +55,10 @@ public class VehicleService {
     }
 
     @Transactional
-    public Vehicle updateVehicle(Long vehicleId, String brand, String model, Short year,
+    public Vehicle updateVehicle(Long requesterId, Long vehicleId, String brand, String model, Short year,
                                  String color, String licensePlate, VehicleClass vehicleClass) {
         Vehicle vehicle = getVehicle(vehicleId);
+        checkOwnership(vehicle, requesterId);
 
         vehicle.setBrand(brand);
         vehicle.setModel(model);
@@ -70,8 +72,10 @@ public class VehicleService {
 
     @Transactional
     public void setActiveVehicle(Long driverId, Long vehicleId) {
-        List<Vehicle> driverVehicles = getVehiclesByDriver(driverId);
+        Vehicle target = getVehicle(vehicleId);
+        checkOwnership(target, driverId);
 
+        List<Vehicle> driverVehicles = getVehiclesByDriver(driverId);
         driverVehicles.forEach(v -> {
             v.setActive(v.getId().equals(vehicleId));
             vehicleRepository.save(v);
@@ -79,7 +83,16 @@ public class VehicleService {
     }
 
     @Transactional
-    public void deleteVehicle(Long vehicleId) {
+    public void deleteVehicle(Long requesterId, Long vehicleId) {
+        Vehicle vehicle = getVehicle(vehicleId);
+        checkOwnership(vehicle, requesterId);
+
         vehicleRepository.deleteById(vehicleId);
+    }
+
+    private void checkOwnership(Vehicle vehicle, Long requesterId) {
+        if (!vehicle.getDriver().getAccount().getId().equals(requesterId)) {
+            throw new AccessDeniedException("You do not have access to this vehicle");
+        }
     }
 }
