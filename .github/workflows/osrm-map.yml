@@ -3,8 +3,6 @@ name: Build OSRM Map
 on:
   workflow_dispatch:
   push:
-    paths:
-      - '**.osm.pbf'
     branches:
       - feature/trip-service-logic
 
