@@ -1,14 +1,9 @@
-import 'dart:convert';
+import 'package:arbuz_express/hooks/use_auth.dart';
 import 'package:arbuz_express/screens/role_selection_screen.dart';
+import 'package:arbuz_express/utils/validators.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-
-
-class TokenStorage {
-  static String? accessToken;
-}
 
 class BasicRegistrationScreen extends StatefulWidget {
   const BasicRegistrationScreen({super.key});
@@ -22,6 +17,7 @@ class _BasicRegistrationScreenState extends State<BasicRegistrationScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController(text: '+7');
   final _passwordController = TextEditingController();
+  final _useAuth = UseAuth();
 
   bool _isFormValid = false;
   bool _isLoading = false;
@@ -37,67 +33,41 @@ class _BasicRegistrationScreenState extends State<BasicRegistrationScreen> {
 
   void _validateForm() {
     final email = _emailController.text.trim();
-    final phoneClean = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final phone = _phoneController.text.trim();
     final password = _passwordController.text.trim();
 
-    bool isEmailValid = RegExp(
-      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-    ).hasMatch(email);
-    bool isPhoneValid = phoneClean.length == 11;
-    bool isPasswordValid =
-        password.length >= 6 &&
-        RegExp(r'[A-Z]').hasMatch(password) &&
-        RegExp(r'\d').hasMatch(password) &&
-        RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
-
     setState(() {
-      _isFormValid = isEmailValid && isPhoneValid && isPasswordValid;
+      _isFormValid =
+          Validators.validateEmail(email) &&
+          Validators.validatePhone(phone) &&
+          Validators.validatePassword(password);
     });
   }
 
   Future<void> _registerBaseAccount() async {
     setState(() => _isLoading = true);
 
-    try {
-      final url = Uri.parse('http://192.168.0.11:8000/api/v1/auth/register');
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          "email": _emailController.text.trim(),
-          "phone": _phoneController.text.trim(),
-          "password": _passwordController.text.trim(),
-        }),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        // Парсим ответ и сохраняем токен
-        final responseData = jsonDecode(response.body);
-        if (responseData['accessTokenData'] != null &&
-            responseData['accessTokenData']['token'] != null) {
-          TokenStorage.accessToken = responseData['accessTokenData']['token'];
-        }
-
-        // Успешно создали базовый аккаунт -> Выбор роли
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
-          );
-        }
-      } else {
-        _showError('Ошибка регистрации: ${response.statusCode}');
-      }
-    } catch (e) {
-      _showError('Ошибка сети: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+    final result = await _useAuth.register(
+      email: _emailController.text.trim(),
+      phone: _phoneController.text.trim(),
+      password: _passwordController.text.trim(),
     );
+
+    if (mounted) {
+      if (result.success) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.error ?? 'Неизвестная ошибка'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+      setState(() => _isLoading = false);
+    }
   }
 
   @override

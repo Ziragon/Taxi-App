@@ -1,53 +1,12 @@
-import 'dart:convert';
-import 'package:arbuz_express/screens/basic_registration_screen.dart'; 
+import 'package:arbuz_express/hooks/use_profile.dart';
+import 'package:arbuz_express/hooks/use_vehicle.dart';
 import 'package:arbuz_express/screens/driver_map_screen.dart';
 import 'package:arbuz_express/screens/home_map_screen.dart';
+import 'package:arbuz_express/utils/formatters.dart';
+import 'package:arbuz_express/utils/validators.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-
-class CardNumberFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    String text = newValue.text.replaceAll(' ', '');
-    String formatted = "";
-    for (int i = 0; i < text.length; i++) {
-      formatted += text[i];
-      if ((i + 1) % 4 == 0 && (i + 1) != text.length) {
-        formatted += " ";
-      }
-    }
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}
-
-class ExpiryDateFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    String text = newValue.text.replaceAll('/', '');
-    if (text.length > 4) text = text.substring(0, 4);
-    String formatted = text;
-    if (text.length >= 2) {
-      formatted =
-          text.substring(0, 2) +
-          (text.length > 2 ? '/' + text.substring(2) : '');
-    }
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}
 
 class RegistrationDetailsScreen extends StatefulWidget {
   const RegistrationDetailsScreen({super.key, required this.isDriver});
@@ -65,7 +24,6 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
   final _cvvController = TextEditingController();
   final _expiryController = TextEditingController();
 
-
   final _licenseNumberController = TextEditingController();
   final _carBrandController = TextEditingController();
   final _carModelController = TextEditingController();
@@ -73,41 +31,23 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
   final _carYearController = TextEditingController();
   final _carColorController = TextEditingController();
 
+  final _useProfile = UseProfile();
+  final _useVehicle = UseVehicle();
+
   bool _isFormValid = false;
   bool _isLoading = false;
 
   void _validateForm() {
     final fio = _fioController.text.trim();
-    final card = _cardController.text.trim().replaceAll(' ', '');
+    final card = _cardController.text.trim();
     final cvv = _cvvController.text.trim();
     final expiry = _expiryController.text.trim();
 
-    final fioWords = fio.split(' ').where((w) => w.isNotEmpty).toList();
-    bool isFioValid = fioWords.length >= 2; 
-
-    bool isCardValid = card.length == 16;
-    bool isCvvValid = cvv.length == 3 && int.tryParse(cvv) != null;
-    bool isExpiryValid = false;
-
-    if (expiry.length == 5 && expiry.contains('/')) {
-      final parts = expiry.split('/');
-      if (parts.length == 2) {
-        final month = int.tryParse(parts[0]);
-        final year = int.tryParse(parts[1]);
-        if (month != null && year != null && month >= 1 && month <= 12) {
-          final now = DateTime.now();
-          final currentYear = now.year % 100;
-          final currentMonth = now.month;
-          if (year > currentYear ||
-              (year == currentYear && month >= currentMonth)) {
-            isExpiryValid = true;
-          }
-        }
-      }
-    }
-
     bool isCommonValid =
-        isFioValid && isCardValid && isCvvValid && isExpiryValid;
+        Validators.validateFio(fio) &&
+        Validators.validateCard(card) &&
+        Validators.validateCvv(cvv) &&
+        Validators.validateExpiry(expiry);
 
     if (widget.isDriver) {
       final license = _licenseNumberController.text.trim();
@@ -117,26 +57,14 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
       final yearText = _carYearController.text.trim();
       final color = _carColorController.text.trim();
 
-      final plateRegex = RegExp(
-        r'^[АВЕКМНОРСТУХ]\d{3}[АВЕКМНОРСТУХ]{2}\d{2,3}$',
-      );
-      bool isLicenseValid = RegExp(r'^\d{10}$').hasMatch(license);
-
-      bool isYearValid = false;
-      if (yearText.isNotEmpty) {
-        final year = int.tryParse(yearText);
-        final currentYear = DateTime.now().year;
-        isYearValid = year != null && year >= 1900 && year <= currentYear;
-      }
-
       setState(() {
         _isFormValid =
             isCommonValid &&
-            isLicenseValid &&
+            Validators.validateLicense(license) &&
             brand.length >= 2 &&
             model.isNotEmpty &&
-            plateRegex.hasMatch(plate) &&
-            isYearValid &&
+            Validators.validatePlate(plate) &&
+            Validators.validateYear(yearText) &&
             color.length >= 3;
       });
     } else {
@@ -153,49 +81,28 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
     final firstName = fioWords.isNotEmpty ? fioWords[0] : '';
     final lastName = fioWords.length > 1 ? fioWords.sublist(1).join(' ') : '';
 
-    const String baseUrl = 'http://192.168.0.11:8000/api/v1';
-
-    
-    final Map<String, String> requestHeaders = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ${TokenStorage.accessToken ?? ''}',
-    };
-
     try {
       if (widget.isDriver) {
-        final profileRes = await http.post(
-          Uri.parse('$baseUrl/profiles/driver'),
-          headers: requestHeaders,
-          body: jsonEncode({
-            "firstName": firstName,
-            "lastName": lastName,
-            "licenseNumber": _licenseNumberController.text.trim(),
-            "photoUrl": "https://cdn.example.com/driver.jpg", 
-          }),
+        final profileResult = await _useProfile.createDriverProfile(
+          firstName: firstName,
+          lastName: lastName,
+          licenseNumber: _licenseNumberController.text.trim(),
         );
 
-        if (profileRes.statusCode != 200 && profileRes.statusCode != 201) {
-          throw Exception(
-            'Ошибка создания профиля водителя: ${profileRes.statusCode}',
-          );
+        if (!profileResult.success) {
+          throw Exception(profileResult.error);
         }
 
-        
-        final vehicleRes = await http.post(
-          Uri.parse('$baseUrl/vehicles'),
-          headers: requestHeaders,
-          body: jsonEncode({
-            "brand": _carBrandController.text.trim(),
-            "model": _carModelController.text.trim(),
-            "year": int.parse(_carYearController.text.trim()),
-            "color": _carColorController.text.trim(),
-            "licensePlate": _carPlateController.text.trim().toUpperCase(),
-            "vehicleClass": "COMFORT", 
-          }),
+        final vehicleResult = await _useVehicle.addVehicle(
+          brand: _carBrandController.text.trim(),
+          model: _carModelController.text.trim(),
+          year: int.parse(_carYearController.text.trim()),
+          color: _carColorController.text.trim(),
+          licensePlate: _carPlateController.text.trim().toUpperCase(),
         );
 
-        if (vehicleRes.statusCode != 200 && vehicleRes.statusCode != 201) {
-          throw Exception('Ошибка добавления авто: ${vehicleRes.statusCode}');
+        if (!vehicleResult.success) {
+          throw Exception(vehicleResult.error);
         }
 
         if (mounted) {
@@ -208,21 +115,13 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
           );
         }
       } else {
-        
-        final profileRes = await http.post(
-          Uri.parse('$baseUrl/profiles/passenger'),
-          headers: requestHeaders,
-          body: jsonEncode({
-            "firstName": firstName,
-            "lastName": lastName,
-            "photoUrl": "https://cdn.example.com/avatar.jpg", 
-          }),
+        final profileResult = await _useProfile.createPassengerProfile(
+          firstName: firstName,
+          lastName: lastName,
         );
 
-        if (profileRes.statusCode != 200 && profileRes.statusCode != 201) {
-          throw Exception(
-            'Ошибка создания профиля пассажира: ${profileRes.statusCode}',
-          );
+        if (!profileResult.success) {
+          throw Exception(profileResult.error);
         }
 
         if (mounted) {
@@ -374,7 +273,6 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
                           ),
                         ],
                       ),
-
                       if (widget.isDriver) ...[
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 24),
