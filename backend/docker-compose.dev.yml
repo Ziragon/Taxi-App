@@ -79,6 +79,11 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  osrm:
+    image: ghcr.io/ziragon/osrm-novosibirsk:dev
+    ports:
+      - "5000:5000"
+
   gateway-service:
     image: ghcr.io/ziragon/taxi-app/gateway-service:dev
     ports:
