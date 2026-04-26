@@ -1,10 +1,10 @@
 package com.example.userservice.controller;
 
 import com.example.shared.security.UserPrincipal;
+import com.example.userservice.dto.data.PassengerProfileDto;
 import com.example.userservice.dto.request.CreatePassengerProfileRequest;
 import com.example.userservice.dto.request.UpdatePassengerProfileRequest;
 import com.example.userservice.dto.response.PassengerProfileResponse;
-import com.example.userservice.entity.PassengerProfile;
 import com.example.userservice.service.PassengerProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -51,7 +51,7 @@ public class PassengerProfileController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreatePassengerProfileRequest request
     ) {
-        PassengerProfile profile = passengerProfileService.createProfile(
+        PassengerProfileDto profile = passengerProfileService.createProfile(
                 principal.userId(),
                 request.firstName(),
                 request.lastName(),
@@ -73,7 +73,7 @@ public class PassengerProfileController {
     public ResponseEntity<PassengerProfileResponse> getProfile(
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        PassengerProfile profile = passengerProfileService.getProfile(principal.userId());
+        PassengerProfileDto profile = passengerProfileService.getProfile(principal.userId());
 
         return ResponseEntity.ok(PassengerProfileResponse.from(profile));
     }
@@ -103,7 +103,7 @@ public class PassengerProfileController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody UpdatePassengerProfileRequest request
     ) {
-        PassengerProfile profile = passengerProfileService.updateProfile(
+        PassengerProfileDto profile = passengerProfileService.updateProfile(
                 principal.userId(),
                 request.firstName(),
                 request.lastName(),

@@ -1,7 +1,7 @@
 package com.example.userservice.integration;
 
-import com.example.userservice.dto.data.AuthResult;
-import com.example.userservice.entity.PassengerProfile;
+import com.example.userservice.dto.data.AuthDto;
+import com.example.userservice.dto.data.PassengerProfileDto;
 import com.example.userservice.repository.AccountRepository;
 import com.example.userservice.repository.PassengerProfileRepository;
 import com.example.userservice.service.AuthService;
@@ -49,68 +49,68 @@ class PassengerWorkflowIntegrationTest extends BaseIntegrationTest{
     @Test
     @DisplayName("Полный workflow пассажира: регистрация -> профиль -> обновление -> рейтинг")
     void fullPassengerWorkflow() {
-        AuthResult result = authService.register(
+        AuthDto result = authService.register(
                 "passenger@workflow.com",
                 "+79995555555",
                 "PassPass123"
         );
 
-        Long passengerId = jwtUtil.extractAccountId(result.accessTokenData().token());
+        Long passengerId = jwtUtil.extractAccountId(result.accessTokenDto().token());
 
-        PassengerProfile profile = passengerProfileService.createProfile(
+        PassengerProfileDto profile = passengerProfileService.createProfile(
                 passengerId,
                 "Мария",
                 "Иванова",
                 "https://cdn.example.com/maria.jpg"
         );
 
-        assertThat(profile.getFirstName()).isEqualTo("Мария");
-        assertThat(profile.getAverageRating()).isEqualByComparingTo(BigDecimal.ZERO);
-        assertThat(profile.getTotalTrips()).isZero();
+        assertThat(profile.firstName()).isEqualTo("Мария");
+        assertThat(profile.averageRating()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(profile.totalTrips()).isZero();
 
-        PassengerProfile updated = passengerProfileService.updateProfile(
+        PassengerProfileDto updated = passengerProfileService.updateProfile(
                 passengerId,
                 "Мария",
                 "Петрова",
                 "https://cdn.example.com/maria-new.jpg"
         );
 
-        assertThat(updated.getLastName()).isEqualTo("Петрова");
+        assertThat(updated.lastName()).isEqualTo("Петрова");
 
         passengerProfileService.updateRating(passengerId, new BigDecimal("5.00"));
         passengerProfileService.updateRating(passengerId, new BigDecimal("4.00"));
         passengerProfileService.updateRating(passengerId, new BigDecimal("5.00"));
 
-        PassengerProfile afterRatings = passengerProfileService.getProfile(passengerId);
-        assertThat(afterRatings.getTotalTrips()).isEqualTo(3);
-        assertThat(afterRatings.getAverageRating()).isEqualByComparingTo("4.67");
+        PassengerProfileDto afterRatings = passengerProfileService.getProfile(passengerId);
+        assertThat(afterRatings.totalTrips()).isEqualTo(3);
+        assertThat(afterRatings.averageRating()).isEqualByComparingTo("4.67");
     }
 
     @Test
     @DisplayName("Пересчёт рейтинга: математическая точность")
     void ratingCalculation_Precision() {
-        AuthResult result = authService.register(
+        AuthDto result = authService.register(
                 "rating@test.com",
                 "+79996666666",
                 "Test123"
         );
 
-        Long passengerId = jwtUtil.extractAccountId(result.accessTokenData().token());
+        Long passengerId = jwtUtil.extractAccountId(result.accessTokenDto().token());
         passengerProfileService.createProfile(passengerId, "Test", "User", null);
 
         passengerProfileService.updateRating(passengerId, new BigDecimal("4.50"));
-        PassengerProfile after1 = passengerProfileService.getProfile(passengerId);
-        assertThat(after1.getAverageRating()).isEqualByComparingTo("4.50");
-        assertThat(after1.getTotalTrips()).isEqualTo(1);
+        PassengerProfileDto after1 = passengerProfileService.getProfile(passengerId);
+        assertThat(after1.averageRating()).isEqualByComparingTo("4.50");
+        assertThat(after1.totalTrips()).isEqualTo(1);
 
         passengerProfileService.updateRating(passengerId, new BigDecimal("5.00"));
-        PassengerProfile after2 = passengerProfileService.getProfile(passengerId);
-        assertThat(after2.getAverageRating()).isEqualByComparingTo("4.75");
-        assertThat(after2.getTotalTrips()).isEqualTo(2);
+        PassengerProfileDto after2 = passengerProfileService.getProfile(passengerId);
+        assertThat(after2.averageRating()).isEqualByComparingTo("4.75");
+        assertThat(after2.totalTrips()).isEqualTo(2);
 
         passengerProfileService.updateRating(passengerId, new BigDecimal("3.00"));
-        PassengerProfile after3 = passengerProfileService.getProfile(passengerId);
-        assertThat(after3.getAverageRating()).isEqualByComparingTo("4.17");
-        assertThat(after3.getTotalTrips()).isEqualTo(3);
+        PassengerProfileDto after3 = passengerProfileService.getProfile(passengerId);
+        assertThat(after3.averageRating()).isEqualByComparingTo("4.17");
+        assertThat(after3.totalTrips()).isEqualTo(3);
     }
 }

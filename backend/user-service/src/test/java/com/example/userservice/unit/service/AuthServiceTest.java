@@ -1,7 +1,7 @@
 package com.example.userservice.unit.service;
 
-import com.example.userservice.dto.data.AuthResult;
-import com.example.userservice.dto.data.TokenData;
+import com.example.userservice.dto.data.AuthDto;
+import com.example.userservice.dto.data.TokenDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.enums.AccountRole;
 import com.example.userservice.exception.InvalidCredentialsException;
@@ -63,18 +63,18 @@ class AuthServiceTest {
         when(accountService.createAccount(anyString(), anyString(), anyString()))
                 .thenReturn(account);
         when(jwtUtil.generateAccessToken(anyLong(), anyString()))
-                .thenReturn(new TokenData("access-token", fixedExpiry));
+                .thenReturn(new TokenDto("access-token", fixedExpiry));
         when(tokenService.createRefreshToken(account))
-                .thenReturn(new TokenData("refresh-token", fixedExpiry));
+                .thenReturn(new TokenDto("refresh-token", fixedExpiry));
 
-        AuthResult result = authService.register(
+        AuthDto result = authService.register(
                 "passenger@test.com",
                 "+79991234567",
                 "password123"
         );
 
-        assertThat(result.accessTokenData().token()).isEqualTo("access-token");
-        assertThat(result.refreshTokenData().token()).isEqualTo("refresh-token");
+        assertThat(result.accessTokenDto().token()).isEqualTo("access-token");
+        assertThat(result.refreshTokenDto().token()).isEqualTo("refresh-token");
 
         verify(accountService).createAccount("passenger@test.com", "+79991234567", "password123");
         verify(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Map.class));
@@ -96,9 +96,9 @@ class AuthServiceTest {
         when(accountService.findByEmail("user@test.com")).thenReturn(account);
         when(passwordEncoder.matches("password123", "hashed-password")).thenReturn(true);
         when(jwtUtil.generateAccessToken(anyLong(), anyString()))
-                .thenReturn(new TokenData("access-token", fixedExpiry));
+                .thenReturn(new TokenDto("access-token", fixedExpiry));
         when(tokenService.createRefreshToken(account))
-                .thenReturn(new TokenData("refresh-token", fixedExpiry));
+                .thenReturn(new TokenDto("refresh-token", fixedExpiry));
 
         authService.login("user@test.com", "password123");
 
@@ -134,14 +134,14 @@ class AuthServiceTest {
 
         when(tokenService.validateAndRotateRefreshToken("old-refresh-token")).thenReturn(account);
         when(jwtUtil.generateAccessToken(anyLong(), anyString()))
-                .thenReturn(new TokenData("new-access-token", fixedExpiry));
+                .thenReturn(new TokenDto("new-access-token", fixedExpiry));
         when(tokenService.createRefreshToken(account))
-                .thenReturn(new TokenData("new-refresh-token", fixedExpiry));
+                .thenReturn(new TokenDto("new-refresh-token", fixedExpiry));
 
-        AuthResult result = authService.refreshTokens("old-refresh-token");
+        AuthDto result = authService.refreshTokens("old-refresh-token");
 
-        assertThat(result.accessTokenData().token()).isEqualTo("new-access-token");
-        assertThat(result.refreshTokenData().token()).isEqualTo("new-refresh-token");
+        assertThat(result.accessTokenDto().token()).isEqualTo("new-access-token");
+        assertThat(result.refreshTokenDto().token()).isEqualTo("new-refresh-token");
         verify(tokenService).validateAndRotateRefreshToken("old-refresh-token");
     }
 }

@@ -1,11 +1,11 @@
 package com.example.userservice.controller;
 
 import com.example.shared.security.UserPrincipal;
+import com.example.userservice.dto.data.DriverProfileDto;
 import com.example.userservice.dto.request.CreateDriverProfileRequest;
 import com.example.userservice.dto.request.UpdateDriverProfileRequest;
 import com.example.userservice.dto.request.UpdateDriverStatusRequest;
 import com.example.userservice.dto.response.DriverProfileResponse;
-import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.service.DriverProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -53,7 +53,7 @@ public class DriverProfileController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreateDriverProfileRequest request
     ) {
-        DriverProfile profile = driverProfileService.createProfile(
+        DriverProfileDto profile = driverProfileService.createProfile(
                 principal.userId(),
                 request.firstName(),
                 request.lastName(),
@@ -76,7 +76,7 @@ public class DriverProfileController {
     public ResponseEntity<DriverProfileResponse> getProfile(
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        DriverProfile profile = driverProfileService.getProfile(principal.userId());
+        DriverProfileDto profile = driverProfileService.getProfile(principal.userId());
 
         return ResponseEntity.ok(DriverProfileResponse.from(profile));
     }
@@ -105,7 +105,7 @@ public class DriverProfileController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody UpdateDriverProfileRequest request
     ) {
-        DriverProfile profile = driverProfileService.updateProfile(
+        DriverProfileDto profile = driverProfileService.updateProfile(
                 principal.userId(),
                 request.firstName(),
                 request.lastName(),

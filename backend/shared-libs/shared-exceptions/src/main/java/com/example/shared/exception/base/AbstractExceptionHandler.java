@@ -1,21 +1,26 @@
 package com.example.shared.exception.base;
 
+import com.example.shared.exception.common.ResourceNotFoundException;
+import com.example.shared.exception.common.ValidationException;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@Slf4j
 public abstract class AbstractExceptionHandler {
+
+    protected final Logger log = LoggerFactory.getLogger(getClass());
 
     protected ResponseEntity<ErrorResponse> handleBaseException(BaseException ex,
                                                                 HttpServletRequest request) {
@@ -31,114 +36,74 @@ public abstract class AbstractExceptionHandler {
         return ResponseEntity.status(ex.getStatusCode()).body(response);
     }
 
-    protected ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex,
-                                                             HttpServletRequest request) {
+    @ExceptionHandler(BaseException.class)
+    public ResponseEntity<ErrorResponse> onBaseException(BaseException ex, HttpServletRequest request) {
+        return handleBaseException(ex, request);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> onValidation(MethodArgumentNotValidException ex,
+                                                      HttpServletRequest request) {
         Map<String, String> details = new LinkedHashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 details.put(error.getField(), error.getDefaultMessage())
         );
-
         log.warn("Validation failed at {}: {}", request.getRequestURI(), details);
 
-        var response = new ErrorResponse(
-                422,
-                "VALIDATION",
-                "Validation failed",
-                request.getRequestURI(),
-                details
-        );
-
+        var response = new ErrorResponse(422, "VALIDATION", "Validation failed",
+                request.getRequestURI(), details);
         return ResponseEntity.unprocessableContent().body(response);
     }
 
-    protected ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException ex,
-                                                             HttpServletRequest request) {
-        log.warn("Malformed request body at {}: {}", request.getRequestURI(), ex.getMessage());
-
-        var response = new ErrorResponse(
-                400,
-                "BAD_REQUEST",
-                "Malformed request body",
-                request.getRequestURI()
-        );
-
-        return ResponseEntity.badRequest().body(response);
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> onUnreadable(HttpMessageNotReadableException ex,
+                                                      HttpServletRequest request) {
+        return handleBaseException(
+                new ValidationException("Malformed request body"), request);
     }
 
-    protected ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex,
-                                                                     HttpServletRequest request) {
-        var response = new ErrorResponse(
-                405,
-                "METHOD_NOT_ALLOWED",
-                "Method '%s' is not supported".formatted(ex.getMethod()),
-                request.getRequestURI()
-        );
-
-        return ResponseEntity.status(405).body(response);
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> onMethodNotSupported(HttpRequestMethodNotSupportedException ex,
+                                                              HttpServletRequest request) {
+        return handleBaseException(
+                new ValidationException("Method '%s' is not supported".formatted(ex.getMethod())), request);
     }
 
-    protected ResponseEntity<ErrorResponse> handleMediaType(HttpMediaTypeNotSupportedException ex,
-                                                            HttpServletRequest request) {
-        var response = new ErrorResponse(
-                415,
-                "UNSUPPORTED_MEDIA_TYPE",
-                "Content type '%s' is not supported".formatted(ex.getContentType()),
-                request.getRequestURI()
-        );
-
-        return ResponseEntity.status(415).body(response);
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> onMediaType(HttpMediaTypeNotSupportedException ex,
+                                                     HttpServletRequest request) {
+        return handleBaseException(
+                new ValidationException("Content type '%s' is not supported".formatted(ex.getContentType())), request);
     }
 
-    protected ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException ex,
-                                                               HttpServletRequest request) {
-        var response = new ErrorResponse(
-                400,
-                "BAD_REQUEST",
-                "Required parameter '%s' is missing".formatted(ex.getParameterName()),
-                request.getRequestURI()
-        );
-
-        return ResponseEntity.badRequest().body(response);
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> onMissingParam(MissingServletRequestParameterException ex,
+                                                        HttpServletRequest request) {
+        return handleBaseException(
+                new ValidationException("Required parameter '%s' is missing".formatted(ex.getParameterName())), request);
     }
 
-    protected ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
-                                                               HttpServletRequest request) {
-        var response = new ErrorResponse(
-                400,
-                "BAD_REQUEST",
-                "Parameter '%s' must be of type '%s'".formatted(
-                        ex.getName(),
-                        ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown"
-                ),
-                request.getRequestURI()
-        );
-
-        return ResponseEntity.badRequest().body(response);
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> onTypeMismatch(MethodArgumentTypeMismatchException ex,
+                                                        HttpServletRequest request) {
+        String type = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown";
+        return handleBaseException(
+                new ValidationException("Parameter '%s' must be of type '%s'".formatted(ex.getName(), type)), request);
     }
 
-    protected ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException ex,
-                                                             HttpServletRequest request) {
-        var response = new ErrorResponse(
-                404,
-                "NOT_FOUND",
-                "Resource not found",
-                request.getRequestURI()
-        );
-
-        return ResponseEntity.status(404).body(response);
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> onNoResource(NoResourceFoundException ex,
+                                                      HttpServletRequest request) {
+        return handleBaseException(
+                new ResourceNotFoundException("Resource not found"), request);
     }
 
-    protected ResponseEntity<ErrorResponse> handleGeneric(Exception ex,
-                                                          HttpServletRequest request) {
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> onGeneric(Exception ex, HttpServletRequest request) {
         log.error("Unexpected error at {}: {}", request.getRequestURI(), ex.getMessage(), ex);
 
-        var response = new ErrorResponse(
-                500,
-                "INTERNAL",
-                "Internal server error",
-                request.getRequestURI()
-        );
-
+        var response = new ErrorResponse(500, "INTERNAL", "Internal server error",
+                request.getRequestURI());
         return ResponseEntity.internalServerError().body(response);
     }
 }

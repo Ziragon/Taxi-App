@@ -2,7 +2,9 @@ package com.example.userservice.service;
 
 import com.example.userservice.entity.DriverLocation;
 import com.example.userservice.entity.DriverProfile;
+import com.example.userservice.exception.ProfileNotFoundException;
 import com.example.userservice.repository.DriverLocationRepository;
+import com.example.userservice.repository.DriverProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,15 +18,16 @@ import java.util.List;
 public class DriverLocationService {
 
     private final DriverLocationRepository driverLocationRepository;
-    private final DriverProfileService driverProfileService;
+    private final DriverProfileRepository driverProfileRepository;
 
     @Transactional
     public DriverLocation updateLocation(Long driverId, BigDecimal latitude, BigDecimal longitude) {
-        DriverProfile driver = driverProfileService.getProfile(driverId);
+        DriverProfile profile = driverProfileRepository.findById(driverId)
+                .orElseThrow(() -> new ProfileNotFoundException("Driver", driverId));
 
         DriverLocation location = driverLocationRepository.findById(driverId)
                 .orElse(DriverLocation.builder()
-                        .driver(driver)
+                        .driver(profile)
                         .build());
 
         location.setLatitude(latitude);
