@@ -1,6 +1,6 @@
 package com.example.userservice.integration;
 
-import com.example.userservice.dto.data.AuthResult;
+import com.example.userservice.dto.data.AuthDto;
 import com.example.userservice.entity.PassengerProfile;
 import com.example.userservice.repository.AccountRepository;
 import com.example.userservice.repository.PassengerProfileRepository;
@@ -49,13 +49,13 @@ class PassengerWorkflowIntegrationTest extends BaseIntegrationTest{
     @Test
     @DisplayName("Полный workflow пассажира: регистрация -> профиль -> обновление -> рейтинг")
     void fullPassengerWorkflow() {
-        AuthResult result = authService.register(
+        AuthDto result = authService.register(
                 "passenger@workflow.com",
                 "+79995555555",
                 "PassPass123"
         );
 
-        Long passengerId = jwtUtil.extractAccountId(result.accessTokenData().token());
+        Long passengerId = jwtUtil.extractAccountId(result.accessTokenDto().token());
 
         PassengerProfile profile = passengerProfileService.createProfile(
                 passengerId,
@@ -89,13 +89,13 @@ class PassengerWorkflowIntegrationTest extends BaseIntegrationTest{
     @Test
     @DisplayName("Пересчёт рейтинга: математическая точность")
     void ratingCalculation_Precision() {
-        AuthResult result = authService.register(
+        AuthDto result = authService.register(
                 "rating@test.com",
                 "+79996666666",
                 "Test123"
         );
 
-        Long passengerId = jwtUtil.extractAccountId(result.accessTokenData().token());
+        Long passengerId = jwtUtil.extractAccountId(result.accessTokenDto().token());
         passengerProfileService.createProfile(passengerId, "Test", "User", null);
 
         passengerProfileService.updateRating(passengerId, new BigDecimal("4.50"));

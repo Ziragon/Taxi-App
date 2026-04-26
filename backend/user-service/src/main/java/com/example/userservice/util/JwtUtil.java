@@ -1,7 +1,7 @@
 package com.example.userservice.util;
 
 import com.example.userservice.config.AppProperties;
-import com.example.userservice.dto.data.TokenData;
+import com.example.userservice.dto.data.TokenDto;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -23,15 +23,15 @@ public class JwtUtil {
     private final AppProperties appProperties;
     private final Clock clock;
 
-    public TokenData generateAccessToken(Long accountId, String role) {
+    public TokenDto generateAccessToken(Long accountId, String role) {
         Instant expiresAt = Instant.now(clock).plusMillis(appProperties.accessToken().toMillis());
         String token = generateToken(accountId, role, appProperties.accessToken().toMillis());
-        return new TokenData(token, expiresAt);
+        return new TokenDto(token, expiresAt);
     }
 
-    public TokenData generateRefreshToken() {
+    public TokenDto generateRefreshToken() {
         Instant expiresAt = Instant.now(clock).plusMillis(appProperties.refreshToken().toMillis());
-        return new TokenData(UUID.randomUUID().toString(), expiresAt);
+        return new TokenDto(UUID.randomUUID().toString(), expiresAt);
     }
 
     private String generateToken(Long accountId, String role, long expirationMs) {

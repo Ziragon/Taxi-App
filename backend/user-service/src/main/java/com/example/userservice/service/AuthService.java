@@ -1,7 +1,8 @@
 package com.example.userservice.service;
 
-import com.example.userservice.dto.data.AuthResult;
-import com.example.userservice.dto.data.TokenData;
+import com.example.userservice.dto.data.AccountDto;
+import com.example.userservice.dto.data.AuthDto;
+import com.example.userservice.dto.data.TokenDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.enums.AccountRole;
 import com.example.userservice.exception.AccountDeactivatedException;
@@ -30,7 +31,7 @@ public class AuthService {
     private final RabbitTemplate rabbitTemplate;
 
     @Transactional
-    public AuthResult register(String email, String phone, String password) {
+    public AuthDto register(String email, String phone, String password) {
 
         Account account = accountService.createAccount(email, phone, password);
 
@@ -40,7 +41,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResult login(String email, String password) {
+    public AuthDto login(String email, String password) {
 
         Account account = accountService.findByEmail(email);
 
@@ -56,7 +57,7 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResult refreshTokens(String refreshToken) {
+    public AuthDto refreshTokens(String refreshToken) {
         Account account = tokenService.validateAndRotateRefreshToken(refreshToken);
 
         if (!account.isActive()) {
@@ -71,14 +72,14 @@ public class AuthService {
         tokenService.revokeAllTokens(accountId);
     }
 
-    private AuthResult generateTokens(Account account) {
-        TokenData accessTokenData = jwtUtil.generateAccessToken(account.getId(), account.getRole().name());
-        TokenData refreshTokenData = tokenService.createRefreshToken(account);
+    private AuthDto generateTokens(Account account) {
+        TokenDto accessTokenDto = jwtUtil.generateAccessToken(account.getId(), account.getRole().name());
+        TokenDto refreshTokenDto = tokenService.createRefreshToken(account);
 
-        return new AuthResult(
-                account,
-                accessTokenData,
-                refreshTokenData
+        return new AuthDto(
+                AccountDto.from(account),
+                accessTokenDto,
+                refreshTokenDto
         );
     }
 

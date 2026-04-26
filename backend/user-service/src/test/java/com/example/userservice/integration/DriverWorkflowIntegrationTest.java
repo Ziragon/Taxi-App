@@ -1,6 +1,6 @@
 package com.example.userservice.integration;
 
-import com.example.userservice.dto.data.AuthResult;
+import com.example.userservice.dto.data.AuthDto;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.Vehicle;
 import com.example.userservice.entity.enums.DriverStatus;
@@ -64,13 +64,13 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
     @Test
     @DisplayName("Полный workflow водителя: регистрация -> профиль -> транспорт -> статус -> верификация")
     void fullDriverWorkflow() {
-        AuthResult result = authService.register(
+        AuthDto result = authService.register(
                 "driver@workflow.com",
                 "+79993333333",
                 "DriverPass789"
         );
 
-        Long driverId = jwtUtil.extractAccountId(result.accessTokenData().token());
+        Long driverId = jwtUtil.extractAccountId(result.accessTokenDto().token());
 
         DriverProfile profile = driverProfileService.createProfile(
                 driverId,
@@ -129,13 +129,13 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
     @Test
     @DisplayName("Несколько автомобилей: только один может быть активным")
     void multipleVehicles_OnlyOneActive() {
-        AuthResult result = authService.register(
+        AuthDto result = authService.register(
                 "driver2@workflow.com",
                 "+79994444444",
                 "Pass123"
         );
 
-        Long driverId = jwtUtil.extractAccountId(result.accessTokenData().token());
+        Long driverId = jwtUtil.extractAccountId(result.accessTokenDto().token());
 
         driverProfileService.createProfile(driverId, "Иван", "Иванов", "1122334455", null);
 
