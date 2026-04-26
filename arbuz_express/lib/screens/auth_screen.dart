@@ -1,5 +1,5 @@
+import 'package:arbuz_express/screens/basic_registration_screen.dart';
 import 'package:arbuz_express/screens/home_map_screen.dart';
-import 'package:arbuz_express/screens/role_selection_screen.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -177,7 +177,9 @@ class _AuthScreenState extends State<AuthScreen> {
                               TextButton(
                                 onPressed: () => Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (_) => const RoleSelectionScreen(),
+                                    // Перенаправляем на создание базового аккаунта
+                                    builder: (_) =>
+                                        const BasicRegistrationScreen(),
                                   ),
                                 ),
                                 style: TextButton.styleFrom(
