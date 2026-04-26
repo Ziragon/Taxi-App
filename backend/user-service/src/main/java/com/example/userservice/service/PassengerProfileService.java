@@ -4,6 +4,7 @@ import com.example.userservice.entity.Account;
 import com.example.userservice.entity.PassengerProfile;
 import com.example.userservice.exception.ProfileNotFoundException;
 import com.example.userservice.repository.PassengerProfileRepository;
+import com.example.userservice.util.RatingCalculator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,17 +56,11 @@ public class PassengerProfileService {
     public void updateRating(Long accountId, BigDecimal newTripRating) {
         PassengerProfile profile = getProfile(accountId);
 
-        int totalTrips = profile.getTotalTrips() + 1;
-        BigDecimal currentAverage = profile.getAverageRating();
-
-        BigDecimal newAverage = currentAverage
-                .multiply(BigDecimal.valueOf(profile.getTotalTrips()))
-                .add(newTripRating)
-                .divide(BigDecimal.valueOf(totalTrips), 2, RoundingMode.HALF_UP);
-
-        profile.setAverageRating(newAverage);
-        profile.setTotalTrips(totalTrips);
-
-        passengerProfileRepository.save(profile);
+        profile.setAverageRating(RatingCalculator.calculate(
+                profile.getAverageRating(),
+                profile.getTotalTrips(),
+                newTripRating
+        ));
+        profile.setTotalTrips(profile.getTotalTrips() + 1);
     }
 }

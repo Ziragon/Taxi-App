@@ -39,10 +39,11 @@ public class VehicleService {
     }
 
     @Transactional(readOnly = true)
-    public Vehicle getVehicle(Long vehicleId) {
-        return vehicleRepository.findById(vehicleId)
+    public Vehicle getVehicleWithDriver(Long vehicleId) {
+        return vehicleRepository.findByIdWithDriver(vehicleId)
                 .orElseThrow(() -> new VehicleNotFoundException(vehicleId));
     }
+
 
     @Transactional(readOnly = true)
     public List<Vehicle> getVehiclesByDriver(Long driverId) {
@@ -57,7 +58,7 @@ public class VehicleService {
     @Transactional
     public Vehicle updateVehicle(Long requesterId, Long vehicleId, String brand, String model, Short year,
                                  String color, String licensePlate, VehicleClass vehicleClass) {
-        Vehicle vehicle = getVehicle(vehicleId);
+        Vehicle vehicle = getVehicleWithDriver(vehicleId);
         checkOwnership(vehicle, requesterId);
 
         vehicle.setBrand(brand);
@@ -72,7 +73,7 @@ public class VehicleService {
 
     @Transactional
     public void setActiveVehicle(Long driverId, Long vehicleId) {
-        Vehicle target = getVehicle(vehicleId);
+        Vehicle target = getVehicleWithDriver(vehicleId);
         checkOwnership(target, driverId);
 
         List<Vehicle> driverVehicles = getVehiclesByDriver(driverId);
@@ -84,7 +85,7 @@ public class VehicleService {
 
     @Transactional
     public void deleteVehicle(Long requesterId, Long vehicleId) {
-        Vehicle vehicle = getVehicle(vehicleId);
+        Vehicle vehicle = getVehicleWithDriver(vehicleId);
         checkOwnership(vehicle, requesterId);
 
         vehicleRepository.deleteById(vehicleId);

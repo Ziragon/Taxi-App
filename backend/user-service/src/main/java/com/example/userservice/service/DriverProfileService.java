@@ -3,8 +3,10 @@ package com.example.userservice.service;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.enums.DriverStatus;
+import com.example.userservice.exception.ProfileAlreadyExistsException;
 import com.example.userservice.exception.ProfileNotFoundException;
 import com.example.userservice.repository.DriverProfileRepository;
+import com.example.userservice.util.RatingCalculator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,10 @@ public class DriverProfileService {
     @Transactional
     public DriverProfile createProfile(Long accountId, String firstName, String lastName,
                                        String licenseNumber, String photoUrl) {
+        if (driverProfileRepository.existsByLicenseNumber(licenseNumber)) {
+            throw new ProfileAlreadyExistsException("Driver profile with license number already exists");
+        }
+
         Account account = accountService.findById(accountId);
 
         DriverProfile profile = DriverProfile.builder()
@@ -85,17 +91,11 @@ public class DriverProfileService {
     public void updateRating(Long accountId, BigDecimal newTripRating) {
         DriverProfile profile = getProfile(accountId);
 
-        int totalTrips = profile.getTotalTrips() + 1;
-        BigDecimal currentAverage = profile.getAverageRating();
-
-        BigDecimal newAverage = currentAverage
-                .multiply(BigDecimal.valueOf(profile.getTotalTrips()))
-                .add(newTripRating)
-                .divide(BigDecimal.valueOf(totalTrips), 2, RoundingMode.HALF_UP);
-
-        profile.setAverageRating(newAverage);
-        profile.setTotalTrips(totalTrips);
-
-        driverProfileRepository.save(profile);
+        profile.setAverageRating(RatingCalculator.calculate(
+                profile.getAverageRating(),
+                profile.getTotalTrips(),
+                newTripRating
+        ));
+        profile.setTotalTrips(profile.getTotalTrips() + 1);
     }
 }
