@@ -6,5 +6,9 @@ public record AuthDto(
 
         TokenDto accessTokenDto,
 
-        TokenDto refreshTokenDto
+        TokenDto refreshTokenDto,
+
+        PassengerProfileDto passengerProfileDto,
+
+        DriverProfileDto driverProfileDto
 ) {}

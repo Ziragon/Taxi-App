@@ -1,8 +1,6 @@
 package com.example.userservice.service;
 
-import com.example.userservice.dto.data.AccountDto;
-import com.example.userservice.dto.data.AuthDto;
-import com.example.userservice.dto.data.TokenDto;
+import com.example.userservice.dto.data.*;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.enums.AccountRole;
 import com.example.userservice.exception.AccountDeactivatedException;
@@ -79,7 +77,13 @@ public class AuthService {
         return new AuthDto(
                 AccountDto.from(account),
                 accessTokenDto,
-                refreshTokenDto
+                refreshTokenDto,
+                account.getPassengerProfile() != null
+                        ? PassengerProfileDto.from(account.getPassengerProfile())
+                        : null,
+                account.getDriverProfile() != null
+                        ? DriverProfileDto.from(account.getDriverProfile())
+                        : null
         );
     }
 

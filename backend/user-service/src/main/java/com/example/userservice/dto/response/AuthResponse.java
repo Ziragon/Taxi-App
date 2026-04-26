@@ -19,7 +19,11 @@ public record AuthResponse (
 
         TokenDto accessTokenDto,
 
-        TokenDto refreshTokenDto
+        TokenDto refreshTokenDto,
+
+        PassengerProfileResponse passengerProfile,
+
+        DriverProfileResponse driverProfile
 ) {
     public static AuthResponse from(AuthDto result) {
         return new AuthResponse(
@@ -27,7 +31,13 @@ public record AuthResponse (
                 result.accountDto().email(),
                 result.accountDto().role(),
                 result.accessTokenDto(),
-                result.refreshTokenDto()
+                result.refreshTokenDto(),
+                result.passengerProfileDto() != null
+                        ? PassengerProfileResponse.from(result.passengerProfileDto())
+                        : null,
+                result.driverProfileDto() != null
+                        ? DriverProfileResponse.from(result.driverProfileDto())
+                        : null
         );
     }
 }

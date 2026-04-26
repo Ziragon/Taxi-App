@@ -1,5 +1,6 @@
 package com.example.userservice.service;
 
+import com.example.userservice.dto.data.DriverProfileDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.enums.DriverStatus;
@@ -21,7 +22,7 @@ public class DriverProfileService {
     private final AccountService accountService;
 
     @Transactional
-    public DriverProfile createProfile(Long accountId, String firstName, String lastName,
+    public DriverProfileDto createProfile(Long accountId, String firstName, String lastName,
                                        String licenseNumber, String photoUrl) {
         Account account = accountService.findById(accountId);
 
@@ -37,26 +38,32 @@ public class DriverProfileService {
                 .verified(false)
                 .build();
 
-        return driverProfileRepository.save(profile);
+        DriverProfile saved = driverProfileRepository.save(profile);
+        return DriverProfileDto.from(saved);
     }
 
     @Transactional(readOnly = true)
-    public DriverProfile getProfile(Long accountId) {
-        return driverProfileRepository.findById(accountId)
+    public DriverProfileDto getProfile(Long accountId) {
+        DriverProfile profile = driverProfileRepository.findById(accountId)
                 .orElseThrow(() -> new ProfileNotFoundException("Driver", accountId));
+
+        return DriverProfileDto.from(profile);
     }
 
     @Transactional
-    public DriverProfile updateProfile(Long accountId, String firstName, String lastName,
+    public DriverProfileDto updateProfile(Long accountId, String firstName, String lastName,
                                        String licenseNumber, String photoUrl) {
-        DriverProfile profile = getProfile(accountId);
+
+        DriverProfile profile = driverProfileRepository.findById(accountId)
+                .orElseThrow(() -> new ProfileNotFoundException("Driver", accountId));
 
         profile.setFirstName(firstName);
         profile.setLastName(lastName);
         profile.setLicenseNumber(licenseNumber);
         profile.setPhotoUrl(photoUrl);
 
-        return driverProfileRepository.save(profile);
+        DriverProfile saved = driverProfileRepository.save(profile);
+        return DriverProfileDto.from(saved);
     }
 
     @Transactional
@@ -66,7 +73,10 @@ public class DriverProfileService {
 
     @Transactional
     public void verifyDriver(Long accountId) {
-        DriverProfile profile = getProfile(accountId);
+
+        DriverProfile profile = driverProfileRepository.findById(accountId)
+                .orElseThrow(() -> new ProfileNotFoundException("Driver", accountId));
+
         profile.setVerified(true);
         driverProfileRepository.save(profile);
     }
@@ -83,7 +93,9 @@ public class DriverProfileService {
 
     @Transactional
     public void updateRating(Long accountId, BigDecimal newTripRating) {
-        DriverProfile profile = getProfile(accountId);
+
+        DriverProfile profile = driverProfileRepository.findById(accountId)
+                .orElseThrow(() -> new ProfileNotFoundException("Driver", accountId));
 
         int totalTrips = profile.getTotalTrips() + 1;
         BigDecimal currentAverage = profile.getAverageRating();
