@@ -8,6 +8,6 @@ public class TripPricingService {
 
     @Transactional
     public Long priceCalculation() {
-        
+        return null;
     }
 }
