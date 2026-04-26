@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - '**.osm.pbf'
+    branches:
+      - feature/trip-service-logic
 
 jobs:
   build:
