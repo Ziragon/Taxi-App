@@ -38,7 +38,7 @@ jobs:
       - name: Build & push OSRM image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: backend/docker/osrm
           file: backend/docker/osrm/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
