@@ -2,6 +2,7 @@ package com.example.userservice.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 @Schema(description = "Создание профиля водителя")
@@ -18,7 +19,7 @@ public record CreateDriverProfileRequest (
     String lastName,
 
     @NotBlank(message = "Номер водительского удостоверения обязателен")
-    @Size(max = 50, message = "Максимум 50 символов")
+    @Pattern(regexp = "^\\d{10}$", message = "Номер ВУ должен содержать ровно 10 цифр")
     @Schema(description = "Номер водительского удостоверения", example = "7712345678")
     String licenseNumber,
 

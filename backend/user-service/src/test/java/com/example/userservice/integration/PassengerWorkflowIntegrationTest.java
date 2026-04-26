@@ -23,7 +23,10 @@ import static org.assertj.core.api.Assertions.*;
 @ActiveProfiles("test")
 @Transactional
 @DisplayName("Passenger Workflow Integration Tests")
-class PassengerWorkflowIntegrationTest extends BaseIntegrationTest{
+class PassengerWorkflowIntegrationTest extends BaseIntegrationTest {
+
+    @Autowired
+    private jakarta.persistence.EntityManager entityManager;
 
     @Autowired
     private AuthService authService;
@@ -81,6 +84,9 @@ class PassengerWorkflowIntegrationTest extends BaseIntegrationTest{
         passengerProfileService.updateRating(passengerId, new BigDecimal("4.00"));
         passengerProfileService.updateRating(passengerId, new BigDecimal("5.00"));
 
+        entityManager.flush();
+        entityManager.clear();
+
         PassengerProfileDto afterRatings = passengerProfileService.getProfile(passengerId);
         assertThat(afterRatings.totalTrips()).isEqualTo(3);
         assertThat(afterRatings.averageRating()).isEqualByComparingTo("4.67");
@@ -99,16 +105,22 @@ class PassengerWorkflowIntegrationTest extends BaseIntegrationTest{
         passengerProfileService.createProfile(passengerId, "Test", "User", null);
 
         passengerProfileService.updateRating(passengerId, new BigDecimal("4.50"));
+        entityManager.flush();
+        entityManager.clear();
         PassengerProfileDto after1 = passengerProfileService.getProfile(passengerId);
         assertThat(after1.averageRating()).isEqualByComparingTo("4.50");
         assertThat(after1.totalTrips()).isEqualTo(1);
 
         passengerProfileService.updateRating(passengerId, new BigDecimal("5.00"));
+        entityManager.flush();
+        entityManager.clear();
         PassengerProfileDto after2 = passengerProfileService.getProfile(passengerId);
         assertThat(after2.averageRating()).isEqualByComparingTo("4.75");
         assertThat(after2.totalTrips()).isEqualTo(2);
 
         passengerProfileService.updateRating(passengerId, new BigDecimal("3.00"));
+        entityManager.flush();
+        entityManager.clear();
         PassengerProfileDto after3 = passengerProfileService.getProfile(passengerId);
         assertThat(after3.averageRating()).isEqualByComparingTo("4.17");
         assertThat(after3.totalTrips()).isEqualTo(3);

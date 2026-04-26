@@ -13,13 +13,11 @@ import java.util.Optional;
 @Repository
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
 
-    Optional<RefreshToken> findByTokenHash(String tokenHash);
-
     Optional<RefreshToken> findByTokenHashAndRevokedFalse(String tokenHash);
 
     @Modifying
     @Query("UPDATE RefreshToken rt SET rt.revoked = true WHERE rt.account.id = :accountId AND rt.revoked = false")
-    int revokeAllByAccountId(@Param("accountId") Long accountId);
+    void revokeAllByAccountId(@Param("accountId") Long accountId);
 
     @Modifying
     @Query("DELETE FROM RefreshToken rt WHERE rt.expiresAt < :now")

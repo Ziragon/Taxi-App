@@ -1,16 +1,16 @@
 package com.example.userservice.service;
 
+import com.example.shared.exception.common.ResourceNotFoundException;
 import com.example.userservice.dto.data.PassengerProfileDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.PassengerProfile;
-import com.example.userservice.exception.ProfileNotFoundException;
+import com.example.userservice.exception.ProfileAlreadyExistsException;
 import com.example.userservice.repository.PassengerProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +21,10 @@ public class PassengerProfileService {
 
     @Transactional
     public PassengerProfileDto createProfile(Long accountId, String firstName, String lastName, String photoUrl) {
+        if (passengerProfileRepository.existsById(accountId)) {
+            throw new ProfileAlreadyExistsException("Passenger");
+        }
+
         Account account = accountService.findById(accountId);
 
         PassengerProfile profile = PassengerProfile.builder()
@@ -39,7 +43,7 @@ public class PassengerProfileService {
     @Transactional(readOnly = true)
     public PassengerProfileDto getProfile(Long accountId) {
         PassengerProfile profile = passengerProfileRepository.findById(accountId)
-                .orElseThrow(() -> new ProfileNotFoundException("Passenger", accountId));
+                .orElseThrow(() -> new ResourceNotFoundException("Passenger profile", accountId));
 
         return PassengerProfileDto.from(profile);
     }
@@ -47,7 +51,7 @@ public class PassengerProfileService {
     @Transactional
     public PassengerProfileDto updateProfile(Long accountId, String firstName, String lastName, String photoUrl) {
         PassengerProfile profile = passengerProfileRepository.findById(accountId)
-                .orElseThrow(() -> new ProfileNotFoundException("Passenger", accountId));
+                .orElseThrow(() -> new ResourceNotFoundException("Passenger profile", accountId));
 
         profile.setFirstName(firstName);
         profile.setLastName(lastName);
@@ -59,20 +63,9 @@ public class PassengerProfileService {
 
     @Transactional
     public void updateRating(Long accountId, BigDecimal newTripRating) {
-        PassengerProfile profile = passengerProfileRepository.findById(accountId)
-                .orElseThrow(() -> new ProfileNotFoundException("Passenger", accountId));
-
-        int totalTrips = profile.getTotalTrips() + 1;
-        BigDecimal currentAverage = profile.getAverageRating();
-
-        BigDecimal newAverage = currentAverage
-                .multiply(BigDecimal.valueOf(profile.getTotalTrips()))
-                .add(newTripRating)
-                .divide(BigDecimal.valueOf(totalTrips), 2, RoundingMode.HALF_UP);
-
-        profile.setAverageRating(newAverage);
-        profile.setTotalTrips(totalTrips);
-
-        passengerProfileRepository.save(profile);
+        if (!passengerProfileRepository.existsById(accountId)) {
+            throw new ResourceNotFoundException("Passenger profile", accountId);
+        }
+        passengerProfileRepository.updateRating(accountId, newTripRating);
     }
 }

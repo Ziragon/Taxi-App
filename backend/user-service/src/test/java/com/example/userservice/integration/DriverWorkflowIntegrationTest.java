@@ -107,6 +107,8 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
         assertThat(vehicle2.active()).isFalse();
 
         vehicleService.setActiveVehicle(driverId, vehicle1.id());
+        entityManager.flush();
+        entityManager.clear();
 
         List<VehicleDto> vehicles = vehicleService.getVehiclesByDriver(driverId);
         assertThat(vehicles).hasSize(2);
@@ -114,6 +116,7 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
         assertThat(vehicles.stream().filter(VehicleDto::active).findFirst().get().id())
                 .isEqualTo(vehicle1.id());
 
+        driverProfileService.verifyDriver(driverId);
         driverProfileService.updateStatus(driverId, DriverStatus.ONLINE);
         entityManager.flush();
         entityManager.clear();
@@ -144,11 +147,17 @@ class DriverWorkflowIntegrationTest extends BaseIntegrationTest {
         VehicleDto v3 = vehicleService.addVehicle(driverId, "Mercedes", "E-Class", (short) 2023, "Silver", "E333EE777", VehicleClass.BUSINESS);
 
         vehicleService.setActiveVehicle(driverId, v2.id());
+        entityManager.flush();
+        entityManager.clear();
+
         List<VehicleDto> afterFirstSet = vehicleService.getVehiclesByDriver(driverId);
         assertThat(afterFirstSet.stream().filter(VehicleDto::active)).hasSize(1);
         assertThat(afterFirstSet.stream().filter(VehicleDto::active).findFirst().get().id()).isEqualTo(v2.id());
 
         vehicleService.setActiveVehicle(driverId, v3.id());
+        entityManager.flush();
+        entityManager.clear();
+
         List<VehicleDto> afterSecondSet = vehicleService.getVehiclesByDriver(driverId);
         assertThat(afterSecondSet.stream().filter(VehicleDto::active)).hasSize(1);
         assertThat(afterSecondSet.stream().filter(VehicleDto::active).findFirst().get().id()).isEqualTo(v3.id());

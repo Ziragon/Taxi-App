@@ -1,11 +1,13 @@
 package com.example.userservice.service;
 
+import com.example.shared.exception.common.AccessDeniedException;
+import com.example.shared.exception.common.ResourceNotFoundException;
 import com.example.userservice.dto.data.VehicleDto;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.Vehicle;
+import com.example.userservice.entity.enums.DriverStatus;
 import com.example.userservice.entity.enums.VehicleClass;
-import com.example.userservice.exception.ProfileNotFoundException;
-import com.example.userservice.exception.VehicleNotFoundException;
+import com.example.userservice.exception.VehicleAlreadyExistsException;
 import com.example.userservice.repository.DriverProfileRepository;
 import com.example.userservice.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,12 +22,17 @@ public class VehicleService {
 
     private final VehicleRepository vehicleRepository;
     private final DriverProfileRepository driverProfileRepository;
+    private final DriverProfileService driverProfileService;
 
     @Transactional
     public VehicleDto addVehicle(Long driverId, String brand, String model, Short year,
-                              String color, String licensePlate, VehicleClass vehicleClass) {
+                                 String color, String licensePlate, VehicleClass vehicleClass) {
+        if (vehicleRepository.existsByLicensePlate(licensePlate)) {
+            throw new VehicleAlreadyExistsException(licensePlate);
+        }
+
         DriverProfile profile = driverProfileRepository.findById(driverId)
-                .orElseThrow(() -> new ProfileNotFoundException("Driver", driverId));
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile", driverId));
 
         Vehicle vehicle = Vehicle.builder()
                 .driver(profile)
@@ -45,9 +52,15 @@ public class VehicleService {
     @Transactional(readOnly = true)
     public VehicleDto getVehicle(Long vehicleId) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
-                .orElseThrow(() -> new VehicleNotFoundException(vehicleId));
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle", vehicleId));
 
         return VehicleDto.from(vehicle);
+    }
+
+    @Transactional(readOnly = true)
+    public Vehicle getVehicleWithDriver(Long vehicleId) {
+        return vehicleRepository.findByIdWithDriver(vehicleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle", vehicleId));
     }
 
     @Transactional(readOnly = true)
@@ -69,10 +82,10 @@ public class VehicleService {
     }
 
     @Transactional
-    public VehicleDto updateVehicle(Long vehicleId, String brand, String model, Short year,
+    public VehicleDto updateVehicle(Long requesterId, Long vehicleId, String brand, String model, Short year,
                                     String color, String licensePlate, VehicleClass vehicleClass) {
-        Vehicle vehicle = vehicleRepository.findById(vehicleId)
-                .orElseThrow(() -> new VehicleNotFoundException(vehicleId));
+        Vehicle vehicle = getVehicleWithDriver(vehicleId);
+        checkOwnership(vehicle, requesterId);
 
         vehicle.setBrand(brand);
         vehicle.setModel(model);
@@ -89,14 +102,36 @@ public class VehicleService {
     public void setActiveVehicle(Long driverId, Long vehicleId) {
         List<Vehicle> driverVehicles = vehicleRepository.findAllByDriverAccountId(driverId);
 
+        boolean vehicleBelongsToDriver = driverVehicles.stream()
+                .anyMatch(v -> v.getId().equals(vehicleId));
+
+        if (!vehicleBelongsToDriver) {
+            throw new AccessDeniedException("You do not have access to this vehicle");
+        }
+
         driverVehicles.forEach(v -> {
             v.setActive(v.getId().equals(vehicleId));
             vehicleRepository.save(v);
         });
+
+        vehicleRepository.flush();
     }
 
     @Transactional
-    public void deleteVehicle(Long vehicleId) {
+    public void deleteVehicle(Long requesterId, Long vehicleId) {
+        Vehicle vehicle = getVehicleWithDriver(vehicleId);
+        checkOwnership(vehicle, requesterId);
+
+        if (vehicle.isActive()) {
+            driverProfileService.updateStatus(requesterId, DriverStatus.OFFLINE);
+        }
+
         vehicleRepository.deleteById(vehicleId);
+    }
+
+    private void checkOwnership(Vehicle vehicle, Long requesterId) {
+        if (!vehicle.getDriver().getAccount().getId().equals(requesterId)) {
+            throw new AccessDeniedException("You do not have access to this vehicle");
+        }
     }
 }

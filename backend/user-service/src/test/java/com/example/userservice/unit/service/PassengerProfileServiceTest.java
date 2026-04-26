@@ -1,10 +1,11 @@
 package com.example.userservice.unit.service;
 
+import com.example.shared.exception.common.ResourceNotFoundException;
 import com.example.userservice.dto.data.PassengerProfileDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.PassengerProfile;
 import com.example.userservice.entity.enums.AccountRole;
-import com.example.userservice.exception.ProfileNotFoundException;
+import com.example.userservice.exception.ProfileAlreadyExistsException;
 import com.example.userservice.repository.PassengerProfileRepository;
 import com.example.userservice.service.AccountService;
 import com.example.userservice.service.PassengerProfileService;
@@ -45,6 +46,7 @@ class PassengerProfileServiceTest {
                 .lastName("Иванов")
                 .build();
 
+        when(passengerProfileRepository.existsById(1L)).thenReturn(false);
         when(accountService.findById(1L)).thenReturn(account);
         when(passengerProfileRepository.save(any(PassengerProfile.class))).thenReturn(profile);
 
@@ -52,34 +54,40 @@ class PassengerProfileServiceTest {
 
         assertThat(created.firstName()).isEqualTo("Иван");
         assertThat(created.lastName()).isEqualTo("Иванов");
+        verify(passengerProfileRepository).existsById(1L);
+        verify(accountService).findById(1L);
         verify(passengerProfileRepository).save(any(PassengerProfile.class));
     }
 
     @Test
-    @DisplayName("Обновление рейтинга: корректный пересчёт среднего")
-    void updateRating_CalculatesCorrectAverage() {
-        PassengerProfile profile = PassengerProfile.builder()
-                .accountId(1L)
-                .averageRating(new BigDecimal("4.50"))
-                .totalTrips(2)
-                .build();
+    @DisplayName("Создание профиля: дублирующийся профиль -> ProfileAlreadyExistsException")
+    void createProfile_AlreadyExists() {
+        when(passengerProfileRepository.existsById(1L)).thenReturn(true);
 
-        when(passengerProfileRepository.findById(1L)).thenReturn(Optional.of(profile));
-        when(passengerProfileRepository.save(any(PassengerProfile.class))).thenAnswer(i -> i.getArgument(0));
-
-        passengerProfileService.updateRating(1L, new BigDecimal("5.00"));
-
-        assertThat(profile.getAverageRating()).isEqualByComparingTo("4.67");
-        assertThat(profile.getTotalTrips()).isEqualTo(3);
+        assertThatThrownBy(() -> passengerProfileService.createProfile(1L, "Иван", "Иванов", null))
+                .isInstanceOf(ProfileAlreadyExistsException.class)
+                .hasMessageContaining("Passenger");
     }
 
     @Test
-    @DisplayName("Получение профиля: профиль не найден -> ProfileNotFoundException")
+    @DisplayName("Обновление рейтинга: вызывает update query")
+    void updateRating_CallsRepositoryUpdate() {
+        when(passengerProfileRepository.existsById(1L)).thenReturn(true);
+
+        passengerProfileService.updateRating(1L, new BigDecimal("5.00"));
+
+        verify(passengerProfileRepository).existsById(1L);
+        verify(passengerProfileRepository).updateRating(1L, new BigDecimal("5.00"));
+        verifyNoMoreInteractions(passengerProfileRepository);
+    }
+
+    @Test
+    @DisplayName("Получение профиля: профиль не найден -> ResourceNotFoundException")
     void getProfile_NotFound() {
         when(passengerProfileRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> passengerProfileService.getProfile(999L))
-                .isInstanceOf(ProfileNotFoundException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Passenger profile");
     }
 }
