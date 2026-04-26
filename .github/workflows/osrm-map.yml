@@ -4,7 +4,10 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - feature/trip-service-logic
+      - main
+      - dev
+    paths:
+      - 'backend/docker/osrm/**.osm.pbf'
 
 jobs:
   build:
