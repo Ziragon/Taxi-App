@@ -22,6 +22,7 @@ public class TripService {
     private final TripRepository tripRepository;
     private final WeatherService weatherService;
     private final NavigationService navigationService;
+    private final PriceService priceService;
 
     @Transactional
     public TripDto createTrip(Long userId, TripCreateDto dto) {
@@ -43,7 +44,7 @@ public class TripService {
         trip.setDistanceKm(BigDecimal.valueOf(route.distance() / 1000));
         trip.setDurationSec(route.duration());
         trip.setWeatherCoef(weather.weatherCoef());
-        trip.setSurgeCoef(new BigDecimal("1.1"));
+        trip.setSurgeCoef(priceService.getSurgeCoef(weather.localtime()));
 
         Trip saved = tripRepository.save(trip);
         return TripDto.from(saved);

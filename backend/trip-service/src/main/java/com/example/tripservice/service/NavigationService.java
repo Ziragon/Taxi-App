@@ -24,7 +24,7 @@ public class NavigationService {
 
         OsrmResponse response = osrmClient.getRoute(coords, "full");
 
-        if (!response.code().equals("200")) {
+        if (!response.code().equals("Ok")) {
             log.warn("OSRM API error: {}", response.code());
             throw new RouteNotFoundException(coords);
         }

@@ -23,7 +23,7 @@ public class WeatherService {
 
     public WeatherDto getWeatherCoef(BigDecimal longitude, BigDecimal latitude) {
         try {
-            String currentCoords = String.format("%f,%f", latitude, longitude);
+            String currentCoords = String.format(java.util.Locale.US, "%f,%f", latitude, longitude);
 
             WeatherResponse response = weatherClient.getWeather(
                     apiKey,
@@ -34,11 +34,12 @@ public class WeatherService {
             BigDecimal weatherCoef = WeatherAPIPriceUtil.getMultiplier(response.current().condition().code());
 
             log.info(response.toString());
+            log.info(currentCoords);
 
             return WeatherDto.from(response, weatherCoef);
         } catch (Exception e) {
             log.warn("Weather API Error: {}", e.getMessage());
-            return new WeatherDto(null, 0.0, "Weather Service Unavailable", null, new BigDecimal("1.0"));
+            return new WeatherDto(null, null, 0.0, "Weather Service Unavailable", null, new BigDecimal("1.0"));
         }
     }
 }
