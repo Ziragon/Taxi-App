@@ -1,4 +1,4 @@
-package com.example.userservice.dto.data.admin;
+package com.example.userservice.dto.data;
 
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.enums.AccountRole;

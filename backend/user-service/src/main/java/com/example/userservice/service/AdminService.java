@@ -2,7 +2,7 @@ package com.example.userservice.service;
 
 import com.example.shared.exception.common.ResourceNotFoundException;
 import com.example.userservice.dto.data.*;
-import com.example.userservice.dto.data.admin.AccountAdminDto;
+import com.example.userservice.dto.data.AccountAdminDto;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.Vehicle;
 import com.example.userservice.repository.AccountRepository;
