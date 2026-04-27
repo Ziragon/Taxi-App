@@ -20,7 +20,9 @@ public record VehicleDto(
 
         VehicleClass vehicleClass,
 
-        boolean active
+        boolean active,
+
+        boolean verified
 ) {
     public static VehicleDto from(Vehicle vehicle) {
         return new VehicleDto(
@@ -32,7 +34,8 @@ public record VehicleDto(
                 vehicle.getColor(),
                 vehicle.getLicensePlate(),
                 vehicle.getVehicleClass(),
-                vehicle.isActive()
+                vehicle.isActive(),
+                vehicle.isVerified()
         );
     }
 }

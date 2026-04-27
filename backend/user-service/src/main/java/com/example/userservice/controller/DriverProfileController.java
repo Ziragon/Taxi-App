@@ -143,23 +143,5 @@ public class DriverProfileController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{driverId}/verify")
-    @Operation(
-            summary = "Верифицировать водителя (только для админа)",
-            description = "Устанавливает is_verified = true",
-            responses = {
-                    @ApiResponse(responseCode = "204", description = "Водитель верифицирован"),
-                    @ApiResponse(responseCode = "403", description = "Недостаточно прав")
-            }
-    )
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<Void> verifyDriver(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long driverId
-    ) {
-        driverProfileService.verifyDriver(driverId);
-
-        return ResponseEntity.noContent().build();
-    }
 }
 

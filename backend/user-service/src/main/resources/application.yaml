@@ -94,3 +94,8 @@ logging:
   level:
     root: INFO
     org.hibernate: INFO
+
+admin:
+  email: ${ADMIN_EMAIL:admin@example.com}
+  phone: ${ADMIN_PHONE:+79990000000}
+  password: ${ADMIN_PASSWORD:AdminPass123}
