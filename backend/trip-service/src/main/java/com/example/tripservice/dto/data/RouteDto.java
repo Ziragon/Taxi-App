@@ -2,9 +2,9 @@ package com.example.tripservice.dto.data;
 
 public record RouteDto(
 
-        double distance,
+        Double distance,
 
-        int duration,
+        Integer duration,
 
         String geometry
 ) {}

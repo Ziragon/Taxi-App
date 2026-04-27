@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
@@ -22,10 +21,9 @@ public class WeatherService {
     @Value("${weather-api.key}")
     private String apiKey;
 
-    @Transactional
     public WeatherDto getWeatherCoef(BigDecimal longitude, BigDecimal latitude) {
         try {
-            String currentCoords = String.format("%f,%f", longitude, latitude);
+            String currentCoords = String.format("%f,%f", latitude, longitude);
 
             WeatherResponse response = weatherClient.getWeather(
                     apiKey,
@@ -39,8 +37,8 @@ public class WeatherService {
 
             return WeatherDto.from(response, weatherCoef);
         } catch (Exception e) {
-            log.warn("Weather API Error");
-            return new WeatherDto(null, null, null, null, null);
+            log.warn("Weather API Error: {}", e.getMessage());
+            return new WeatherDto(null, 0.0, "Weather Service Unavailable", null, new BigDecimal("1.0"));
         }
     }
 }
