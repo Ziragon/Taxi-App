@@ -4,10 +4,7 @@ spring:
       on-profile: test
 
   datasource:
-    url: jdbc:tc:postgresql:17-alpine:///user_db?TC_DAEMON=true
-    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
-    username: test
-    password: test
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -34,9 +31,9 @@ spring:
   rabbitmq:
     listener:
       simple:
-        auto-startup: false
+        auto-startup: true
       direct:
-        auto-startup: false
+        auto-startup: true
 
   jackson:
     date-format: "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
