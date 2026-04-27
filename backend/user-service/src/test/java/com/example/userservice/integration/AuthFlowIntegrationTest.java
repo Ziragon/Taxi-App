@@ -15,7 +15,13 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.RabbitMQContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import java.util.concurrent.TimeUnit;
 
@@ -26,8 +32,22 @@ import static org.awaitility.Awaitility.await;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@Testcontainers
 @DisplayName("Auth Flow Integration Tests")
-class AuthFlowIntegrationTest extends BaseRabbitMQIntegrationTest {
+class AuthFlowIntegrationTest {
+
+    @Container
+    static final RabbitMQContainer rabbitMQ = new RabbitMQContainer(
+            DockerImageName.parse("rabbitmq:4.0-management-alpine")
+    ).withStartupTimeout(java.time.Duration.ofMinutes(2));
+
+    @DynamicPropertySource
+    static void rabbitProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.rabbitmq.host", rabbitMQ::getHost);
+        registry.add("spring.rabbitmq.port", rabbitMQ::getAmqpPort);
+        registry.add("spring.rabbitmq.username", rabbitMQ::getAdminUsername);
+        registry.add("spring.rabbitmq.password", rabbitMQ::getAdminPassword);
+    }
 
     @Autowired
     private AuthService authService;
