@@ -4,6 +4,7 @@ import com.example.tripservice.entity.Trip;
 import com.example.tripservice.entity.enums.TripStatus;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public record TripDto(
 
@@ -29,9 +30,11 @@ public record TripDto(
 
         BigDecimal weatherCoef,
 
-        BigDecimal surgeCoef
+        BigDecimal surgeCoef,
+
+        List<TariffDto> tariffDtos
 ) {
-    public static TripDto from(Trip trip) {
+    public static TripDto from(Trip trip, List<TariffDto> dtos) {
         return new TripDto(
                 trip.getPassengerId(),
                 trip.getStatus(),
@@ -44,7 +47,8 @@ public record TripDto(
                 trip.getDistanceKm(),
                 trip.getDurationSec(),
                 trip.getWeatherCoef(),
-                trip.getSurgeCoef()
+                trip.getSurgeCoef(),
+                dtos
         );
     }
 }
