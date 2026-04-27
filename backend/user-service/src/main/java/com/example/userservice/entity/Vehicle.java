@@ -49,4 +49,8 @@ public class Vehicle {
     @Builder.Default
     @Column(name = "is_active", nullable = false)
     private boolean active = false;
+
+    @Builder.Default
+    @Column(name = "is_verified", nullable = false)
+    private boolean verified = false;
 }

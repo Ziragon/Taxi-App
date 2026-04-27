@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Repository
 public interface PassengerProfileRepository extends JpaRepository<PassengerProfile, Long> {
@@ -20,4 +21,7 @@ public interface PassengerProfileRepository extends JpaRepository<PassengerProfi
             WHERE p.accountId = :accountId
             """)
     void updateRating(@Param("accountId") Long accountId, @Param("newRating") BigDecimal newRating);
+
+    @Query("SELECT pp FROM PassengerProfile pp JOIN FETCH pp.account")
+    List<PassengerProfile> findAllWithAccount();
 }

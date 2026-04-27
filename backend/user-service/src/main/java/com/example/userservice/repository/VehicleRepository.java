@@ -25,4 +25,7 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     Optional<Vehicle> findByIdWithDriver(@Param("id") Long id);
 
     boolean existsByLicensePlate(String licensePlate);
+
+    @Query("SELECT v FROM Vehicle v JOIN FETCH v.driver d JOIN FETCH d.account")
+    List<Vehicle> findAllWithDriver();
 }

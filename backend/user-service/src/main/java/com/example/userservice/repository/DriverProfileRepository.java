@@ -22,4 +22,7 @@ public interface DriverProfileRepository extends JpaRepository<DriverProfile, Lo
     @Modifying
     @Query("UPDATE DriverProfile dp SET dp.status = :status WHERE dp.accountId = :accountId")
     int updateStatus(@Param("accountId") Long accountId, @Param("status") DriverStatus status);
+
+    @Query("SELECT dp FROM DriverProfile dp JOIN FETCH dp.account")
+    List<DriverProfile> findAllWithAccount();
 }
