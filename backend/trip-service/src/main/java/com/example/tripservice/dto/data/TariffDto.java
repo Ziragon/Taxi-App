@@ -17,16 +17,16 @@ public record TariffDto(
 
         BigDecimal pricePerMin,
 
-        BigDecimal price
+        TariffPriceData prices
 ) {
-    public static TariffDto from(Tariff tariff, BigDecimal price) {
+    public static TariffDto from(Tariff tariff, TariffPriceData prices) {
         return new TariffDto(
                 tariff.getId(),
                 tariff.getTripClass(),
                 tariff.getBaseFare(),
                 tariff.getPricePerKm(),
                 tariff.getPricePerMin(),
-                price
+                prices
         );
     }
 }

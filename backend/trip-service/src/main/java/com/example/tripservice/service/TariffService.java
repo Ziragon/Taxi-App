@@ -1,6 +1,7 @@
 package com.example.tripservice.service;
 
 import com.example.tripservice.dto.data.TariffDto;
+import com.example.tripservice.dto.data.TariffPriceData;
 import com.example.tripservice.dto.data.TripDto;
 import com.example.tripservice.entity.Tariff;
 import com.example.tripservice.repository.TariffRepository;
@@ -8,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -25,17 +25,17 @@ public class TariffService {
 
         return tariffs.stream()
                 .map(tariff -> {
-                    BigDecimal calculatedPrice = priceService.calculatePrice(
+                    TariffPriceData calculatedPrices = priceService.calculatePrice(
                             tariff.getBaseFare(),
                             tripDto.distanceKm(),
-                            tripDto.durationSec(),
+                            tripDto.durationMin(),
                             tariff.getPricePerKm(),
                             tariff.getPricePerMin(),
                             tripDto.weatherCoef(),
                             tripDto.surgeCoef()
                     );
 
-                    return TariffDto.from(tariff, calculatedPrice);
+                    return TariffDto.from(tariff, calculatedPrices);
                 })
                 .toList();
     }

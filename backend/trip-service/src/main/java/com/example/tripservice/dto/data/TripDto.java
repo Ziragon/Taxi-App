@@ -8,6 +8,8 @@ import java.util.List;
 
 public record TripDto(
 
+        Long id,
+
         Long passengerId,
 
         TripStatus status,
@@ -26,7 +28,7 @@ public record TripDto(
 
         BigDecimal distanceKm,
 
-        Integer durationSec,
+        BigDecimal durationMin,
 
         BigDecimal weatherCoef,
 
@@ -36,6 +38,7 @@ public record TripDto(
 ) {
     public static TripDto from(Trip trip, List<TariffDto> dtos) {
         return new TripDto(
+                trip.getId(),
                 trip.getPassengerId(),
                 trip.getStatus(),
                 trip.getOriginAddress(),
@@ -45,7 +48,7 @@ public record TripDto(
                 trip.getDestinationLat(),
                 trip.getDestinationLng(),
                 trip.getDistanceKm(),
-                trip.getDurationSec(),
+                trip.getDurationMin(),
                 trip.getWeatherCoef(),
                 trip.getSurgeCoef(),
                 dtos

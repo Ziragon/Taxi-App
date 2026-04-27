@@ -1,5 +1,6 @@
 package com.example.tripservice.service;
 
+import com.example.tripservice.dto.data.TariffPriceData;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,17 +15,14 @@ import java.time.LocalDateTime;
 public class PriceService {
 
     // Рассчитывание окончательной цены по тарифу со всеми параметрами
-    public BigDecimal calculatePrice(
-            BigDecimal baseFare, BigDecimal km, Integer sec,
+    public TariffPriceData calculatePrice(
+            BigDecimal baseFare, BigDecimal km, BigDecimal mins,
             BigDecimal pricePerKm, BigDecimal pricePerMin,
             BigDecimal weatherCoef, BigDecimal surgeCoef
     ) {
         BigDecimal distanceCost = km.multiply(pricePerKm);
 
-        BigDecimal minutes = BigDecimal.valueOf(sec)
-                .divide(new BigDecimal("60"), 10, RoundingMode.HALF_UP);
-
-        BigDecimal timeCost = minutes.multiply(pricePerMin);
+        BigDecimal timeCost = mins.multiply(pricePerMin);
 
         BigDecimal totalPrice = baseFare
                 .add(distanceCost)
@@ -32,7 +30,11 @@ public class PriceService {
                 .multiply(weatherCoef)
                 .multiply(surgeCoef);
 
-        return totalPrice.setScale(2, RoundingMode.HALF_UP);
+        return new TariffPriceData(
+                distanceCost.setScale(2, RoundingMode.HALF_UP),
+                timeCost.setScale(2, RoundingMode.HALF_UP),
+                totalPrice.setScale(2, RoundingMode.HALF_UP)
+        );
     }
 
     // Имитация пробок

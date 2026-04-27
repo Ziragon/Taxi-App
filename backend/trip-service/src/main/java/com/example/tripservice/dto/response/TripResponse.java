@@ -4,8 +4,12 @@ import com.example.tripservice.dto.data.TripDto;
 import com.example.tripservice.entity.enums.TripStatus;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public record TripResponse(
+
+        Long id,
+
         Long passengerId,
 
         TripStatus status,
@@ -24,14 +28,23 @@ public record TripResponse(
 
         BigDecimal distanceKm,
 
-        Integer durationSec,
+        BigDecimal durationMin,
 
         BigDecimal weatherCoef,
 
-        BigDecimal surgeCoef
+        BigDecimal surgeCoef,
+
+        List<TariffResponse> tariffs
 ) {
     public static TripResponse from(TripDto trip) {
+        List<TariffResponse> tariffs = trip.tariffDtos() == null
+                ? List.of()
+                : trip.tariffDtos().stream()
+                  .map(TariffResponse::from)
+                  .toList();
+
         return new TripResponse(
+                trip.id(),
                 trip.passengerId(),
                 trip.status(),
                 trip.originAddress(),
@@ -41,9 +54,10 @@ public record TripResponse(
                 trip.destLat(),
                 trip.destLng(),
                 trip.distanceKm(),
-                trip.durationSec(),
+                trip.durationMin(),
                 trip.weatherCoef(),
-                trip.surgeCoef()
+                trip.surgeCoef(),
+                tariffs
         );
     }
 }
