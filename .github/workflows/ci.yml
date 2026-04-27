@@ -98,6 +98,7 @@ jobs:
         run: ./gradlew :${{ matrix.service }}:build
         env:
           TESTCONTAINERS_RYUK_DISABLED: false
+          TESTCONTAINERS_REUSE_ENABLE: true 
           TESTCONTAINERS_CHECKS_DISABLE: false
 
       - name: Upload test report
