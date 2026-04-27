@@ -21,7 +21,7 @@ public class DriverLocationService {
     private final DriverProfileRepository driverProfileRepository;
 
     @Transactional
-    public DriverLocation updateLocation(Long driverId, BigDecimal latitude, BigDecimal longitude) {
+    public void updateLocation(Long driverId, BigDecimal latitude, BigDecimal longitude) {
         DriverProfile profile = driverProfileRepository.findById(driverId)
                 .orElseThrow(() -> new ProfileNotFoundException("Driver", driverId));
 
@@ -33,7 +33,7 @@ public class DriverLocationService {
         location.setLatitude(latitude);
         location.setLongitude(longitude);
 
-        return driverLocationRepository.save(location);
+        driverLocationRepository.save(location);
     }
 
     @Transactional(readOnly = true)
