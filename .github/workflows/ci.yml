@@ -77,6 +77,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-testcontainers-
 
+      - name: Pull Testcontainers images
+        run: |
+          docker pull rabbitmq:3.13-management-alpine
+          docker pull redis:7.2-alpine
+
       - uses: gradle/actions/setup-gradle@v6
         with:
           cache-provider: basic
@@ -92,6 +97,7 @@ jobs:
         working-directory: backend
         run: ./gradlew :${{ matrix.service }}:build
         env:
+          TESTCONTAINERS_RYUK_DISABLED: false
           TESTCONTAINERS_CHECKS_DISABLE: false
 
       - name: Upload test report
