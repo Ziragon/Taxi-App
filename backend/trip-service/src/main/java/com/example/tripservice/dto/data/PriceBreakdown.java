@@ -1,4 +1,4 @@
-package com.example.tripservice.dto;
+package com.example.tripservice.dto.data;
 
 import java.math.BigDecimal;
 

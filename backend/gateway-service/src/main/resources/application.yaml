@@ -21,6 +21,18 @@ spring:
               filters:
                 - RewritePath=/user-service/v3/api-docs, /v3/api-docs
 
+            - id: trip-service
+              uri: ${TRIP_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/v1/trips/**
+
+            - id: trip-service-docs
+              uri: ${TRIP_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/trip-service/v3/api-docs
+              filters:
+                - RewritePath=/trip-service/v3/api-docs, /v3/api-docs
+
 server:
   port: 8000
   shutdown: graceful
@@ -37,6 +49,7 @@ gateway:
     - /swagger-ui/**
     - /swagger-ui.html
     - /user-service/v3/api-docs
+    - /trip-service/v3/api-docs
     - /webjars/**
     - /v3/api-docs/**
 
@@ -50,6 +63,8 @@ springdoc:
     urls:
       - name: user-service
         url: /user-service/v3/api-docs
+      - name: trip-service
+        url: /trip-service/v3/api-docs
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:*}

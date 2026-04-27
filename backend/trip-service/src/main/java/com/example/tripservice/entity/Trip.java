@@ -1,6 +1,6 @@
 package com.example.tripservice.entity;
 
-import com.example.tripservice.dto.PriceBreakdown;
+import com.example.tripservice.dto.data.PriceBreakdown;
 import com.example.tripservice.entity.enums.TripStatus;
 import com.example.tripservice.entity.enums.VehicleClass;
 import jakarta.persistence.*;
@@ -71,8 +71,8 @@ public class Trip {
     @Column(name = "distance_km", nullable = false, precision = 6, scale = 2)
     private BigDecimal distanceKm;
 
-    @Column(name = "duration_sec", nullable = false)
-    private Integer durationSec;
+    @Column(name = "duration_min", nullable = false, precision = 6, scale = 2)
+    private BigDecimal durationMin;
 
     @Column(name = "weather_coefficient", nullable = false, precision = 4, scale = 2)
     private BigDecimal weatherCoef;
