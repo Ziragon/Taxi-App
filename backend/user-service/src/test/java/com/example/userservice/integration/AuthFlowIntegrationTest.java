@@ -10,18 +10,24 @@ import com.example.userservice.util.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.concurrent.TimeUnit;
+
+import static com.example.userservice.config.RabbitMQConfig.USER_REGISTERED_QUEUE;
 import static org.assertj.core.api.Assertions.*;
+import static org.awaitility.Awaitility.await;
 
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
 @DisplayName("Auth Flow Integration Tests")
-class AuthFlowIntegrationTest extends BaseIntegrationTest{
+class AuthFlowIntegrationTest extends BaseRabbitMQIntegrationTest {
 
     @Autowired
     private AuthService authService;
@@ -35,10 +41,17 @@ class AuthFlowIntegrationTest extends BaseIntegrationTest{
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
     @BeforeEach
     void cleanup() {
         refreshTokenRepository.deleteAll();
         accountRepository.deleteAll();
+        rabbitTemplate.execute(channel -> {
+            channel.queuePurge(USER_REGISTERED_QUEUE);
+            return null;
+        });
     }
 
     @Test
@@ -96,5 +109,26 @@ class AuthFlowIntegrationTest extends BaseIntegrationTest{
 
         long activeTokens = refreshTokenRepository.countByAccountIdAndRevokedFalse(accountId);
         assertThat(activeTokens).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Регистрация: событие user.registered отправлено в RabbitMQ")
+    void register_PublishesUserRegisteredEvent() {
+        authService.register(
+                "rabbit@test.com",
+                "+79993333333",
+                "RabbitPass123"
+        );
+
+        await()
+                .atMost(5, TimeUnit.SECONDS)
+                .untilAsserted(() -> {
+                    Message message = rabbitTemplate.receive(USER_REGISTERED_QUEUE, 1000);
+                    assertThat(message).isNotNull();
+
+                    String body = new String(message.getBody());
+                    assertThat(body).contains("rabbit@test.com");
+                    assertThat(body).contains("USER");
+                });
     }
 }

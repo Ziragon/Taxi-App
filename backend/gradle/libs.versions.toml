@@ -32,6 +32,7 @@ boot-starter-test = { group = "org.springframework.boot", name = "spring-boot-st
 boot-testcontainers = { group = "org.springframework.boot", name = "spring-boot-testcontainers" }
 boot-webmvc-test = { group = "org.springframework.boot", name = "spring-boot-webmvc-test" }
 testcontainers-jdbc = { module = "org.testcontainers:jdbc", version.ref = "testcontainers" }
+awaitility = { group = "org.awaitility", name = "awaitility", version = "4.2.2" }
 
 jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind" }
 
