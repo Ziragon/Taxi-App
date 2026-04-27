@@ -11,7 +11,7 @@ public record WeatherResponse(
     public record Location(String name) {}
 
     public record Current(
-            @JsonProperty("temp_c") double tempC,
+            @JsonProperty("temp_c") Double tempC,
 
             Condition condition
     ) {}
