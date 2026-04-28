@@ -66,7 +66,8 @@ public class DriverProfile {
     @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Vehicle> vehicles = new ArrayList<>();
 
-    @OneToOne(mappedBy = "driver", cascade = CascadeType.ALL, orphanRemoval = true)
-    private DriverLocation location;
+    @Builder.Default
+    @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<DriverLocation> locationLogs = new ArrayList<>();
 }
 
