@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.geo.Point;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +21,6 @@ import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.tuple;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -32,10 +32,28 @@ class DriverCacheIntegrationTest {
     private static final String KEY_LOCATION_PREFIX = "driver:location:";
     private static final String KEY_STATUS_PREFIX   = "driver:status:";
     private static final String ONLINE_DRIVERS_KEY  = "drivers:online";
+    private static final String GEO_KEY             = "drivers:geo";
 
     private static final Long DRIVER_ID_1 = 1L;
     private static final Long DRIVER_ID_2 = 2L;
     private static final Long DRIVER_ID_3 = 3L;
+
+    // Координаты точки
+    private static final double CENTER_LNG = 37.61;
+    private static final double CENTER_LAT = 55.75;
+
+    // Координаты в радиусе 5 км
+    private static final String NEAR_LNG_1 = "37.62";   // ~0.8 км от центра
+    private static final String NEAR_LAT_1 = "55.76";
+
+    private static final String NEAR_LNG_2 = "37.63";   // ~2.1 км от центра
+    private static final String NEAR_LAT_2 = "55.77";
+
+    // Координаты за пределами 5 км (~85 км)
+    private static final String FAR_LNG_3  = "38.50";
+    private static final String FAR_LAT_3  = "56.30";
+
+    private static final double SEARCH_RADIUS_KM = 5.0;
 
     @Autowired
     private DriverCachingService driverCachingService;
@@ -57,11 +75,12 @@ class DriverCacheIntegrationTest {
         redisStatusTemplate.delete(KEY_STATUS_PREFIX + DRIVER_ID_3);
 
         redisStatusTemplate.delete(ONLINE_DRIVERS_KEY);
+        redisStatusTemplate.delete(GEO_KEY);
     }
 
-    private DriverLocationDto buildLocation(String lon, String lat) {
+    private DriverLocationDto buildLocation(String lng, String lat) {
         return new DriverLocationDto(
-                new BigDecimal(lon),
+                new BigDecimal(lng),
                 new BigDecimal(lat)
         );
     }
@@ -83,20 +102,37 @@ class DriverCacheIntegrationTest {
                     .get(KEY_LOCATION_PREFIX + DRIVER_ID_1);
 
             assertThat(stored).isNotNull();
-            assertThat(stored.latitude()).isEqualTo("55.75");
-            assertThat(stored.longitude()).isEqualTo("37.61");
+            assertThat(stored.latitude()).isEqualByComparingTo("55.75");
+            assertThat(stored.longitude()).isEqualByComparingTo("37.61");
         }
 
         @Test
         @DisplayName("Установлен положительный TTL")
         void shouldSetPositiveTtl() {
 
-            DriverLocationDto dto = buildLocation("55.75", "37.61");
+            DriverLocationDto dto = buildLocation("37.61", "55.75");
 
             driverCachingService.updateLocation(DRIVER_ID_1, dto);
 
             Long ttl = redisLocationTemplate.getExpire(KEY_LOCATION_PREFIX + DRIVER_ID_1);
             assertThat(ttl).isNotNull().isPositive();
+        }
+
+        @Test
+        @DisplayName("Добавляет водителя в GEO-индекс")
+        void shouldAddDriverToGeoIndex() {
+
+            DriverLocationDto dto = buildLocation("37.61", "55.75");
+
+            driverCachingService.updateLocation(DRIVER_ID_1, dto);
+
+            List<Point> positions = redisStatusTemplate.opsForGeo()
+                    .position(GEO_KEY, String.valueOf(DRIVER_ID_1));
+
+            assertThat(positions)
+                    .isNotNull()
+                    .isNotEmpty();
+            assertThat(positions.getFirst()).isNotNull();
         }
     }
 
@@ -124,7 +160,10 @@ class DriverCacheIntegrationTest {
             driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
 
             Set<String> onlineIds = redisStatusTemplate.opsForSet().members(ONLINE_DRIVERS_KEY);
-            assertThat(onlineIds).contains(String.valueOf(DRIVER_ID_1));
+            assertThat(onlineIds)
+                    .isNotNull()
+                    .isNotEmpty()
+                    .contains(String.valueOf(DRIVER_ID_1));
         }
 
         @Test
@@ -182,7 +221,7 @@ class DriverCacheIntegrationTest {
         @DisplayName("Удаляет локацию из Redis")
         void shouldDeleteLocation() {
 
-            driverCachingService.updateLocation(DRIVER_ID_1, buildLocation("55.0", "37.0"));
+            driverCachingService.updateLocation(DRIVER_ID_1, buildLocation(NEAR_LNG_1, NEAR_LAT_1));
 
             driverCachingService.deleteDriver(DRIVER_ID_1);
 
@@ -217,7 +256,7 @@ class DriverCacheIntegrationTest {
             assertThat(onlineIdsBefore)
                     .isNotNull()
                     .isNotEmpty()
-                    .contains(String.valueOf(DRIVER_ID_1));
+                    .contains(String.valueOf(DRIVER_ID_1), String.valueOf(DRIVER_ID_2));
 
             driverCachingService.deleteDriver(DRIVER_ID_1);
 
@@ -228,70 +267,123 @@ class DriverCacheIntegrationTest {
                     .doesNotContain(String.valueOf(DRIVER_ID_1))
                     .contains(String.valueOf(DRIVER_ID_2));
         }
+
+        @Test
+        @DisplayName("Удаляет водителя из GEO-индекса")
+        void shouldRemoveDriverFromGeoIndex() {
+
+            driverCachingService.updateLocation(DRIVER_ID_1, buildLocation(NEAR_LNG_1, NEAR_LAT_1));
+
+            List<Point> positionsBefore = redisStatusTemplate.opsForGeo()
+                    .position(GEO_KEY, String.valueOf(DRIVER_ID_1));
+            assertThat(positionsBefore).isNotNull().isNotEmpty();
+            assertThat(positionsBefore.getFirst()).isNotNull();
+
+            driverCachingService.deleteDriver(DRIVER_ID_1);
+
+            List<Point> positionsAfter = redisStatusTemplate.opsForGeo()
+                    .position(GEO_KEY, String.valueOf(DRIVER_ID_1));
+            assertThat(positionsAfter).satisfiesAnyOf(
+                    list -> assertThat(list).isNullOrEmpty(),
+                    list -> assertThat(list.getFirst()).isNull()
+            );
+        }
     }
 
     @Nested
-    @DisplayName("getOnlineDriverLocations()")
-    class GetOnlineDriverLocations {
+    @DisplayName("getNearbyOnlineDrivers()")
+    class GetNearbyOnlineDrivers {
 
         @Test
-        @DisplayName("Возвращает пустой список, если онлайн-водителей нет")
-        void shouldReturnEmptyListWhenNoOnlineDrivers() {
+        @DisplayName("Возвращает пустой список, если нет водителей в радиусе")
+        void shouldReturnEmptyListWhenNoDriversInRadius() {
 
-            List<DriverLocationDto> result = driverCachingService.getOnlineDriverLocations();
+            List<DriverLocationDto> result = driverCachingService
+                    .getNearbyOnlineDrivers(CENTER_LNG, CENTER_LAT, SEARCH_RADIUS_KM);
 
             assertThat(result).isEmpty();
         }
 
         @Test
-        @DisplayName("Возвращает локации всех онлайн-водителей")
-        void shouldReturnLocationsOfAllOnlineDrivers() {
-            // given
+        @DisplayName("Возвращает локации онлайн-водителей в радиусе")
+        void shouldReturnOnlineDriversWithinRadius() {
+
             driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
             driverCachingService.updateStatus(DRIVER_ID_2, DriverStatus.ONLINE);
-            driverCachingService.updateLocation(DRIVER_ID_1, buildLocation("37.1", "55.1"));
-            driverCachingService.updateLocation(DRIVER_ID_2, buildLocation("37.2", "55.2"));
+            driverCachingService.updateLocation(DRIVER_ID_1, buildLocation(NEAR_LNG_1, NEAR_LAT_1));
+            driverCachingService.updateLocation(DRIVER_ID_2, buildLocation(NEAR_LNG_2, NEAR_LAT_2));
 
-            List<DriverLocationDto> result = driverCachingService.getOnlineDriverLocations();
+            List<DriverLocationDto> result = driverCachingService
+                    .getNearbyOnlineDrivers(CENTER_LNG, CENTER_LAT, SEARCH_RADIUS_KM);
 
             assertThat(result).hasSize(2);
             assertThat(result)
-                    .extracting(DriverLocationDto::latitude, DriverLocationDto::longitude)
+                    .extracting(DriverLocationDto::longitude)
+                    .map(BigDecimal::doubleValue)
                     .containsExactlyInAnyOrder(
-                            tuple(new BigDecimal("55.1"), new BigDecimal("37.1")),
-                            tuple(new BigDecimal("55.2"), new BigDecimal("37.2"))
+                            Double.parseDouble(NEAR_LNG_1),
+                            Double.parseDouble(NEAR_LNG_2)
                     );
         }
 
         @Test
-        @DisplayName("Возвращает только локации онлайн-водителей, офлайн не включаются")
-        void shouldReturnOnlyOnlineDriverLocations() {
+        @DisplayName("Не включает водителей за пределами радиуса")
+        void shouldExcludeDriversOutsideRadius() {
 
             driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
-            driverCachingService.updateStatus(DRIVER_ID_2, DriverStatus.OFFLINE);
-            driverCachingService.updateLocation(DRIVER_ID_1, buildLocation("37.1", "55.1"));
-            driverCachingService.updateLocation(DRIVER_ID_2, buildLocation("37.2", "55.2"));
+            driverCachingService.updateStatus(DRIVER_ID_3, DriverStatus.ONLINE);
+            driverCachingService.updateLocation(DRIVER_ID_1, buildLocation(NEAR_LNG_1, NEAR_LAT_1));
+            driverCachingService.updateLocation(DRIVER_ID_3, buildLocation(FAR_LNG_3, FAR_LAT_3));
 
-            List<DriverLocationDto> result = driverCachingService.getOnlineDriverLocations();
+            List<DriverLocationDto> result = driverCachingService
+                    .getNearbyOnlineDrivers(CENTER_LNG, CENTER_LAT, SEARCH_RADIUS_KM);
 
             assertThat(result).hasSize(1);
-            assertThat(result.getFirst().latitude()).isEqualTo("55.1");
-            assertThat(result.getFirst().longitude()).isEqualTo("37.1");
+            assertThat(result.getFirst().longitude()).isEqualByComparingTo(NEAR_LNG_1);
+            assertThat(result.getFirst().latitude()).isEqualByComparingTo(NEAR_LAT_1);
         }
 
         @Test
-        @DisplayName("Фильтрует null: водитель в сете online, но локация не задана")
+        @DisplayName("Не включает OFFLINE/BUSY водителей, даже если они в радиусе")
+        void shouldExcludeOfflineAndBusyDriversWithinRadius() {
+
+            driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
+            driverCachingService.updateStatus(DRIVER_ID_2, DriverStatus.OFFLINE);
+            driverCachingService.updateStatus(DRIVER_ID_3, DriverStatus.BUSY);
+            driverCachingService.updateLocation(DRIVER_ID_1, buildLocation(NEAR_LNG_1, NEAR_LAT_1));
+            driverCachingService.updateLocation(DRIVER_ID_2, buildLocation(NEAR_LNG_2, NEAR_LAT_2));
+            driverCachingService.updateLocation(DRIVER_ID_3, buildLocation("37.615", "55.755"));
+
+            List<DriverLocationDto> result = driverCachingService
+                    .getNearbyOnlineDrivers(CENTER_LNG, CENTER_LAT, SEARCH_RADIUS_KM);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.getFirst().longitude()).isEqualByComparingTo(NEAR_LNG_1);
+        }
+
+        @Test
+        @DisplayName("Фильтрует null: водитель в GEO и онлайн, но локация не задана")
         void shouldFilterNullLocations() {
 
             driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
             driverCachingService.updateStatus(DRIVER_ID_2, DriverStatus.ONLINE);
-            driverCachingService.updateLocation(DRIVER_ID_2, buildLocation("37.2", "55.2"));
+            driverCachingService.updateLocation(DRIVER_ID_2, buildLocation(NEAR_LNG_2, NEAR_LAT_2));
 
-            List<DriverLocationDto> result = driverCachingService.getOnlineDriverLocations();
+            redisStatusTemplate.opsForGeo().add(
+                    GEO_KEY,
+                    new org.springframework.data.geo.Point(
+                            Double.parseDouble(NEAR_LNG_1),
+                            Double.parseDouble(NEAR_LAT_1)
+                    ),
+                    String.valueOf(DRIVER_ID_1)
+            );
+
+            List<DriverLocationDto> result = driverCachingService
+                    .getNearbyOnlineDrivers(CENTER_LNG, CENTER_LAT, SEARCH_RADIUS_KM);
 
             assertThat(result).hasSize(1);
-            assertThat(result.getFirst().latitude()).isEqualTo("55.2");
-            assertThat(result.getFirst().longitude()).isEqualTo("37.2");
+            assertThat(result.getFirst().longitude()).isEqualByComparingTo(NEAR_LNG_2);
+            assertThat(result.getFirst().latitude()).isEqualByComparingTo(NEAR_LAT_2);
         }
     }
 }
