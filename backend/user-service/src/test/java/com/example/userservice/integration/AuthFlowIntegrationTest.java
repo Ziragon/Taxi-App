@@ -1,5 +1,6 @@
 package com.example.userservice.integration;
 
+import com.example.userservice.config.TestContainersConfig;
 import com.example.userservice.dto.data.AuthDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.enums.AccountRole;
@@ -14,6 +15,7 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,9 +27,10 @@ import static org.awaitility.Awaitility.await;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Import(TestContainersConfig.class)
 @Transactional
 @DisplayName("Auth Flow Integration Tests")
-class AuthFlowIntegrationTest extends BaseIntegrationTest {
+class AuthFlowIntegrationTest {
 
     @Autowired
     private AuthService authService;
