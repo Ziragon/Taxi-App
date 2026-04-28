@@ -2,6 +2,7 @@ package com.example.userservice.service;
 
 import com.example.userservice.dto.data.DriverLocationDto;
 import com.example.userservice.entity.enums.DriverStatus;
+import com.example.userservice.entity.enums.VehicleClass;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,82 +28,81 @@ public class DriverCachingService {
     private static final String GEO_KEY = "drivers:geo";
 
     private final RedisTemplate<String, DriverLocationDto> redisLocationTemplate;
-    private final RedisTemplate<String, String> redisStatusTemplate;
+    private final RedisTemplate<String, String> redisStringTemplate;
 
     @Value("${app.driver.location.ttl-seconds}")
     private long ttlSeconds;
 
-    public void updateLocation(Long driverId, DriverLocationDto dto) {
-        String key = KEY_LOCATION_PREFIX + driverId;
+    public void updateLocation(DriverLocationDto dto) {
+        String key = KEY_LOCATION_PREFIX + dto.driverId();
         redisLocationTemplate.opsForValue().set(key, dto, ttlSeconds, TimeUnit.SECONDS);
 
-        redisStatusTemplate.opsForGeo().add(
+        redisStringTemplate.opsForGeo().add(
                 GEO_KEY,
-                new Point(dto.longitude().doubleValue(), dto.latitude().doubleValue()),
-                String.valueOf(driverId)
+                new Point(
+                        dto.location().longitude().doubleValue(),
+                        dto.location().latitude().doubleValue()
+                ),
+                String.valueOf(dto.driverId())
         );
     }
 
     public void updateStatus(Long driverId, DriverStatus status) {
         String key = KEY_STATUS_PREFIX + driverId;
-        redisStatusTemplate.opsForValue().set(key, status.name(), ttlSeconds, TimeUnit.SECONDS);
+        redisStringTemplate.opsForValue().set(key, status.name(), ttlSeconds, TimeUnit.SECONDS);
 
         if (status == DriverStatus.ONLINE) {
-            redisStatusTemplate.opsForSet().add(ONLINE_DRIVERS_KEY, String.valueOf(driverId));
+            redisStringTemplate.opsForSet().add(ONLINE_DRIVERS_KEY, String.valueOf(driverId));
         } else {
-            redisStatusTemplate.opsForSet().remove(ONLINE_DRIVERS_KEY, String.valueOf(driverId));
+            redisStringTemplate.opsForSet().remove(ONLINE_DRIVERS_KEY, String.valueOf(driverId));
         }
     }
 
     public void deleteDriver(Long driverId) {
         redisLocationTemplate.delete(KEY_LOCATION_PREFIX + driverId);
-        redisStatusTemplate.delete(KEY_STATUS_PREFIX + driverId);
-        redisStatusTemplate.opsForSet().remove(ONLINE_DRIVERS_KEY, String.valueOf(driverId));
-        redisStatusTemplate.opsForGeo().remove(GEO_KEY, String.valueOf(driverId));
+        redisStringTemplate.delete(KEY_STATUS_PREFIX + driverId);
+        redisStringTemplate.opsForSet().remove(ONLINE_DRIVERS_KEY, String.valueOf(driverId));
+        redisStringTemplate.opsForGeo().remove(GEO_KEY, String.valueOf(driverId));
     }
 
-    // Определение ближайших водителей через Redis GEO
-    public List<DriverLocationDto> getNearbyOnlineDrivers(double lng, double lat, double radiusKm) {
+    public List<DriverLocationDto> getNearbyOnlineDrivers(
+            double lng, double lat, double radiusKm, VehicleClass vehicleClass) {
 
         GeoReference<String> center = GeoReference.fromCoordinate(new Point(lng, lat));
-
         Distance radius = new Distance(radiusKm, Metrics.KILOMETERS);
 
-        // Параметры поиска по гео
         RedisGeoCommands.GeoSearchCommandArgs args = RedisGeoCommands.GeoSearchCommandArgs
                 .newGeoSearchArgs()
-                .includeCoordinates()
                 .sortAscending()
                 .limit(50);
 
-        // Выдает result по вхождению в радиус окружности с центром - координаты пользователя
         GeoResults<RedisGeoCommands.GeoLocation<String>> geoResults =
-                redisStatusTemplate.opsForGeo()
+                redisStringTemplate.opsForGeo()
                         .search(GEO_KEY, center, radius, args);
 
         if (geoResults == null) return Collections.emptyList();
 
-        List<Long> nearbyIds = geoResults.getContent().stream()
-                .map(r -> Long.parseLong(r.getContent().getName()))
+        List<String> locationKeys = geoResults.getContent().stream()
+                .map(r -> KEY_LOCATION_PREFIX + r.getContent().getName())
                 .toList();
 
-        if (nearbyIds.isEmpty()) return Collections.emptyList();
-
-        List<Long> onlineNearbyIds = nearbyIds.stream()
-                .filter(id -> DriverStatus.ONLINE.name().equals(
-                        redisStatusTemplate.opsForValue().get(KEY_STATUS_PREFIX + id)))
-                .toList();
-
-        if (onlineNearbyIds.isEmpty()) return Collections.emptyList();
-
-        List<String> locationKeys = onlineNearbyIds.stream()
-                .map(id -> KEY_LOCATION_PREFIX + id)
-                .toList();
+        if (locationKeys.isEmpty()) return Collections.emptyList();
 
         List<DriverLocationDto> locations =
                 redisLocationTemplate.opsForValue().multiGet(locationKeys);
 
-        return locations == null ? Collections.emptyList() :
-                locations.stream().filter(Objects::nonNull).toList();
+        if (locations == null) return Collections.emptyList();
+
+        return locations.stream()
+                .filter(Objects::nonNull)
+                .filter(dto -> DriverStatus.ONLINE.name().equals(
+                        redisStringTemplate.opsForValue().get(KEY_STATUS_PREFIX + dto.driverId())))
+                .filter(dto -> vehicleClass == null || vehicleClass.equals(dto.vehicleClass()))
+                .toList();
+    }
+
+    public List<DriverLocationDto> getNearbyOnlineDrivers(
+            double lng, double lat, double radiusKm) {
+        return getNearbyOnlineDrivers(lng, lat, radiusKm, null);
     }
 }

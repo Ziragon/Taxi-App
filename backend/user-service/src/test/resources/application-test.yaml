@@ -37,14 +37,6 @@ spring:
     deserialization:
       fail-on-unknown-properties: false
 
-jwt:
-  secret: test-secret-key-for-unit-tests-must-be-at-least-32-characters-long
-  issuer: user-service-test
-  access-token:
-    expiration: 5m
-  refresh-token:
-    expiration: 10m
-
 logging:
   level:
     root: INFO

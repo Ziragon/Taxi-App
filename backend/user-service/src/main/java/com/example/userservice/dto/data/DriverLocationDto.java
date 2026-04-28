@@ -1,10 +1,12 @@
 package com.example.userservice.dto.data;
 
-import java.math.BigDecimal;
+import com.example.userservice.entity.enums.VehicleClass;
 
 public record DriverLocationDto(
 
-        BigDecimal longitude,
+        Long driverId,
 
-        BigDecimal latitude
+        LocationDto location,
+
+        VehicleClass vehicleClass
 ) {}
