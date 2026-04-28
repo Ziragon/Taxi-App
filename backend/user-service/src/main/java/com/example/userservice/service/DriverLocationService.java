@@ -3,13 +3,18 @@ package com.example.userservice.service;
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.userservice.dto.data.DriverLocationDto;
 import com.example.userservice.dto.data.LocationDto;
-import com.example.userservice.repository.DriverLocationBatchRepository;
+import com.example.userservice.entity.DriverLocation;
+import com.example.userservice.entity.DriverProfile;
+import com.example.userservice.repository.DriverLocationRepository;
+import com.example.userservice.repository.DriverProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -20,7 +25,8 @@ import java.util.Set;
 public class DriverLocationService {
 
     private final DriverCachingService driverCachingService;
-    private final DriverLocationBatchRepository batchRepository;
+    private final DriverLocationRepository locationRepository;
+    private final DriverProfileRepository driverProfileRepository;
 
     public void updateLocation(Long driverId, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {
         DriverLocationDto dto = new DriverLocationDto(
@@ -39,21 +45,32 @@ public class DriverLocationService {
     }
 
     @Scheduled(fixedRate = 60_000)
+    @Transactional
     public void persistLocationsToDatabase() {
+        Instant recordedAt = Instant.now();
+
         Set<String> onlineIds = driverCachingService.getOnlineDriverIds();
         if (onlineIds == null || onlineIds.isEmpty()) return;
 
-        List<DriverLocationDto> locations = driverCachingService
-                .multiGetLocations(onlineIds.stream()
-                        .map(id -> "driver:location:" + id)
-                        .toList())
+        List<DriverLocation> logs = driverCachingService
+                .multiGetLocations(
+                        onlineIds.stream()
+                                .map(id -> "driver:location:" + id)
+                                .toList()
+                )
                 .stream()
                 .filter(Objects::nonNull)
+                .map(dto -> DriverLocation.builder()
+                        .driver(driverProfileRepository.getReferenceById(dto.driverId()))
+                        .latitude(dto.location().latitude())
+                        .longitude(dto.location().longitude())
+                        .recordedAt(recordedAt)
+                        .build())
                 .toList();
 
-        if (locations.isEmpty()) return;
+        if (logs.isEmpty()) return;
 
-        batchRepository.batchUpsert(locations);
-        log.info("Persisted locations for {} drivers", locations.size());
+        locationRepository.saveAll(logs);
+        log.info("Logged locations for {} drivers at {}", logs.size(), recordedAt);
     }
 }

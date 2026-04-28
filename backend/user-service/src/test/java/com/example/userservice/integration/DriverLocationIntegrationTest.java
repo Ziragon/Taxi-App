@@ -156,31 +156,9 @@ class DriverLocationIntegrationTest {
             List<DriverLocation> saved = driverLocationRepository.findAll();
             assertThat(saved).hasSize(2);
             assertThat(saved)
-                    .extracting(DriverLocation::getDriverId)
+                    .extracting(loc -> loc.getDriver().getAccountId())
                     .containsExactlyInAnyOrder(driverId1, driverId2)
                     .doesNotContain(driverId3);
-        }
-
-        @Test
-        @DisplayName("Upsert: при повторном вызове не дублирует, а обновляет запись")
-        void shouldUpsertNotDuplicate_whenCalledTwice() {
-            setupDriverInRedis(driverId1, DriverStatus.ONLINE, ECONOMY);
-            driverLocationService.persistLocationsToDatabase();
-
-            driverLocationService.updateLocation(
-                    driverId1,
-                    BigDecimal.valueOf(38.0),
-                    BigDecimal.valueOf(56.0),
-                    ECONOMY
-            );
-            driverLocationService.persistLocationsToDatabase();
-
-            List<DriverLocation> saved = driverLocationRepository.findAll();
-            assertThat(saved).hasSize(1);
-            assertThat(saved.getFirst().getLongitude())
-                    .isEqualByComparingTo(BigDecimal.valueOf(38.0));
-            assertThat(saved.getFirst().getLatitude())
-                    .isEqualByComparingTo(BigDecimal.valueOf(56.0));
         }
 
         @Test
