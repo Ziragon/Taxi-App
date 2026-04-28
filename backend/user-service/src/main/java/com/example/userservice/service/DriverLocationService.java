@@ -1,50 +1,57 @@
 package com.example.userservice.service;
 
-import com.example.userservice.entity.DriverLocation;
-import com.example.userservice.entity.DriverProfile;
-import com.example.userservice.exception.ProfileNotFoundException;
-import com.example.userservice.repository.DriverLocationRepository;
-import com.example.userservice.repository.DriverProfileRepository;
+import com.example.userservice.dto.data.DriverLocationDto;
+import com.example.userservice.dto.data.LocationDto;
+import com.example.userservice.entity.enums.VehicleClass;
+import com.example.userservice.repository.DriverLocationBatchRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DriverLocationService {
 
-    private final DriverLocationRepository driverLocationRepository;
-    private final DriverProfileRepository driverProfileRepository;
+    private final DriverCachingService driverCachingService;
+    private final DriverLocationBatchRepository batchRepository;
 
-    @Transactional
-    public void updateLocation(Long driverId, BigDecimal latitude, BigDecimal longitude) {
-        DriverProfile profile = driverProfileRepository.findById(driverId)
-                .orElseThrow(() -> new ProfileNotFoundException("Driver", driverId));
-
-        DriverLocation location = driverLocationRepository.findById(driverId)
-                .orElse(DriverLocation.builder()
-                        .driver(profile)
-                        .build());
-
-        location.setLatitude(latitude);
-        location.setLongitude(longitude);
-
-        driverLocationRepository.save(location);
+    public void updateLocation(Long driverId, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {
+        DriverLocationDto dto = new DriverLocationDto(
+                driverId,
+                new LocationDto(longitude, latitude),
+                vehicleClass
+        );
+        driverCachingService.updateLocation(dto);
     }
 
-    @Transactional(readOnly = true)
-    public DriverLocation getLocation(Long driverId) {
-        return driverLocationRepository.findById(driverId)
-                .orElse(null);
+    public List<DriverLocationDto> getNearbyOnlineDrivers(
+            double lng, double lat, double radiusKm, VehicleClass vehicleClass) {
+        return driverCachingService.getNearbyOnlineDrivers(lng, lat, radiusKm, vehicleClass);
     }
 
-    @Transactional(readOnly = true)
-    public List<DriverLocation> findNearbyDrivers(BigDecimal lat, BigDecimal lng, BigDecimal radiusKm) {
-        BigDecimal radiusDegrees = radiusKm.divide(BigDecimal.valueOf(111), 7, RoundingMode.HALF_UP);
-        return driverLocationRepository.findNearbyOnlineDrivers(lat, lng, radiusDegrees);
+    @Scheduled(fixedRate = 60_000)
+    public void persistLocationsToDatabase() {
+        Set<String> onlineIds = driverCachingService.getOnlineDriverIds();
+        if (onlineIds == null || onlineIds.isEmpty()) return;
+
+        List<DriverLocationDto> locations = driverCachingService
+                .multiGetLocations(onlineIds.stream()
+                        .map(id -> "driver:location:" + id)
+                        .toList())
+                .stream()
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (locations.isEmpty()) return;
+
+        batchRepository.batchUpsert(locations);
+        log.info("Persisted locations for {} drivers", locations.size());
     }
 }
