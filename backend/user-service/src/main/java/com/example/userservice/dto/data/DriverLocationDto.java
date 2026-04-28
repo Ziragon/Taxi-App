@@ -1,6 +1,6 @@
 package com.example.userservice.dto.data;
 
-import com.example.userservice.entity.enums.VehicleClass;
+import com.example.shared.dto.enums.VehicleClass;
 
 public record DriverLocationDto(
 

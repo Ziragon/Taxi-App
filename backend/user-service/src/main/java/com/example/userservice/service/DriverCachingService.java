@@ -1,8 +1,8 @@
 package com.example.userservice.service;
 
+import com.example.shared.dto.enums.VehicleClass;
 import com.example.userservice.dto.data.DriverLocationDto;
 import com.example.userservice.entity.enums.DriverStatus;
-import com.example.userservice.entity.enums.VehicleClass;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

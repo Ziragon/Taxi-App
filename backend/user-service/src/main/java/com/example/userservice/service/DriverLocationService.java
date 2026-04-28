@@ -1,8 +1,8 @@
 package com.example.userservice.service;
 
+import com.example.shared.dto.enums.VehicleClass;
 import com.example.userservice.dto.data.DriverLocationDto;
 import com.example.userservice.dto.data.LocationDto;
-import com.example.userservice.entity.enums.VehicleClass;
 import com.example.userservice.repository.DriverLocationBatchRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,8 +32,10 @@ public class DriverLocationService {
     }
 
     public List<DriverLocationDto> getNearbyOnlineDrivers(
-            double lng, double lat, double radiusKm, VehicleClass vehicleClass) {
-        return driverCachingService.getNearbyOnlineDrivers(lng, lat, radiusKm, vehicleClass);
+            BigDecimal lng, BigDecimal lat, BigDecimal radiusKm, VehicleClass vehicleClass) {
+        return driverCachingService.getNearbyOnlineDrivers(
+                lng.doubleValue(), lat.doubleValue(), radiusKm.doubleValue(), vehicleClass
+        );
     }
 
     @Scheduled(fixedRate = 60_000)

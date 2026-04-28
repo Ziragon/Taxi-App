@@ -1,11 +1,11 @@
 package com.example.userservice.integration;
 
+import com.example.shared.dto.enums.VehicleClass;
 import com.example.userservice.config.TestContainersConfig;
 import com.example.userservice.dto.data.AuthDto;
 import com.example.userservice.dto.data.DriverProfileDto;
 import com.example.userservice.dto.data.VehicleDto;
 import com.example.userservice.entity.enums.DriverStatus;
-import com.example.userservice.entity.enums.VehicleClass;
 import com.example.userservice.repository.AccountRepository;
 import com.example.userservice.repository.DriverProfileRepository;
 import com.example.userservice.repository.VehicleRepository;

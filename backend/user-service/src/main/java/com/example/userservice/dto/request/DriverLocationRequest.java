@@ -1,6 +1,6 @@
 package com.example.userservice.dto.request;
 
-import com.example.userservice.entity.enums.VehicleClass;
+import com.example.shared.dto.enums.VehicleClass;
 
 import java.math.BigDecimal;
 

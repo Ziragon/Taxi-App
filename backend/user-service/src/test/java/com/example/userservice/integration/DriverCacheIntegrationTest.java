@@ -1,10 +1,10 @@
 package com.example.userservice.integration;
 
+import com.example.shared.dto.enums.VehicleClass;
 import com.example.userservice.config.TestContainersConfig;
 import com.example.userservice.dto.data.DriverLocationDto;
 import com.example.userservice.dto.data.LocationDto;
 import com.example.userservice.entity.enums.DriverStatus;
-import com.example.userservice.entity.enums.VehicleClass;
 import com.example.userservice.service.DriverCachingService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;

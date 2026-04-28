@@ -1,8 +1,8 @@
 package com.example.userservice.controller;
 
+import com.example.shared.dto.request.NearbyDriversRequest;
 import com.example.userservice.dto.data.DriverLocationDto;
 import com.example.userservice.dto.request.DriverLocationRequest;
-import com.example.userservice.entity.enums.VehicleClass;
 import com.example.userservice.service.DriverLocationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -30,13 +30,13 @@ public class DriverLocationInternalController {
 
     @GetMapping("/nearby")
     public ResponseEntity<List<DriverLocationDto>> getNearbyDrivers(
-            @RequestParam double lng,
-            @RequestParam double lat,
-            @RequestParam double radiusKm,
-            @RequestParam(required = false) VehicleClass vehicleClass
+            @RequestBody NearbyDriversRequest request
     ) {
         return ResponseEntity.ok(
-                driverLocationService.getNearbyOnlineDrivers(lng, lat, radiusKm, vehicleClass)
+                driverLocationService.getNearbyOnlineDrivers(
+                        request.longitude(), request.latitude(),
+                        request.radius(), request.vehicleClass()
+                )
         );
     }
 }

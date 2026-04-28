@@ -4,7 +4,7 @@ import com.example.userservice.dto.data.VehicleDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.Vehicle;
-import com.example.userservice.entity.enums.VehicleClass;
+import com.example.shared.dto.enums.VehicleClass;
 import com.example.userservice.repository.DriverProfileRepository;
 import com.example.userservice.repository.VehicleRepository;
 import com.example.userservice.service.VehicleService;

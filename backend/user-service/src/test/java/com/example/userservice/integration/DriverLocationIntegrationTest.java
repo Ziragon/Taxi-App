@@ -1,5 +1,6 @@
 package com.example.userservice.integration;
 
+import com.example.shared.dto.enums.VehicleClass;
 import com.example.userservice.config.TestContainersConfig;
 import com.example.userservice.dto.data.DriverLocationDto;
 import com.example.userservice.dto.data.LocationDto;
@@ -8,7 +9,6 @@ import com.example.userservice.entity.DriverLocation;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.enums.AccountRole;
 import com.example.userservice.entity.enums.DriverStatus;
-import com.example.userservice.entity.enums.VehicleClass;
 import com.example.userservice.repository.AccountRepository;
 import com.example.userservice.repository.DriverLocationRepository;
 import com.example.userservice.repository.DriverProfileRepository;
@@ -42,9 +42,9 @@ class DriverLocationIntegrationTest {
     private static final VehicleClass ECONOMY = VehicleClass.ECONOMY;
     private static final VehicleClass COMFORT  = VehicleClass.COMFORT;
 
-    private static final double CENTER_LNG    = 37.61;
-    private static final double CENTER_LAT    = 55.75;
-    private static final double SEARCH_RADIUS = 5.0;
+    private static final BigDecimal CENTER_LNG    = new BigDecimal("37.61");
+    private static final BigDecimal CENTER_LAT    = new BigDecimal("55.75");
+    private static final BigDecimal SEARCH_RADIUS = new BigDecimal("5.0");
 
     private Long driverId1;
     private Long driverId2;
@@ -129,7 +129,7 @@ class DriverLocationIntegrationTest {
     private void setupDriverInRedis(Long driverId, DriverStatus status, VehicleClass vehicleClass) {
         DriverLocationDto dto = new DriverLocationDto(
                 driverId,
-                new LocationDto(BigDecimal.valueOf(CENTER_LNG), BigDecimal.valueOf(CENTER_LAT)),
+                new LocationDto(CENTER_LNG, CENTER_LAT),
                 vehicleClass
         );
         driverCachingService.updateLocation(dto);
@@ -224,9 +224,9 @@ class DriverLocationIntegrationTest {
             List<DriverLocation> saved = driverLocationRepository.findAll();
             assertThat(saved).hasSize(1);
             assertThat(saved.getFirst().getLongitude())
-                    .isEqualByComparingTo(BigDecimal.valueOf(CENTER_LNG));
+                    .isEqualByComparingTo(CENTER_LNG);
             assertThat(saved.getFirst().getLatitude())
-                    .isEqualByComparingTo(BigDecimal.valueOf(CENTER_LAT));
+                    .isEqualByComparingTo(CENTER_LAT);
         }
     }
 
