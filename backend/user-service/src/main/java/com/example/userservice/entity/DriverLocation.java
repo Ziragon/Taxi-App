@@ -9,7 +9,8 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "driver_locations", indexes = {
-        @Index(name = "idx_driver_locations_lat_lng", columnList = "latitude, longitude")
+        @Index(name = "idx_driver_locations_driver_recorded", columnList = "driver_id, recorded_at"),
+        @Index(name = "idx_driver_locations_recorded", columnList = "recorded_at")
 })
 @Getter
 @Setter
@@ -19,12 +20,16 @@ import java.time.Instant;
 public class DriverLocation {
 
     @Id
-    @Column(name = "driver_id")
-    private Long driverId;
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "driver_location_seq")
+    @SequenceGenerator(
+            name = "driver_location_seq",
+            sequenceName = "driver_locations_seq",
+            allocationSize = 100
+    )
+    private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @MapsId
-    @JoinColumn(name = "driver_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "driver_id", nullable = false)
     private DriverProfile driver;
 
     @Column(name = "latitude", nullable = false, precision = 10, scale = 7)
@@ -33,7 +38,6 @@ public class DriverLocation {
     @Column(name = "longitude", nullable = false, precision = 10, scale = 7)
     private BigDecimal longitude;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
+    @Column(name = "recorded_at", nullable = false)
+    private Instant recordedAt;
 }

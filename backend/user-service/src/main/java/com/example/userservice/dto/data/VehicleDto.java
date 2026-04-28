@@ -1,7 +1,7 @@
 package com.example.userservice.dto.data;
 
+import com.example.shared.dto.enums.VehicleClass;
 import com.example.userservice.entity.Vehicle;
-import com.example.userservice.entity.enums.VehicleClass;
 
 public record VehicleDto(
         Long id,

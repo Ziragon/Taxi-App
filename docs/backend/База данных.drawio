@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.3.6 Chrome/140.0.7339.249 Electron/38.8.0 Safari/537.36">
   <diagram name="Страница-1" id="cTK4-fwFm5GlYKmPLDWP">
-    <mxGraphModel dx="1488" dy="885" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+    <mxGraphModel dx="2175" dy="1294" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -408,27 +408,6 @@
         </mxCell>
         <mxCell id="KNIQ0k6O-UhRAcSa3MJS-138" parent="KNIQ0k6O-UhRAcSa3MJS-106" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="+ created_at: TIMESTAMP" vertex="1">
           <mxGeometry height="26" width="160" y="290" as="geometry" />
-        </mxCell>
-        <mxCell id="KNIQ0k6O-UhRAcSa3MJS-110" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;fillColor=none;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" value="DeviceTokens" vertex="1">
-          <mxGeometry height="202" width="160" x="1260" y="959.9999999999999" as="geometry" />
-        </mxCell>
-        <mxCell id="KNIQ0k6O-UhRAcSa3MJS-111" parent="KNIQ0k6O-UhRAcSa3MJS-110" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="+ id: PK" vertex="1">
-          <mxGeometry height="26" width="160" y="26" as="geometry" />
-        </mxCell>
-        <mxCell id="KNIQ0k6O-UhRAcSa3MJS-112" parent="KNIQ0k6O-UhRAcSa3MJS-110" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="+ user_id: Long" vertex="1">
-          <mxGeometry height="26" width="160" y="52" as="geometry" />
-        </mxCell>
-        <mxCell id="KNIQ0k6O-UhRAcSa3MJS-113" parent="KNIQ0k6O-UhRAcSa3MJS-110" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="+ token: VARCHAR" vertex="1">
-          <mxGeometry height="26" width="160" y="78" as="geometry" />
-        </mxCell>
-        <mxCell id="KNIQ0k6O-UhRAcSa3MJS-139" parent="KNIQ0k6O-UhRAcSa3MJS-110" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="+ platform: ENUM (IOS, Android)" vertex="1">
-          <mxGeometry height="46" width="160" y="104" as="geometry" />
-        </mxCell>
-        <mxCell id="KNIQ0k6O-UhRAcSa3MJS-140" parent="KNIQ0k6O-UhRAcSa3MJS-110" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="+ is_active: BOOLEAN" vertex="1">
-          <mxGeometry height="26" width="160" y="150" as="geometry" />
-        </mxCell>
-        <mxCell id="KNIQ0k6O-UhRAcSa3MJS-141" parent="KNIQ0k6O-UhRAcSa3MJS-110" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" value="+ created_at: TIMESTAMP" vertex="1">
-          <mxGeometry height="26" width="160" y="176" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

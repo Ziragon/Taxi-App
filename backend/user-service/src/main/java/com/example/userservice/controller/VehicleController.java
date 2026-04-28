@@ -76,12 +76,14 @@ public class VehicleController {
                     @ApiResponse(responseCode = "200", description = "Список автомобилей")
             }
     )
-    public List<VehicleResponse> getVehicles(
+    public ResponseEntity<List<VehicleResponse>> getVehicles(
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return vehicleService.getVehiclesByDriver(principal.userId()).stream()
+        List<VehicleResponse> response = vehicleService.getVehiclesByDriver(principal.userId()).stream()
                 .map(VehicleResponse::from)
                 .toList();
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{vehicleId}")

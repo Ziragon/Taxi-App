@@ -1,7 +1,6 @@
 package com.example.userservice.entity;
 
-
-import com.example.userservice.entity.enums.VehicleClass;
+import com.example.shared.dto.enums.VehicleClass;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -1,12 +1,12 @@
 package com.example.userservice.service;
 
+import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.exception.common.AccessDeniedException;
 import com.example.shared.exception.common.ResourceNotFoundException;
 import com.example.userservice.dto.data.VehicleDto;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.Vehicle;
 import com.example.userservice.entity.enums.DriverStatus;
-import com.example.userservice.entity.enums.VehicleClass;
 import com.example.userservice.exception.VehicleAlreadyExistsException;
 import com.example.userservice.repository.DriverProfileRepository;
 import com.example.userservice.repository.VehicleRepository;
@@ -50,31 +50,8 @@ public class VehicleService {
     }
 
     @Transactional(readOnly = true)
-    public VehicleDto getVehicle(Long vehicleId) {
-        Vehicle vehicle = vehicleRepository.findById(vehicleId)
-                .orElseThrow(() -> new ResourceNotFoundException("Vehicle", vehicleId));
-
-        return VehicleDto.from(vehicle);
-    }
-
-    @Transactional(readOnly = true)
-    public Vehicle getVehicleWithDriver(Long vehicleId) {
-        return vehicleRepository.findByIdWithDriver(vehicleId)
-                .orElseThrow(() -> new ResourceNotFoundException("Vehicle", vehicleId));
-    }
-
-    @Transactional(readOnly = true)
     public List<VehicleDto> getVehiclesByDriver(Long driverId) {
         List<Vehicle> vehicles = vehicleRepository.findAllByDriverAccountId(driverId);
-
-        return vehicles.stream()
-                .map(VehicleDto::from)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<VehicleDto> getActiveVehiclesByDriver(Long driverId) {
-        List<Vehicle> vehicles = vehicleRepository.findAllByDriverAccountIdAndActiveTrue(driverId);
 
         return vehicles.stream()
                 .map(VehicleDto::from)
@@ -84,7 +61,9 @@ public class VehicleService {
     @Transactional
     public VehicleDto updateVehicle(Long requesterId, Long vehicleId, String brand, String model, Short year,
                                     String color, String licensePlate, VehicleClass vehicleClass) {
-        Vehicle vehicle = getVehicleWithDriver(vehicleId);
+        Vehicle vehicle = vehicleRepository.findByIdWithDriver(vehicleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle", vehicleId));
+
         checkOwnership(vehicle, requesterId);
 
         vehicle.setBrand(brand);
@@ -119,7 +98,9 @@ public class VehicleService {
 
     @Transactional
     public void deleteVehicle(Long requesterId, Long vehicleId) {
-        Vehicle vehicle = getVehicleWithDriver(vehicleId);
+        Vehicle vehicle = vehicleRepository.findByIdWithDriver(vehicleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle", vehicleId));
+
         checkOwnership(vehicle, requesterId);
 
         if (vehicle.isActive()) {

@@ -1,7 +1,7 @@
 package com.example.userservice.dto.response;
 
 import com.example.userservice.dto.data.VehicleDto;
-import com.example.userservice.entity.enums.VehicleClass;
+import com.example.shared.dto.enums.VehicleClass;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Данные транспорта")

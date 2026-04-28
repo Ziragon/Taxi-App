@@ -9,7 +9,7 @@ spring:
         ddl-auto: validate
         jdbc:
           time_zone: UTC
-          batch_size: 25
+          batch_size: 50
         order_inserts: true
         order_updates: true
 
@@ -68,6 +68,11 @@ gateway:
 gateway-auth:
   header: ${JWT_HEADER:X-Gateway-Header}
   header-key: ${HEADER_KEY:dev-secret-key-for-microservices}
+
+app:
+  driver:
+    location:
+      ttl-seconds: ${DRIVER_LOCATION_TTL_SEC:30}
 
 springdoc:
   api-docs:
