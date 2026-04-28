@@ -69,6 +69,11 @@ gateway-auth:
   header: ${JWT_HEADER:X-Gateway-Header}
   header-key: ${HEADER_KEY:dev-secret-key-for-microservices}
 
+app:
+  driver:
+    location:
+      ttl-seconds: ${DRIVER_LOCATION_TTL_SEC:30}
+
 springdoc:
   api-docs:
     enabled: true
