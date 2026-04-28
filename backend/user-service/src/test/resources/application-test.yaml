@@ -23,11 +23,6 @@ spring:
   flyway:
     enabled: false
 
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-
   rabbitmq:
     listener:
       simple:
