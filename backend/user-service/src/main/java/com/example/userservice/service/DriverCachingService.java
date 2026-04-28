@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -104,5 +105,14 @@ public class DriverCachingService {
     public List<DriverLocationDto> getNearbyOnlineDrivers(
             double lng, double lat, double radiusKm) {
         return getNearbyOnlineDrivers(lng, lat, radiusKm, null);
+    }
+
+    public Set<String> getOnlineDriverIds() {
+        return redisStringTemplate.opsForSet().members(ONLINE_DRIVERS_KEY);
+    }
+
+    public List<DriverLocationDto> multiGetLocations(List<String> keys) {
+        List<DriverLocationDto> result = redisLocationTemplate.opsForValue().multiGet(keys);
+        return result == null ? Collections.emptyList() : result;
     }
 }
