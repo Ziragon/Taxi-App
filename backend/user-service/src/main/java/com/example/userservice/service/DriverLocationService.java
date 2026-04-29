@@ -2,7 +2,7 @@ package com.example.userservice.service;
 
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.dto.data.DriverLocationDto;
-import com.example.userservice.dto.data.LocationDto;
+import com.example.shared.dto.data.LocationDto;
 import com.example.userservice.entity.DriverLocation;
 import com.example.userservice.repository.DriverLocationRepository;
 import com.example.userservice.repository.DriverProfileRepository;
