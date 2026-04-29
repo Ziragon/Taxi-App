@@ -1,7 +1,6 @@
 package com.example.shared.dto.data;
 
 import com.example.shared.dto.enums.VehicleClass;
-import org.jspecify.annotations.Nullable;
 
 public record DriverLocationDto(
 
@@ -9,6 +8,5 @@ public record DriverLocationDto(
 
         LocationDto location,
 
-        @Nullable
         VehicleClass vehicleClass
 ) {}
