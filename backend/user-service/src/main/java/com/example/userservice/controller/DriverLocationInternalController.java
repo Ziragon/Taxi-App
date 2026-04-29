@@ -1,7 +1,7 @@
 package com.example.userservice.controller;
 
 import com.example.shared.dto.request.NearbyDriversRequest;
-import com.example.userservice.dto.data.DriverLocationDto;
+import com.example.shared.dto.data.DriverLocationDto;
 import com.example.userservice.dto.request.DriverLocationRequest;
 import com.example.userservice.service.DriverLocationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
