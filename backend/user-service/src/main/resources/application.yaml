@@ -69,6 +69,10 @@ gateway-auth:
   header: ${JWT_HEADER:X-Gateway-Header}
   header-key: ${HEADER_KEY:dev-secret-key-for-microservices}
 
+internal-auth:
+  header: ${INTERNAL_HEADER:X-Internal-Header}
+  header-key: ${HEADER_KEY:dev-secret-internal-key-for-microservices}
+
 app:
   driver:
     location:
