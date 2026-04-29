@@ -24,6 +24,7 @@ import java.util.List;
 public class GatewayAuthFilter extends OncePerRequestFilter {
 
     private final GatewayAuthProperties gatewayAuthProperties;
+    private final InternalAuthProperties internalAuthProperties;
 
     @Override
     protected void doFilterInternal(
@@ -33,8 +34,18 @@ public class GatewayAuthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String gatewayHeader = request.getHeader(gatewayAuthProperties.header());
-        if (!gatewayAuthProperties.headerKey().equals(gatewayHeader)) {
+        String internalHeader = request.getHeader(internalAuthProperties.header());
+
+        boolean fromGateway = gatewayAuthProperties.headerKey().equals(gatewayHeader);
+        boolean fromInternal = internalAuthProperties.headerKey().equals(internalHeader);
+
+        if (!fromGateway && !fromInternal) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+
+        if (fromInternal) {
+            filterChain.doFilter(request, response);
             return;
         }
 
