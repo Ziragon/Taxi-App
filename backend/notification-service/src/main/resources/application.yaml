@@ -65,7 +65,10 @@ notification:
   websocket:
     endpoint: /ws/notifications
     allowed-origins: "*"
-
+  internal:
+    gateway-header: ${JWT_HEADER:X-Gateway-Header}
+    gateway-header-key: ${HEADER_KEY:dev-secret-key-for-microservices}
+    user-service-url: ${USER_SERVICE_URL:http://localhost:8080}
 springdoc:
   api-docs:
     enabled: true

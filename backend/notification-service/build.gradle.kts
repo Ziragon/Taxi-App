@@ -6,6 +6,7 @@ plugins {
     id("rabbitmq-plugin")
     id("websocket-plugin")
     id("integration-testing")
+    id("openfeign-plugin")
 }
 
 dependencies {

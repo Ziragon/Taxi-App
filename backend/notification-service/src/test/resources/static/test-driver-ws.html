@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Driver WebSocket Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 24px;
+        }
+
+        h2 {
+            color: #58a6ff;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        h3 {
+            color: #8b949e;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        label {
+            font-size: 13px;
+            color: #8b949e;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        textarea, input, select {
+            width: 100%;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #c9d1d9;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 12px;
+        }
+
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .row > div {
+            flex: 1;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        button {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        button:hover { opacity: 0.85; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .btn-connect    { background: #238636; color: #fff; }
+        .btn-disconnect { background: #da3633; color: #fff; }
+        .btn-send       { background: #1f6feb; color: #fff; }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid #30363d;
+            margin-bottom: 16px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #8b949e;
+        }
+
+        .status.connected .status-dot    { background: #3fb950; }
+        .status.disconnected .status-dot { background: #8b949e; }
+        .status.error .status-dot        { background: #f85149; }
+
+        #logs {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px;
+            height: 380px;
+            overflow-y: scroll;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .log-entry { margin-bottom: 2px; }
+        .log-info    { color: #58a6ff; }
+        .log-success { color: #3fb950; }
+        .log-warning { color: #d29922; }
+        .log-error   { color: #f85149; }
+        .log-data    { color: #d2a8ff; }
+        .log-stomp   { color: #6e7681; }
+        .log-time    { color: #484f58; }
+    </style>
+</head>
+<body>
+
+<h2>🚖 Driver WebSocket Test — notification-service</h2>
+
+<div class="status disconnected" id="statusBadge">
+    <div class="status-dot"></div>
+    <span id="statusText">Disconnected</span>
+</div>
+
+<div class="card">
+    <h3>JWT Token (Driver)</h3>
+    <label>Вставь accessToken водителя:</label>
+    <label for="token"></label><textarea id="token" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></textarea>
+</div>
+
+<div class="card">
+    <h3>Driver Location</h3>
+    <div class="row">
+        <div>
+            <label>Longitude</label>
+            <input id="lng" type="number" value="37.617617" step="0.000001">
+        </div>
+        <div>
+            <label>Latitude</label>
+            <input id="lat" type="number" value="55.755864" step="0.000001">
+        </div>
+        <div>
+            <label>Vehicle Class</label>
+            <select id="vehicleClass">
+                <option value="ECONOMY">ECONOMY</option>
+                <option value="COMFORT">COMFORT</option>
+                <option value="BUSINESS">BUSINESS</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="buttons">
+    <button class="btn-connect"    id="btnConnect"    onclick="connect()">🟢 Начать работу</button>
+    <button class="btn-disconnect" id="btnDisconnect" onclick="disconnect()" disabled>🔴 Завершить работу</button>
+    <button class="btn-send"       id="btnSend"       onclick="sendLocationOnce()" disabled>📍 Отправить локацию</button>
+</div>
+
+<h3>Logs</h3>
+<div id="logs"></div>
+
+<script>
+    let stompClient     = null;
+    let locationInterval = null;
+    const LOCATION_INTERVAL_MS = 15_000;
+    const WS_URL = 'http://localhost:8083/ws/notifications';
+
+
+    function log(message, type = 'info') {
+        const logsDiv  = document.getElementById('logs');
+        const time     = new Date().toISOString().slice(11, 23);
+        const entry    = document.createElement('div');
+        entry.className = `log-entry log-${type}`;
+        entry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
+        logsDiv.prepend(entry);
+    }
+
+
+    function setStatus(state, text) {
+        const badge = document.getElementById('statusBadge');
+        badge.className = `status ${state}`;
+        document.getElementById('statusText').innerText = text;
+    }
+
+    function setButtons(connected) {
+        document.getElementById('btnConnect').disabled    = connected;
+        document.getElementById('btnDisconnect').disabled = !connected;
+        document.getElementById('btnSend').disabled       = !connected;
+    }
+
+    // ВСТАВИТЬ ТОКЕН В alert('Вставь JWT токен!');
+
+    function connect() {
+        const token = document.getElementById('token').value.trim();
+        if (!token) {
+            alert('Вставь JWT токен!');
+            return;
+        }
+
+        log(`Connecting to ${WS_URL}?token=***`, 'info');
+
+        const socket = new SockJS(`${WS_URL}?token=${token}`);
+        stompClient  = Stomp.over(socket);
+
+        stompClient.debug = (msg) => {
+            if (msg && !msg.startsWith('>>>') && !msg.startsWith('<<<')) {
+                log('STOMP: ' + msg, 'stomp');
+            }
+        };
+
+        stompClient.connect(
+            {},
+            frame => {
+                setStatus('connected', 'Connected ✅');
+                setButtons(true);
+                log('WebSocket connected!', 'success');
+
+                stompClient.subscribe('/user/queue/notifications', message => {
+                    const notification = JSON.parse(message.body);
+                    log('📨 Notification: ' + JSON.stringify(notification, null, 2), 'data');
+                });
+
+                log('Subscribed to /user/queue/notifications', 'success');
+
+                sendLocationOnce();
+
+                locationInterval = setInterval(() => {
+                    sendLocationOnce();
+                }, LOCATION_INTERVAL_MS);
+
+                log(`📍 Location tracking started (every ${LOCATION_INTERVAL_MS / 1000}s)`, 'warning');
+            },
+            error => {
+                setStatus('error', 'Error ❌');
+                setButtons(false);
+                log('Connection error: ' + error, 'error');
+                stopTracking();
+            }
+        );
+    }
+
+    function disconnect() {
+        stopTracking();
+
+        if (stompClient) {
+            stompClient.disconnect(() => {
+                log('WebSocket disconnected', 'info');
+            });
+            stompClient = null;
+        }
+
+        setStatus('disconnected', 'Disconnected');
+        setButtons(false);
+    }
+
+    function sendLocationOnce() {
+        if (!stompClient || !stompClient.connected) {
+            log('Cannot send: not connected', 'error');
+            return;
+        }
+
+        const payload = {
+            longitude:    parseFloat(document.getElementById('lng').value),
+            latitude:     parseFloat(document.getElementById('lat').value),
+            vehicleClass: document.getElementById('vehicleClass').value
+        };
+
+        stompClient.send(
+            '/app/driver/location',
+            {},
+            JSON.stringify(payload)
+        );
+
+        log(`📍 Location sent → lng=${payload.longitude}, lat=${payload.latitude}, class=${payload.vehicleClass}`, 'warning');
+    }
+
+    function stopTracking() {
+        if (locationInterval) {
+            clearInterval(locationInterval);
+            locationInterval = null;
+            log('📍 Location tracking stopped', 'warning');
+        }
+    }
+</script>
+
+</body>
+</html>
