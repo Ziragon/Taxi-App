@@ -8,6 +8,7 @@ import com.example.tripservice.repository.TariffRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -19,10 +20,12 @@ public class TariffService {
     private final TariffRepository tariffRepository;
     private final PriceService priceService;
 
-    public List<TariffDto> calculateAllTariffs(TripDto tripDto) {
+    @Transactional(readOnly = true)
+    public List<Tariff> getActiveTariffs() {
+        return tariffRepository.findAllByActive(true);
+    }
 
-        List<Tariff> tariffs = tariffRepository.findAllByActive(true);
-
+    public List<TariffDto> calculatePrices(List<Tariff> tariffs, TripDto tripDto) {
         return tariffs.stream()
                 .map(tariff -> {
                     TariffPriceData calculatedPrices = priceService.calculatePrice(
