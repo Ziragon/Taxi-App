@@ -1,6 +1,6 @@
 package com.example.tripservice.entity;
 
-import com.example.tripservice.entity.enums.VehicleClass;
+import com.example.shared.dto.enums.VehicleClass;
 import jakarta.persistence.*;
 import lombok.*;
 

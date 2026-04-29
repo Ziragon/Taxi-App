@@ -1,7 +1,7 @@
 package com.example.tripservice.dto.response;
 
 import com.example.tripservice.dto.data.TariffDto;
-import com.example.tripservice.entity.enums.VehicleClass;
+import com.example.shared.dto.enums.VehicleClass;
 
 import java.math.BigDecimal;
 
@@ -35,7 +35,7 @@ public record TariffResponse(
                 dto.pricePerMin(),
                 dto.prices().timeCost(),
                 dto.prices().price(),
-                null // TODO Заглушка
+                dto.driversNearby()
         );
     }
 }

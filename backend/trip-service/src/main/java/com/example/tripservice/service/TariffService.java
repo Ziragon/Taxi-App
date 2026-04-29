@@ -35,7 +35,7 @@ public class TariffService {
                             tripDto.surgeCoef()
                     );
 
-                    return TariffDto.from(tariff, calculatedPrices);
+                    return TariffDto.from(tariff, calculatedPrices, null);
                 })
                 .toList();
     }
