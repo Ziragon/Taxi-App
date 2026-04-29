@@ -4,7 +4,9 @@ import com.example.notificationservice.entity.enums.Channel;
 import com.example.notificationservice.entity.enums.EventType;
 import com.example.notificationservice.entity.enums.RecipientType;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Builder;
 
+@Builder
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record NotificationEventDto(
 

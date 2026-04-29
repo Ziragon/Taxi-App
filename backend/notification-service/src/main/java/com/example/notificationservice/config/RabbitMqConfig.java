@@ -13,19 +13,30 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitMqConfig {
 
     public static final String NOTIFICATION_EXCHANGE     = "notification.exchange";
-    public static final String NOTIFICATION_QUEUE        = "notification.queue";
     public static final String NOTIFICATION_ROUTING_KEY  = "notification.#";
+
+    public static final String USER_EVENTS_EXCHANGE      = "user.events";
+
+    public static final String NOTIFICATION_QUEUE        = "notification.queue";
 
     public static final String NOTIFICATION_DLX          = "notification.dlx";
     public static final String NOTIFICATION_DLQ          = "notification.dlq";
     public static final String NOTIFICATION_DLQ_ROUTING  = "notification.dead";
 
-    //Exchanges
+    // Exchanges
 
     @Bean
     public TopicExchange notificationExchange() {
         return ExchangeBuilder
                 .topicExchange(NOTIFICATION_EXCHANGE)
+                .durable(true)
+                .build();
+    }
+
+    @Bean
+    public TopicExchange userEventsExchange() {
+        return ExchangeBuilder
+                .topicExchange(USER_EVENTS_EXCHANGE)
                 .durable(true)
                 .build();
     }
@@ -67,6 +78,14 @@ public class RabbitMqConfig {
     }
 
     @Bean
+    public Binding userRegisteredBinding() {
+        return BindingBuilder
+                .bind(notificationQueue())
+                .to(userEventsExchange())
+                .with("user.registered");
+    }
+
+    @Bean
     public Binding deadLetterBinding() {
         return BindingBuilder
                 .bind(notificationDeadLetterQueue())
@@ -74,7 +93,7 @@ public class RabbitMqConfig {
                 .with(NOTIFICATION_DLQ_ROUTING);
     }
 
-    // Converter & Template
+    // Converter and Template
 
     @Bean
     public MessageConverter jsonMessageConverter() {

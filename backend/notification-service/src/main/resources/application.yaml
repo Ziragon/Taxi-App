@@ -50,7 +50,8 @@ spring:
     listener:
       simple:
         prefetch: 10
-        acknowledge-mode: manual
+        acknowledge-mode: auto
+        default-requeue-rejected: false
 
 server:
   port: 8083
