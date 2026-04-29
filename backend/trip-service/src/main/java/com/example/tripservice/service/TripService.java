@@ -2,10 +2,12 @@ package com.example.tripservice.service;
 
 import com.example.shared.dto.data.DriverLocationDto;
 import com.example.shared.dto.enums.VehicleClass;
+import com.example.shared.exception.common.AccessDeniedException;
 import com.example.tripservice.dto.data.*;
 import com.example.tripservice.entity.Tariff;
 import com.example.tripservice.entity.Trip;
 import com.example.tripservice.entity.enums.TripStatus;
+import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.repository.TripRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -65,15 +67,36 @@ public class TripService {
         List<Tariff> tariffs = tariffsFuture.join();
 
         trip.setDistanceKm(BigDecimal.valueOf(route.distance()).divide(new BigDecimal("1000"), 3, RoundingMode.HALF_UP));
-        trip.setDurationMin(BigDecimal.valueOf(route.duration()).divide(new BigDecimal("60"), 10, RoundingMode.HALF_UP));
+        trip.setDurationMin(BigDecimal.valueOf(route.duration()).divide(new BigDecimal("30"), 10, RoundingMode.HALF_UP));
         trip.setWeatherCoef(weather.weatherCoef());
         trip.setSurgeCoef(priceService.getSurgeCoef(weather.localtime()));
 
-        List<TariffDto> tariffDtos = buildFilteredTariffs(tariffs, drivers, TripDto.from(trip, null));
+        List<TariffDto> tariffDtos = buildFilteredTariffs(tariffs, drivers, TripDto.from(trip, null, null));
 
         Trip saved = tripRepository.save(trip);
 
-        return TripDto.from(saved, tariffDtos);
+        return TripDto.from(saved, tariffDtos, route.geometry());
+    }
+
+    @Transactional
+    public void startSearching(Long userId, Long tripId, VehicleClass vehicleClass) {
+
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new TripNotFoundException(tripId));
+
+        if (!trip.getPassengerId().equals(userId)) {
+            throw new AccessDeniedException();
+        }
+
+        Tariff tariff = tariffService.getByVehicleClass(vehicleClass);
+
+        TariffDto tariffDto = tariffService.calculatePrice(tariff, TripDto.from(trip, null, null));
+        trip.setTripClass(vehicleClass);
+        trip.setPrice(tariffDto.prices().price());
+        trip.setDetails(PriceBreakdown.from(trip, tariffDto));
+
+        tripRepository.save(trip);
+        // TODO - вызываем менеджер 
     }
 
     private Trip buildTrip(Long userId, TripCreateDto dto) {
@@ -95,8 +118,9 @@ public class TripService {
         Map<VehicleClass, Long> driverCountByClass = drivers.stream()
                 .collect(Collectors.groupingBy(DriverLocationDto::vehicleClass, Collectors.counting()));
 
-        return tariffService.calculatePrices(tariffs, tripDto).stream()
-                .filter(t -> driverCountByClass.containsKey(t.tripClass()))
+        return tariffs.stream()
+                .filter(t -> driverCountByClass.containsKey(t.getTripClass()))
+                .map(t -> tariffService.calculatePrice(t, tripDto))
                 .map(t -> new TariffDto(
                         t.id(),
                         t.tripClass(),
