@@ -34,7 +34,9 @@ public record TripResponse(
 
         BigDecimal surgeCoef,
 
-        List<TariffResponse> tariffs
+        List<TariffResponse> tariffs,
+
+        String routeGeometry
 ) {
     public static TripResponse from(TripDto trip) {
         List<TariffResponse> tariffs = trip.tariffDtos() == null
@@ -57,7 +59,8 @@ public record TripResponse(
                 trip.durationMin(),
                 trip.weatherCoef(),
                 trip.surgeCoef(),
-                tariffs
+                tariffs,
+                trip.routeGeometry()
         );
     }
 }
