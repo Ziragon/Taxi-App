@@ -4,6 +4,11 @@ plugins {
     id("database-plugin")
     id("redis-plugin")
     id("rabbitmq-plugin")
-    id("openfeign-plugin")
+    id("websocket-plugin")
     id("integration-testing")
+}
+
+dependencies {
+    implementation(project(":shared-libs:shared-exceptions"))
+    implementation(project(":shared-libs:shared-dto"))
 }

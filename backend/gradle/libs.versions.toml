@@ -67,6 +67,10 @@ springdoc-webflux-ui = { group = "org.springdoc", name = "springdoc-openapi-star
 # Stripe
 stripe-java = { group = "com.stripe", name = "stripe-java", version.ref = "stripe" }
 
+# WebSocket
+spring-websocket = { group = "org.springframework", name = "spring-websocket" }
+spring-messaging = { group = "org.springframework", name = "spring-messaging" }
+
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
