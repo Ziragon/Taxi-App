@@ -34,6 +34,9 @@ jobs:
             payment-service:
               - 'backend/payment-service/**'
               - '.github/workflows/**'
+            notification-service:                        
+              - 'backend/notification-service/**'
+              - '.github/workflows/**'
 
       - name: Set matrix
         id: set-matrix
@@ -43,6 +46,7 @@ jobs:
           [[ "${{ steps.filter.outputs.user-service }}" == "true" ]] && services+=("user-service")
           [[ "${{ steps.filter.outputs.trip-service }}" == "true" ]] && services+=("trip-service")
           [[ "${{ steps.filter.outputs.payment-service }}" == "true" ]] && services+=("payment-service")
+          [[ "${{ steps.filter.outputs.notification-service }}" == "true" ]] && services+=("notification-service")
 
           json=$(printf '%s\n' "${services[@]}" | jq -R . | jq -cs .)
           echo "services=$json" >> $GITHUB_OUTPUT
@@ -139,6 +143,7 @@ jobs:
         service: ${{ fromJson(needs.detect-changes.outputs.services) }}
         exclude:
           - service: trip-service
+          - service: notification-service
 
     steps:
       - uses: actions/checkout@v4
