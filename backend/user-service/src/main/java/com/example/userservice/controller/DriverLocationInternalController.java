@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/drivers/internal")
+@RequestMapping("/api/v1/internal/drivers")
 @RequiredArgsConstructor
 @Tag(name = "Internal Requests (НЕ ДЛЯ ФРОНТА)")
 public class DriverLocationInternalController {
