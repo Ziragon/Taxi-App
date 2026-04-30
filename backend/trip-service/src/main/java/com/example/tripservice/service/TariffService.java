@@ -42,15 +42,11 @@ public class TariffService {
     }
 
     public TariffDto calculatePrice(Tariff tariff, TripDto tripDto) {
+
         TariffPriceData prices = priceService.calculatePrice(
-                tariff.getBaseFare(),
-                tripDto.distanceKm(),
-                tripDto.durationMin(),
-                tariff.getPricePerKm(),
-                tariff.getPricePerMin(),
-                tripDto.weatherCoef(),
-                tripDto.surgeCoef()
+                CalculatePriceDto.from(tariff, tripDto)
         );
+
         return TariffDto.from(tariff, prices, null);
     }
 }

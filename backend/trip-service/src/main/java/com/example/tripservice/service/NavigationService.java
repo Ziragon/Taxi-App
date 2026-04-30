@@ -23,7 +23,11 @@ public class NavigationService {
                                  BigDecimal destLng, BigDecimal destLat
     ) {
         try {
-            String coords = originLng + "," + originLat + ";" + destLng + "," + destLat;
+            String coords = String.format(
+                    java.util.Locale.US,
+                    "%s,%s;%s,%s",
+                    originLng, originLat, destLng, destLat
+            );
 
             OsrmResponse response = osrmClient.getRoute(coords, "full");
 
@@ -37,7 +41,7 @@ public class NavigationService {
                     .orElseThrow(() -> new RouteNotFoundException(coords));
         } catch (FeignException e) {
             log.error("Failed to fetch route info: {}", e.getMessage());
-            throw new ServiceUnavailableException("OSPF");
+            throw new ServiceUnavailableException("OSRM");
         }
     }
 }

@@ -51,7 +51,7 @@ public class TripService {
                 executor);
 
         var driversFuture = CompletableFuture.supplyAsync(() ->
-                driverService.getNearbyDrivers(dto.originLng(), dto.originLat(), new BigDecimal("60")),
+                driverService.getNearbyDrivers(dto.originLng(), dto.originLat(), new BigDecimal("30")),
                 executor);
 
         var tariffsFuture = CompletableFuture.supplyAsync(
@@ -67,7 +67,7 @@ public class TripService {
         List<Tariff> tariffs = tariffsFuture.join();
 
         trip.setDistanceKm(BigDecimal.valueOf(route.distance()).divide(new BigDecimal("1000"), 3, RoundingMode.HALF_UP));
-        trip.setDurationMin(BigDecimal.valueOf(route.duration()).divide(new BigDecimal("30"), 10, RoundingMode.HALF_UP));
+        trip.setDurationMin(BigDecimal.valueOf(route.duration()).divide(new BigDecimal("60"), 10, RoundingMode.HALF_UP));
         trip.setWeatherCoef(weather.weatherCoef());
         trip.setSurgeCoef(priceService.getSurgeCoef(weather.localtime()));
 
