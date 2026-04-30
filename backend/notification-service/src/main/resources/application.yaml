@@ -64,11 +64,12 @@ notification:
     issuer: ${JWT_ISSUER:user-service}
   websocket:
     endpoint: /ws/notifications
-    allowed-origins: "*"
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
   internal:
-    gateway-header: ${JWT_HEADER:X-Gateway-Header}
-    gateway-header-key: ${HEADER_KEY:dev-secret-key-for-microservices}
+    header: ${INTERNAL_HEADER:X-Internal-Header}
+    header-key: ${INTERNAL_KEY:dev-internal-secret-key-for-services}
     user-service-url: ${USER_SERVICE_URL:http://localhost:8080}
+
 springdoc:
   api-docs:
     enabled: true
@@ -96,3 +97,5 @@ logging:
     com.example.notificationservice: DEBUG
     org.springframework.web.socket: DEBUG
     org.springframework.messaging: DEBUG
+    com.example.notificationservice.client.UserServiceClient: DEBUG
+    feign: DEBUG

@@ -8,6 +8,8 @@ import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
 
+import java.util.Map;
+
 @Slf4j
 @Component
 public class StompSessionEventListener {
@@ -15,9 +17,16 @@ public class StompSessionEventListener {
     @EventListener
     public void onConnected(SessionConnectedEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        Long userId = (Long) accessor.getSessionAttributes().get(
-                JwtHandshakeInterceptor.SESSION_ATTR_USER_ID
-        );
+
+        Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
+        if (sessionAttributes == null) {
+            log.warn("SessionConnectedEvent: sessionAttributes is null, sessionId={}",
+                    accessor.getSessionId());
+            return;
+        }
+
+        Long userId = (Long) sessionAttributes.get(JwtHandshakeInterceptor.SESSION_ATTR_USER_ID);
+
         log.info("STOMP connected: sessionId={}, userId={}",
                 accessor.getSessionId(), userId);
     }

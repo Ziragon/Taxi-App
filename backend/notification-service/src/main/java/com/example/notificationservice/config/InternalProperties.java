@@ -9,10 +9,10 @@ import org.springframework.validation.annotation.Validated;
 public record InternalProperties(
 
         @NotBlank
-        String gatewayHeader,
+        String header,
 
         @NotBlank
-        String gatewayHeaderKey,
+        String headerKey,
 
         @NotBlank
         String userServiceUrl

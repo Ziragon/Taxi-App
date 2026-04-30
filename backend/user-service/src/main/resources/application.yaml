@@ -71,7 +71,7 @@ gateway-auth:
 
 internal-auth:
   header: ${INTERNAL_HEADER:X-Internal-Header}
-  header-key: ${HEADER_KEY:dev-secret-internal-key-for-microservices}
+  header-key: ${INTERNAL_KEY:dev-internal-secret-key-for-services}
 
 app:
   driver:

@@ -26,11 +26,21 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private final AppProperties appProperties;
     private final PathPatternParser parser = new PathPatternParser();
 
+    private boolean isInternalPath(String path) {
+        return path.contains("/internal/");
+    }
+
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
+
+        if (isInternalPath(path)) {
+            log.warn("Blocked direct access to internal endpoint: {}", path);
+            exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+            return exchange.getResponse().setComplete();
+        }
 
         if (isOpenPath(path)) {
             log.info("Anonymous access to open path: {}", path);

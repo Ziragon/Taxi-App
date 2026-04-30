@@ -1,5 +1,6 @@
 package com.example.notificationservice.config;
 
+import feign.Logger;
 import feign.RequestInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -12,10 +13,15 @@ public class FeignConfig {
     private final InternalProperties internalProperties;
 
     @Bean
-    public RequestInterceptor gatewayHeaderInterceptor() {
+    public RequestInterceptor internalHeaderInterceptor() {
         return requestTemplate -> requestTemplate.header(
-                internalProperties.gatewayHeader(),
-                internalProperties.gatewayHeaderKey()
+                internalProperties.header(),
+                internalProperties.headerKey()
         );
+    }
+
+    @Bean
+    public Logger.Level feignLoggerLevel() {
+        return Logger.Level.FULL;
     }
 }
