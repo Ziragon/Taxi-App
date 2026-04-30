@@ -12,10 +12,10 @@ public class FeignConfig {
     private final InternalProperties internalProperties;
 
     @Bean
-    public RequestInterceptor gatewayHeaderInterceptor() {
+    public RequestInterceptor internalHeaderInterceptor() {
         return requestTemplate -> requestTemplate.header(
-                internalProperties.gatewayHeader(),
-                internalProperties.gatewayHeaderKey()
+                internalProperties.header(),
+                internalProperties.headerKey()
         );
     }
 }

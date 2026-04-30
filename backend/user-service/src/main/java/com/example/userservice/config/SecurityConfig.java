@@ -1,6 +1,7 @@
 package com.example.userservice.config;
 
 import com.example.shared.security.GatewayAuthFilter;
+import com.example.shared.security.InternalAuthFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -22,9 +23,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final GatewayAuthFilter gatewayAuthFilter;
+    private final InternalAuthFilter internalAuthFilter;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(AbstractHttpConfigurer::disable)
@@ -46,7 +48,8 @@ public class SecurityConfig {
                             );
                         })
                 )
-                .addFilterBefore(gatewayAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(gatewayAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(internalAuthFilter, GatewayAuthFilter.class);
 
         return http.build();
     }
