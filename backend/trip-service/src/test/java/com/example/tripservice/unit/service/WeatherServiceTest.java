@@ -2,11 +2,13 @@ package com.example.tripservice.unit.service;
 
 import com.example.tripservice.client.WeatherAPIClient;
 import com.example.tripservice.dto.data.WeatherDto;
+import com.example.tripservice.dto.response.WeatherResponse;
 import com.example.tripservice.service.WeatherService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -16,6 +18,7 @@ import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,15 +49,23 @@ class WeatherServiceTest {
     }
 
     @Test
-    @DisplayName("")
+    @DisplayName("Должен корректно форматировать координаты в строку lat,lng для API")
     void getWeatherCoef_ShouldFormatCoordsCorrectly() {
 
-        BigDecimal lat = new BigDecimal("55.0");
-        BigDecimal lng = new BigDecimal("82.0");
-        String expectedCoords = "55.000000,82.000000";
+        BigDecimal lat = new BigDecimal("55.123456");
+        BigDecimal lng = new BigDecimal("82.654321");
+        String expectedCoords = "55.123456,82.654321";
 
-        WeatherDto result = weatherService.getWeatherCoef(lng, lat);
+        ArgumentCaptor<String> coordsCaptor = ArgumentCaptor.forClass(String.class);
 
-        assertThat(result.weatherCoef()).isEqualByComparingTo("1.0");
+        WeatherResponse mockResponse = mock(WeatherResponse.class);
+        when(weatherClient.getWeather(anyString(), coordsCaptor.capture(), anyString()))
+                .thenReturn(mockResponse);
+
+        weatherService.getWeatherCoef(lng, lat);
+
+        String actualCoords = coordsCaptor.getValue();
+
+        assertThat(actualCoords).isEqualTo(expectedCoords);
     }
 }
