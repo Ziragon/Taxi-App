@@ -1,7 +1,7 @@
 package com.example.userservice.service;
 
 import com.example.shared.dto.enums.VehicleClass;
-import com.example.userservice.dto.data.DriverLocationDto;
+import com.example.shared.dto.data.DriverLocationDto;
 import com.example.userservice.entity.enums.DriverStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

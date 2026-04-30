@@ -1,6 +1,6 @@
 package com.example.tripservice.entity;
 
-import com.example.tripservice.entity.enums.VehicleClass;
+import com.example.shared.dto.enums.VehicleClass;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -33,6 +33,9 @@ public class Tariff {
 
     @Column(name = "price_per_min", nullable = false, precision = 8, scale = 2)
     private BigDecimal pricePerMin;
+
+    @Column(name = "min_fare", nullable = false, precision = 8, scale = 2)
+    private BigDecimal minFare;
 
     @Column(name = "is_active", nullable = false)
     private boolean active;

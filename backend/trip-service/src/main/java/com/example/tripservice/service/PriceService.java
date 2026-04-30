@@ -15,20 +15,19 @@ import java.time.LocalDateTime;
 public class PriceService {
 
     // Рассчитывание окончательной цены по тарифу со всеми параметрами
-    public TariffPriceData calculatePrice(
-            BigDecimal baseFare, BigDecimal km, BigDecimal mins,
-            BigDecimal pricePerKm, BigDecimal pricePerMin,
-            BigDecimal weatherCoef, BigDecimal surgeCoef
-    ) {
-        BigDecimal distanceCost = km.multiply(pricePerKm);
+    public TariffPriceData calculatePrice(CalculatePriceDto dto) {
 
-        BigDecimal timeCost = mins.multiply(pricePerMin);
+        BigDecimal distanceCost = dto.distanceKm().multiply(dto.pricePerKm());
 
-        BigDecimal totalPrice = baseFare
+        BigDecimal timeCost = dto.durationMin().multiply(dto.pricePerMin());
+
+        BigDecimal totalPrice = dto.baseFare()
                 .add(distanceCost)
                 .add(timeCost)
-                .multiply(weatherCoef)
-                .multiply(surgeCoef);
+                .multiply(dto.weatherCoef())
+                .multiply(dto.surgeCoef());
+
+        totalPrice = totalPrice.max(dto.minFare()); // если цена получилась меньше minFare - берем minFare
 
         return new TariffPriceData(
                 distanceCost.setScale(2, RoundingMode.HALF_UP),
@@ -39,6 +38,8 @@ public class PriceService {
 
     // Имитация пробок
     public BigDecimal getSurgeCoef(LocalDateTime localtime) {
+
+        if (localtime == null) return BigDecimal.ONE;
 
         int hour = localtime.getHour();
 

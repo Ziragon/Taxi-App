@@ -34,9 +34,11 @@ public record TripDto(
 
         BigDecimal surgeCoef,
 
-        List<TariffDto> tariffDtos
+        List<TariffDto> tariffDtos,
+
+        String routeGeometry
 ) {
-    public static TripDto from(Trip trip, List<TariffDto> dtos) {
+    public static TripDto from(Trip trip, List<TariffDto> dtos, String route) {
         return new TripDto(
                 trip.getId(),
                 trip.getPassengerId(),
@@ -51,7 +53,8 @@ public record TripDto(
                 trip.getDurationMin(),
                 trip.getWeatherCoef(),
                 trip.getSurgeCoef(),
-                dtos
+                dtos,
+                route
         );
     }
 }

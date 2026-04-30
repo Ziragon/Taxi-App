@@ -6,12 +6,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@EnableConfigurationProperties(GatewayAuthProperties.class)
+@EnableConfigurationProperties({GatewayAuthProperties.class, InternalAuthProperties.class})
 public class GatewaySecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public GatewayAuthFilter gatewayAuthFilter(GatewayAuthProperties properties) {
-        return new GatewayAuthFilter(properties);
+    public GatewayAuthFilter gatewayAuthFilter(GatewayAuthProperties gatewayAuthProperties, InternalAuthProperties internalAuthProperties) {
+        return new GatewayAuthFilter(gatewayAuthProperties, internalAuthProperties);
     }
 }

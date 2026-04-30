@@ -2,8 +2,8 @@ package com.example.userservice.integration;
 
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.userservice.config.TestContainersConfig;
-import com.example.userservice.dto.data.DriverLocationDto;
-import com.example.userservice.dto.data.LocationDto;
+import com.example.shared.dto.data.DriverLocationDto;
+import com.example.shared.dto.data.LocationDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.DriverLocation;
 import com.example.userservice.entity.DriverProfile;
