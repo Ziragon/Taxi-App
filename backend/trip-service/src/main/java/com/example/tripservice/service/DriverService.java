@@ -2,6 +2,7 @@ package com.example.tripservice.service;
 
 import com.example.shared.dto.data.DriverLocationDto;
 import com.example.shared.dto.enums.VehicleClass;
+import com.example.shared.exception.common.AccessDeniedException;
 import com.example.shared.exception.common.ServiceUnavailableException;
 import com.example.tripservice.client.DriverLocationClient;
 import feign.FeignException;
@@ -22,6 +23,7 @@ public class DriverService {
     private final DriverLocationClient locationClient;
     private final TripStatusService tripStatusService;
     private final Map<Long, CompletableFuture<Long>> pendingOffers = new ConcurrentHashMap<>();
+    private final Map<Long, Long> activeOffers = new ConcurrentHashMap<>();
     private static final int SEARCH_DURATION = 15;
     private static final int[] radiuses = {10, 20, 30};
 
@@ -54,6 +56,7 @@ public class DriverService {
 
         try {
             for (int radius : radiuses) {
+                log.debug("Driver searching with radius {}", radius);
                 List<DriverLocationDto> drivers = getNearbyDrivers(longitude, latitude, BigDecimal.valueOf(radius), vehicleClass)
                         .stream()
                         .filter(d -> !alreadyOffered.contains(d.driverId()))
@@ -66,10 +69,11 @@ public class DriverService {
                         future = new CompletableFuture<>();
                         pendingOffers.put(tripId, future);
                     }
-
+                    activeOffers.put(tripId, driver.driverId());
                     // TODO: Отправка оффера водителю
 
                     boolean accepted = waitForAccept(future);
+                    activeOffers.remove(tripId);
                     if (accepted) {
                         Long driverId = future.getNow(null);
                         tripStatusService.assignDriver(tripId, driverId);
@@ -80,6 +84,7 @@ public class DriverService {
                 }
             }
 
+            log.info("Drivers for trip {} not found", tripId);
             tripStatusService.cancelSearch(tripId);
 
         } finally {
@@ -103,6 +108,14 @@ public class DriverService {
     }
 
     public void handleDriverAccept(Long tripId, Long driverId) {
+        Long expectedDriverId = activeOffers.get(tripId);
+
+        if (expectedDriverId == null || !expectedDriverId.equals(driverId)) {
+            log.warn("Driver {} tried to accept trip {} but offer was sent to driver {}",
+                    driverId, tripId, expectedDriverId);
+            throw new AccessDeniedException();
+        }
+
         CompletableFuture<Long> future = pendingOffers.get(tripId);
         if (future != null) {
             future.complete(driverId);
@@ -110,6 +123,14 @@ public class DriverService {
     }
 
     public void handleDriverReject(Long tripId, Long driverId) {
+        Long expectedDriverId = activeOffers.get(tripId);
+
+        if (expectedDriverId == null || !expectedDriverId.equals(driverId)) {
+            log.warn("Driver {} tried to reject trip {} but offer was sent to driver {}",
+                    driverId, tripId, expectedDriverId);
+            throw new AccessDeniedException();
+        }
+
         log.info("Driver {} rejected offer for trip {}", driverId, tripId);
         CompletableFuture<Long> future = pendingOffers.get(tripId);
         if (future != null) {

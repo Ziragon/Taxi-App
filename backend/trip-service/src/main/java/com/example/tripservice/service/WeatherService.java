@@ -33,9 +33,6 @@ public class WeatherService {
 
             BigDecimal weatherCoef = WeatherAPIPriceUtil.getMultiplier(response.current().condition().code());
 
-            log.info(response.toString());
-            log.info(currentCoords);
-
             return WeatherDto.from(response, weatherCoef);
         } catch (Exception e) {
             log.warn("Weather API Error: {}", e.getMessage());
