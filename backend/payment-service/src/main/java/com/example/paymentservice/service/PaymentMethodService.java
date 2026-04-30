@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static reactor.netty.http.HttpConnectionLiveness.log;
+
 @Service
 @RequiredArgsConstructor
 public class PaymentMethodService {
@@ -30,12 +32,10 @@ public class PaymentMethodService {
             );
         }
 
-        Customer customer = stripeService.getOrCreateCustomer(passengerId);
+        StripeService.FakeCustomer customer = stripeService.getOrCreateCustomer(passengerId);
 
-        com.stripe.model.PaymentMethod stripePaymentMethod = stripeService.attachPaymentMethodToCustomer(
-                stripePaymentMethodId,
-                customer.getId()
-        );
+        StripeService.FakePaymentMethod stripePaymentMethod =
+                stripeService.attachPaymentMethodToCustomer(stripePaymentMethodId, customer.id());
 
         boolean isFirst = paymentMethodRepository.findAllByPassengerId(passengerId).isEmpty();
         boolean shouldBeDefault = isFirst || setAsDefault;
@@ -46,10 +46,10 @@ public class PaymentMethodService {
 
         PaymentMethod paymentMethod = PaymentMethod.builder()
                 .passengerId(passengerId)
-                .stripeCustomerId(customer.getId())
+                .stripeCustomerId(customer.id())
                 .stripePaymentMethodId(stripePaymentMethodId)
-                .cardBrand(stripePaymentMethod.getCard().getBrand())
-                .lastFour(stripePaymentMethod.getCard().getLast4())
+                .cardBrand(stripePaymentMethod.brand())
+                .lastFour(stripePaymentMethod.last4())
                 .defaultvalue(shouldBeDefault)
                 .active(true)
                 .build();
@@ -57,7 +57,7 @@ public class PaymentMethodService {
         PaymentMethod saved = paymentMethodRepository.save(paymentMethod);
 
         if (shouldBeDefault) {
-            stripeService.setDefaultPaymentMethod(customer.getId(), stripePaymentMethodId);
+            stripeService.setDefaultPaymentMethod(customer.id(), stripePaymentMethodId);
         }
 
         return saved;
@@ -116,6 +116,10 @@ public class PaymentMethodService {
 
         stripeService.detachPaymentMethod(paymentMethod.getStripePaymentMethodId());
 
+
         paymentMethodRepository.deactivateById(paymentMethodId);
+        paymentMethodRepository.flush();
+
+        log.info("Карта деактивирована локально (Stripe пропущен)", paymentMethodId);
     }
 }

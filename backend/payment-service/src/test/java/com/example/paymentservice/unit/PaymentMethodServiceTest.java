@@ -8,7 +8,6 @@ import com.example.paymentservice.exception.PaymentMethodNotFoundException;
 import com.example.paymentservice.repository.PaymentMethodRepository;
 import com.example.paymentservice.service.PaymentMethodService;
 import com.example.paymentservice.service.StripeService;
-import com.stripe.model.Customer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,21 +37,16 @@ class PaymentMethodServiceTest {
     @InjectMocks
     private PaymentMethodService service;
 
-    private Customer mockCustomer;
-    private com.stripe.model.PaymentMethod mockStripePaymentMethod;
+    private StripeService.FakeCustomer mockCustomer;
+    private StripeService.FakePaymentMethod mockStripePaymentMethod;
     private PaymentMethod mockPaymentMethod;
 
     @BeforeEach
     void setUp() {
-        mockCustomer = new Customer();
-        mockCustomer.setId("cus_test123");
 
-        mockStripePaymentMethod = new com.stripe.model.PaymentMethod();
-        mockStripePaymentMethod.setId("pm_test123");
-        com.stripe.model.PaymentMethod.Card card = new com.stripe.model.PaymentMethod.Card();
-        card.setBrand("visa");
-        card.setLast4("4242");
-        mockStripePaymentMethod.setCard(card);
+        mockCustomer = new StripeService.FakeCustomer("cus_test123");
+
+        mockStripePaymentMethod = new StripeService.FakePaymentMethod("pm_test123", "visa", "4242");
 
         mockPaymentMethod = PaymentMethod.builder()
                 .id(1L)
@@ -69,14 +63,13 @@ class PaymentMethodServiceTest {
     @Test
     @DisplayName("Should add first payment method successfully")
     void shouldAddFirstPaymentMethod() {
-
         Long passengerId = 100L;
         String stripePaymentMethodId = "pm_test123";
 
         when(repository.existsByPassengerIdAndStripePaymentMethodId(passengerId, stripePaymentMethodId))
                 .thenReturn(false);
         when(stripeService.getOrCreateCustomer(passengerId)).thenReturn(mockCustomer);
-        when(stripeService.attachPaymentMethodToCustomer(stripePaymentMethodId, mockCustomer.getId()))
+        when(stripeService.attachPaymentMethodToCustomer(stripePaymentMethodId, mockCustomer.id()))
                 .thenReturn(mockStripePaymentMethod);
         when(repository.findAllByPassengerId(passengerId)).thenReturn(Collections.emptyList());
         when(repository.save(any(PaymentMethod.class))).thenReturn(mockPaymentMethod);
@@ -89,13 +82,12 @@ class PaymentMethodServiceTest {
         assertThat(result.isActive()).isTrue();
 
         verify(repository).save(argThat(PaymentMethod::isDefaultvalue));
-        verify(stripeService).setDefaultPaymentMethod(mockCustomer.getId(), stripePaymentMethodId);
+        verify(stripeService).setDefaultPaymentMethod(mockCustomer.id(), stripePaymentMethodId);
     }
 
     @Test
     @DisplayName("Should add payment method and set as default when requested")
     void shouldAddPaymentMethodAndSetAsDefault() {
-
         Long passengerId = 100L;
         String stripePaymentMethodId = "pm_test123";
 
@@ -108,7 +100,7 @@ class PaymentMethodServiceTest {
         when(repository.existsByPassengerIdAndStripePaymentMethodId(passengerId, stripePaymentMethodId))
                 .thenReturn(false);
         when(stripeService.getOrCreateCustomer(passengerId)).thenReturn(mockCustomer);
-        when(stripeService.attachPaymentMethodToCustomer(stripePaymentMethodId, mockCustomer.getId()))
+        when(stripeService.attachPaymentMethodToCustomer(stripePaymentMethodId, mockCustomer.id()))
                 .thenReturn(mockStripePaymentMethod);
         when(repository.findAllByPassengerId(passengerId)).thenReturn(List.of(existingMethod));
         when(repository.save(any(PaymentMethod.class))).thenReturn(mockPaymentMethod);
@@ -119,13 +111,12 @@ class PaymentMethodServiceTest {
         assertThat(result.isDefaultvalue()).isTrue();
 
         verify(repository).clearDefaultForPassenger(passengerId);
-        verify(stripeService).setDefaultPaymentMethod(mockCustomer.getId(), stripePaymentMethodId);
+        verify(stripeService).setDefaultPaymentMethod(mockCustomer.id(), stripePaymentMethodId);
     }
 
     @Test
     @DisplayName("Should throw exception when duplicate payment method")
     void shouldThrowExceptionWhenDuplicate() {
-
         Long passengerId = 100L;
         String stripePaymentMethodId = "pm_test123";
 
@@ -142,7 +133,6 @@ class PaymentMethodServiceTest {
     @Test
     @DisplayName("Should get payment method by ID")
     void shouldGetById() {
-
         when(repository.findById(1L)).thenReturn(Optional.of(mockPaymentMethod));
 
         PaymentMethod result = service.getById(1L);
@@ -154,7 +144,6 @@ class PaymentMethodServiceTest {
     @Test
     @DisplayName("Should throw exception when payment method not found")
     void shouldThrowExceptionWhenNotFound() {
-
         when(repository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getById(999L))
@@ -164,7 +153,6 @@ class PaymentMethodServiceTest {
     @Test
     @DisplayName("Should get default payment method for passenger")
     void shouldGetDefaultForPassenger() {
-
         Long passengerId = 100L;
         when(repository.findByPassengerIdAndDefaultvalueTrue(passengerId))
                 .thenReturn(Optional.of(mockPaymentMethod));
@@ -178,7 +166,6 @@ class PaymentMethodServiceTest {
     @Test
     @DisplayName("Should get active payment methods for passenger")
     void shouldGetActiveByPassengerId() {
-
         Long passengerId = 100L;
         List<PaymentMethod> methods = List.of(mockPaymentMethod);
         when(repository.findAllByPassengerIdAndActiveTrue(passengerId)).thenReturn(methods);
@@ -192,7 +179,6 @@ class PaymentMethodServiceTest {
     @Test
     @DisplayName("Should set default payment method")
     void shouldSetDefault() {
-
         Long passengerId = 100L;
         Long paymentMethodId = 1L;
         when(repository.findById(paymentMethodId)).thenReturn(Optional.of(mockPaymentMethod));
@@ -211,7 +197,6 @@ class PaymentMethodServiceTest {
     @Test
     @DisplayName("Should throw exception when setting inactive payment method as default")
     void shouldThrowExceptionWhenSetInactiveAsDefault() {
-
         Long passengerId = 100L;
         Long paymentMethodId = 1L;
         mockPaymentMethod.setActive(false);
@@ -224,7 +209,6 @@ class PaymentMethodServiceTest {
     @Test
     @DisplayName("Should deactivate payment method")
     void shouldDeactivate() {
-
         Long passengerId = 100L;
         Long paymentMethodId = 1L;
         mockPaymentMethod.setDefaultvalue(false);
@@ -239,7 +223,6 @@ class PaymentMethodServiceTest {
     @Test
     @DisplayName("Should throw exception when deactivating default payment method")
     void shouldThrowExceptionWhenDeactivateDefault() {
-
         Long passengerId = 100L;
         Long paymentMethodId = 1L;
         when(repository.findById(paymentMethodId)).thenReturn(Optional.of(mockPaymentMethod));

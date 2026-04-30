@@ -7,16 +7,18 @@ import com.example.paymentservice.entity.enums.TransactionType;
 import com.example.paymentservice.exception.InvalidPaymentOperationException;
 import com.example.paymentservice.exception.PaymentProcessingException;
 import com.example.paymentservice.exception.TransactionNotFoundException;
+import com.example.paymentservice.messaging.PaymentEventPublisher;
 import com.example.paymentservice.repository.TransactionRepository;
-import com.stripe.model.PaymentIntent;
-import com.stripe.model.Refund;
-import com.stripe.model.Transfer;
+import com.example.shared.dto.event.PaymentFailedEvent;
+import com.example.shared.dto.event.PaymentSucceededEvent;
+import com.example.shared.dto.event.RefundSucceededEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 @Slf4j
@@ -28,6 +30,7 @@ public class TransactionService {
     private final PaymentMethodService paymentMethodService;
     private final DriverPayoutAccountService driverPayoutAccountService;
     private final StripeService stripeService;
+    private final PaymentEventPublisher paymentEventPublisher;
 
     @Transactional
     public Transaction createCharge(Long tripId,
@@ -44,7 +47,7 @@ public class TransactionService {
             throw new PaymentProcessingException("Payment method is not active");
         }
 
-        PaymentIntent paymentIntent = stripeService.createPaymentIntent(
+        StripeService.FakePaymentIntent paymentIntent = stripeService.createPaymentIntent(
                 amount,
                 currency,
                 paymentMethod.getStripeCustomerId(),
@@ -52,7 +55,7 @@ public class TransactionService {
                 tripId
         );
 
-        TransactionStatus status = resolvePaymentIntentStatus(paymentIntent.getStatus());
+        TransactionStatus status = resolvePaymentIntentStatus(paymentIntent.status());
 
         Transaction transaction = Transaction.builder()
                 .tripId(tripId)
@@ -63,14 +66,39 @@ public class TransactionService {
                 .amount(amount)
                 .currency(currency)
                 .status(status)
-                .stripePaymentIntentId(paymentIntent.getId())
+                .stripePaymentIntentId(paymentIntent.id())
                 .build();
 
         Transaction saved = transactionRepository.save(transaction);
 
         log.info("Charge created for trip {} with status {}", tripId, status);
 
-        // TODO: отправить PaymentSucceededEvent / PaymentFailedEvent в RabbitMQ
+        if (status == TransactionStatus.SUCCEEDED) {
+            paymentEventPublisher.publishPaymentSucceeded(
+                    new PaymentSucceededEvent(
+                            saved.getId(),
+                            tripId,
+                            passengerId,
+                            driverId,
+                            amount,
+                            currency,
+                            paymentIntent.id(),
+                            Instant.now()
+                    )
+            );
+        } else if (status == TransactionStatus.FAILED) {
+            paymentEventPublisher.publishPaymentFailed(
+                    new PaymentFailedEvent(
+                            saved.getId(),
+                            tripId,
+                            passengerId,
+                            driverId,
+                            amount,
+                            "Payment failed with status: " + paymentIntent.status(),
+                            Instant.now()
+                    )
+            );
+        }
 
         return saved;
     }
@@ -95,12 +123,12 @@ public class TransactionService {
             );
         }
 
-        Refund stripeRefund = stripeService.createRefund(
+        StripeService.FakeRefund stripeRefund = stripeService.createRefund(
                 original.getStripePaymentIntentId(),
                 amount
         );
 
-        TransactionStatus refundStatus = resolveRefundStatus(stripeRefund.getStatus());
+        TransactionStatus refundStatus = resolveRefundStatus(stripeRefund.status());
 
         if (refundStatus == TransactionStatus.SUCCEEDED) {
             original.setStatus(TransactionStatus.REFUNDED);
@@ -116,14 +144,25 @@ public class TransactionService {
                 .amount(amount)
                 .currency(original.getCurrency())
                 .status(refundStatus)
-                .stripePaymentIntentId(stripeRefund.getId())
+                .stripePaymentIntentId(stripeRefund.id())
                 .build();
 
         Transaction saved = transactionRepository.save(refund);
 
         log.info("Refund created for transaction {} with status {}", originalTransactionId, refundStatus);
 
-        // TODO: отправить RefundSucceededEvent в RabbitMQ
+        if (refundStatus == TransactionStatus.SUCCEEDED) {
+            paymentEventPublisher.publishRefundSucceeded(
+                    new RefundSucceededEvent(
+                            saved.getId(),
+                            originalTransactionId,
+                            original.getTripId(),
+                            original.getPassengerId(),
+                            amount,
+                            Instant.now()
+                    )
+            );
+        }
 
         return saved;
     }
@@ -136,7 +175,7 @@ public class TransactionService {
                                     String currency) {
         var payoutAccount = driverPayoutAccountService.getVerifiedDefaultForDriver(driverId);
 
-        Transfer transfer = stripeService.createTransfer(
+        StripeService.FakeTransfer transfer = stripeService.createTransfer(
                 amount,
                 currency,
                 payoutAccount.getStripeAccountId(),
@@ -151,14 +190,12 @@ public class TransactionService {
                 .amount(amount)
                 .currency(currency)
                 .status(TransactionStatus.SUCCEEDED)
-                .stripePaymentIntentId(transfer.getId())
+                .stripePaymentIntentId(transfer.id())
                 .build();
 
         Transaction saved = transactionRepository.save(payout);
 
         log.info("Payout created for driver {} trip {}", driverId, tripId);
-
-        // TODO: отправить PayoutSucceededEvent в RabbitMQ
 
         return saved;
     }

@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Service Test</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 24px;
+        }
+
+        h2 { color: #58a6ff; margin-bottom: 20px; font-size: 18px; }
+        h3 { color: #8b949e; font-size: 13px; margin-bottom: 8px; }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        label {
+            font-size: 12px;
+            color: #8b949e;
+            display: block;
+            margin-bottom: 4px;
+            margin-top: 8px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #c9d1d9;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-family: monospace;
+            margin-bottom: 4px;
+        }
+
+        textarea { height: 80px; resize: vertical; }
+
+        .row { display: flex; gap: 12px; }
+        .row > div { flex: 1; }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 8px;
+            margin-right: 8px;
+            transition: opacity 0.2s;
+        }
+
+        button:hover { opacity: 0.85; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .btn-primary  { background: #1f6feb; color: #fff; }
+        .btn-success  { background: #238636; color: #fff; }
+        .btn-danger   { background: #da3633; color: #fff; }
+        .btn-warning  { background: #9e6a03; color: #fff; }
+
+        #stripe-card-element {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-top: 4px;
+            margin-bottom: 8px;
+        }
+
+        #logs {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px;
+            height: 400px;
+            overflow-y: scroll;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .log-entry { margin-bottom: 2px; }
+        .log-info    { color: #58a6ff; }
+        .log-success { color: #3fb950; }
+        .log-error   { color: #f85149; }
+        .log-data    { color: #d2a8ff; }
+        .log-warn    { color: #d29922; }
+        .log-time    { color: #484f58; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-success { background: #238636; color: #fff; }
+        .badge-error   { background: #da3633; color: #fff; }
+        .badge-pending { background: #9e6a03; color: #fff; }
+
+        .pm-card {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+<h2>💳 Payment Service Test</h2>
+
+<!-- Конфигурация -->
+<div class="card">
+    <h3>⚙️ Конфигурация</h3>
+    <div class="row">
+        <div>
+            <label>Gateway URL</label>
+            <input id="gatewayUrl" value="http://localhost:8000">
+        </div>
+        <div>
+            <label>Stripe Publishable Key</label>
+            <input id="stripePk" placeholder="pk_test_...">
+        </div>
+    </div>
+    <label>JWT Access Token (из /auth/login)</label>
+    <textarea id="jwtToken" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></textarea>
+    <button class="btn-primary" onclick="initStripe()">🔑 Инициализировать Stripe</button>
+</div>
+
+<!-- Шаг 1: Создать PaymentMethod -->
+<div class="card">
+    <h3>Шаг 1: Создать Stripe PaymentMethod</h3>
+    <label>Тестовая карта</label>
+    <select id="testCard" onchange="fillTestCard()">
+        <option value="4242424242424242">4242 4242 4242 4242 — Успешная оплата</option>
+        <option value="4000000000000002">4000 0000 0000 0002 — Карта отклонена</option>
+        <option value="4000002500003155">4000 0025 0000 3155 — Требует 3DS</option>
+        <option value="4000000000009995">4000 0000 0000 9995 — Недостаточно средств</option>
+        <option value="custom">Ввести вручную</option>
+    </select>
+
+    <div id="stripe-card-element">
+        <!-- Stripe Card Element будет здесь -->
+        <span style="color: #484f58; font-size: 12px;">
+            Сначала инициализируй Stripe ↑
+        </span>
+    </div>
+
+    <button class="btn-success" onclick="createPaymentMethod()" id="btnCreatePm" disabled>
+        💳 Создать PaymentMethod
+    </button>
+
+    <div id="pmResult" style="margin-top: 8px; display: none;">
+        <label>Созданный PaymentMethod ID</label>
+        <input id="createdPmId" readonly>
+    </div>
+</div>
+
+<!-- Шаг 2: Добавить карту -->
+<div class="card">
+    <h3>Шаг 2: Добавить карту к аккаунту</h3>
+    <label>Payment Method ID (из шага 1 или вручную)</label>
+    <input id="pmIdInput" placeholder="pm_xxxxx">
+    <div class="row">
+        <div>
+            <label>Установить как основную</label>
+            <select id="setDefault">
+                <option value="false">Нет</option>
+                <option value="true">Да</option>
+            </select>
+        </div>
+    </div>
+    <button class="btn-success" onclick="addPaymentMethod()">➕ Добавить карту</button>
+</div>
+
+<!-- Шаг 3: Управление картами -->
+<div class="card">
+    <h3>Шаг 3: Управление картами</h3>
+    <button class="btn-primary" onclick="getPaymentMethods()">📋 Получить все карты</button>
+    <button class="btn-primary" onclick="getDefaultPaymentMethod()">⭐ Получить основную карту</button>
+    <div id="pmList" style="margin-top: 12px;"></div>
+</div>
+
+<!-- Шаг 4: Тест транзакций (опционально) -->
+<div class="card">
+    <h3>Шаг 4: Тест транзакций (опционально — без trip-service)</h3>
+    <div class="row">
+        <div>
+            <label>Trip ID</label>
+            <input id="tripId" type="number" value="1">
+        </div>
+        <div>
+            <label>Passenger ID</label>
+            <input id="passengerId" type="number" value="1">
+        </div>
+        <div>
+            <label>Driver ID</label>
+            <input id="driverId" type="number" value="2">
+        </div>
+    </div>
+    <div class="row">
+        <div>
+            <label>Сумма</label>
+            <input id="chargeAmount" type="number" value="25.50" step="0.01">
+        </div>
+        <div>
+            <label>Валюта</label>
+            <input id="chargeCurrency" value="usd">
+        </div>
+        <div>
+            <label>Payment Method ID (пусто = дефолтный)</label>
+            <input id="chargePaymentMethodId" placeholder="пусто = дефолтный">
+        </div>
+    </div>
+    <button class="btn-warning" onclick="createCharge()">💰 Создать платёж (charge)</button>
+
+    <div id="chargeResult" style="margin-top: 8px; display: none;">
+        <label>Transaction ID</label>
+        <div class="row">
+            <div><input id="createdTransactionId" readonly></div>
+            <div>
+                <button class="btn-danger" onclick="createRefund()" style="margin-top: 4px;">
+                    🔄 Возврат этой транзакции
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Логи -->
+<h3>Logs</h3>
+<div id="logs"></div>
+
+<script>
+    let stripe = null;
+    let cardElement = null;
+
+    // ── Инициализация ─────────────────────────────────────────────────────────
+
+    function initStripe() {
+        const pk = document.getElementById('stripePk').value.trim();
+        if (!pk || !pk.startsWith('pk_')) {
+            log('❌ Введи корректный Stripe Publishable Key (pk_test_...)', 'error');
+            return;
+        }
+
+        stripe = Stripe(pk);
+        const elements = stripe.elements();
+
+        cardElement = elements.create('card', {
+            style: {
+                base: {
+                    color: '#c9d1d9',
+                    fontFamily: 'Courier New, monospace',
+                    fontSize: '14px',
+                    '::placeholder': { color: '#484f58' }
+                },
+                invalid: { color: '#f85149' }
+            }
+        });
+
+        document.getElementById('stripe-card-element').innerHTML = '';
+        cardElement.mount('#stripe-card-element');
+
+        cardElement.on('change', event => {
+            if (event.error) {
+                log('Card error: ' + event.error.message, 'error');
+            }
+        });
+
+        document.getElementById('btnCreatePm').disabled = false;
+        log('✅ Stripe инициализирован', 'success');
+    }
+
+    function fillTestCard() {
+        const card = document.getElementById('testCard').value;
+        if (card !== 'custom') {
+            log(`📋 Выбрана тестовая карта: ${card}`, 'info');
+            log('ℹ️ Карта уже вставлена в Stripe Element — просто нажми "Создать PaymentMethod"', 'warn');
+        }
+    }
+
+    // ── Шаг 1: Создать PaymentMethod ──────────────────────────────────────────
+
+    async function createPaymentMethod() {
+        if (!stripe || !cardElement) {
+            log('❌ Сначала инициализируй Stripe', 'error');
+            return;
+        }
+
+        log('🔄 Создаём PaymentMethod через Stripe...', 'info');
+
+        const { paymentMethod, error } = await stripe.createPaymentMethod({
+            type: 'card',
+            card: cardElement,
+        });
+
+        if (error) {
+            log('❌ Ошибка Stripe: ' + error.message, 'error');
+            return;
+        }
+
+        const pmId = paymentMethod.id;
+        log(`✅ PaymentMethod создан: ${pmId}`, 'success');
+        log(`   Карта: ${paymentMethod.card.brand} **** ${paymentMethod.card.last4}`, 'data');
+
+        document.getElementById('createdPmId').value = pmId;
+        document.getElementById('pmResult').style.display = 'block';
+        document.getElementById('pmIdInput').value = pmId;
+    }
+
+    // ── Шаг 2: Добавить карту ─────────────────────────────────────────────────
+
+    async function addPaymentMethod() {
+        const pmId = document.getElementById('pmIdInput').value.trim();
+        const setDefault = document.getElementById('setDefault').value === 'true';
+        const token = getToken();
+
+        if (!pmId) { log('❌ Введи Payment Method ID', 'error'); return; }
+        if (!token) return;
+
+        log(`🔄 Добавляем карту ${pmId}...`, 'info');
+
+        const response = await apiCall('POST', '/api/v1/payment-methods', token, {
+            stripePaymentMethodId: pmId,
+            setAsDefault: setDefault
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            log(`✅ Карта добавлена: id=${data.id}, ${data.cardBrand} **** ${data.lastFour}`, 'success');
+            // ✅ Исправлено: defaultvalue → default
+            log(`   isDefault=${data.default}, isActive=${data.active}`, 'data');
+        }
+        else {
+            await logError(response, 'Добавить карту');
+        }
+    }
+
+    // ── Шаг 3: Список карт ────────────────────────────────────────────────────
+
+    async function getPaymentMethods() {
+        const token = getToken();
+        if (!token) return;
+
+        log('🔄 Получаем список карт...', 'info');
+
+        const response = await apiCall('GET', '/api/v1/payment-methods', token);
+
+        if (response.ok) {
+            const data = await response.json();
+            log(`✅ Найдено карт: ${data.length}`, 'success');
+
+            const list = document.getElementById('pmList');
+            list.innerHTML = '';
+
+            data.forEach(pm => {
+                const div = document.createElement('div');
+                div.className = 'pm-card';
+                div.innerHTML = `
+                <div>
+                    <span style="color: #58a6ff">${pm.cardBrand?.toUpperCase() || 'CARD'}</span>
+                    &nbsp;<strong>**** ${pm.lastFour}</strong>
+                    &nbsp;${pm.default
+                    ? '<span class="badge badge-success">DEFAULT</span>'
+                    : '<span class="badge badge-pending">secondary</span>'}
+                    &nbsp;<span style="color: #484f58">id=${pm.id}</span>
+                </div>
+                <div>
+                    <button class="btn-primary"
+                        onclick="setDefaultMethod(${pm.id})"
+                        style="padding: 4px 10px; margin: 0 4px"
+                        ${pm.default ? 'disabled' : ''}>
+                        ⭐ Сделать основной
+                    </button>
+                    <button class="btn-danger"
+                        onclick="deleteMethod(${pm.id})"
+                        style="padding: 4px 10px; margin: 0"
+                        ${pm.default ? 'disabled' : ''}>
+                        🗑 Удалить
+                    </button>
+                </div>
+            `;
+                list.appendChild(div);
+            });
+        } else {
+            await logError(response, 'Получить карты');
+        }
+    }
+
+    async function getDefaultPaymentMethod() {
+        const token = getToken();
+        if (!token) return;
+
+        log('🔄 Получаем основную карту...', 'info');
+
+        const response = await apiCall('GET', '/api/v1/payment-methods/default', token);
+
+        if (response.ok) {
+            const data = await response.json();
+            log(`✅ Основная карта: ${data.cardBrand} **** ${data.lastFour} (id=${data.id})`, 'success');
+        } else {
+            await logError(response, 'Получить основную карту');
+        }
+    }
+
+    async function setDefaultMethod(paymentMethodId) {
+        const token = getToken();
+        if (!token) return;
+
+        log(`🔄 Устанавливаем карту ${paymentMethodId} как основную...`, 'info');
+
+        const response = await apiCall(
+            'PUT',
+            `/api/v1/payment-methods/${paymentMethodId}/set-default`,
+            token
+        );
+
+        if (response.ok) {
+            log(`✅ Карта ${paymentMethodId} установлена как основная`, 'success');
+            await getPaymentMethods();
+        } else {
+            await logError(response, 'Установить основную карту');
+        }
+    }
+
+    async function deleteMethod(paymentMethodId) {
+        const token = getToken();
+        if (!token) return;
+
+        log(`🔄 Удаляем карту ${paymentMethodId}...`, 'info');
+
+        const response = await apiCall(
+            'DELETE',
+            `/api/v1/payment-methods/${paymentMethodId}`,
+            token
+        );
+
+        if (response.ok) {
+            log(`✅ Карта ${paymentMethodId} удалена`, 'success');
+            await getPaymentMethods();
+        } else {
+            await logError(response, 'Удалить карту');
+        }
+    }
+
+    // ── Шаг 4: Транзакции ─────────────────────────────────────────────────────
+
+    async function createCharge() {
+        const token = getToken();
+        if (!token) return;
+
+        const body = {
+            tripId: parseInt(document.getElementById('tripId').value),
+            passengerId: parseInt(document.getElementById('passengerId').value),
+            driverId: parseInt(document.getElementById('driverId').value),
+            paymentMethodId: document.getElementById('chargePaymentMethodId').value
+                ? parseInt(document.getElementById('chargePaymentMethodId').value)
+                : null,
+            amount: parseFloat(document.getElementById('chargeAmount').value),
+            currency: document.getElementById('chargeCurrency').value
+        };
+
+        log(`🔄 Создаём платёж: trip=${body.tripId}, amount=${body.amount} ${body.currency}`, 'info');
+
+        const response = await apiCall('POST', '/api/v1/transactions/charge', token, body);
+
+        if (response.ok) {
+            const data = await response.json();
+            log(`✅ Транзакция создана: id=${data.id}, status=${data.status}`, 'success');
+            log(`   stripePaymentIntentId=${data.stripePaymentIntentId}`, 'data');
+
+            document.getElementById('createdTransactionId').value = data.id;
+            document.getElementById('chargeResult').style.display = 'block';
+        } else {
+            await logError(response, 'Создать платёж');
+        }
+    }
+
+    async function createRefund() {
+        const token = getToken();
+        if (!token) return;
+
+        const transactionId = document.getElementById('createdTransactionId').value;
+        const amount = parseFloat(document.getElementById('chargeAmount').value);
+
+        if (!transactionId) { log('❌ Сначала создай транзакцию', 'error'); return; }
+
+        log(`🔄 Создаём возврат для транзакции ${transactionId}...`, 'info');
+
+        const response = await apiCall('POST', '/api/v1/transactions/refund', token, {
+            transactionId: parseInt(transactionId),
+            amount: amount,
+            reason: 'Test refund'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            log(`✅ Возврат создан: id=${data.id}, status=${data.status}`, 'success');
+        } else {
+            await logError(response, 'Создать возврат');
+        }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    function getToken() {
+        const token = document.getElementById('jwtToken').value.trim();
+        if (!token) {
+            log('❌ Введи JWT токен', 'error');
+            return null;
+        }
+        return token;
+    }
+
+    async function apiCall(method, path, token, body = null) {
+        const baseUrl = document.getElementById('gatewayUrl').value.trim();
+        const url = baseUrl + path;
+
+        const options = {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        };
+
+        if (body) {
+            options.body = JSON.stringify(body);
+        }
+
+        log(`→ ${method} ${url}`, 'info');
+        if (body) log(`  Body: ${JSON.stringify(body)}`, 'data');
+
+        try {
+            return await fetch(url, options);
+        } catch (e) {
+            log(`❌ Network error: ${e.message}`, 'error');
+            throw e;
+        }
+    }
+
+    async function logError(response, operation) {
+        let errorText;
+        try {
+            const err = await response.json();
+            errorText = err.message || JSON.stringify(err);
+        } catch {
+            errorText = response.statusText;
+        }
+        log(`❌ ${operation} failed [${response.status}]: ${errorText}`, 'error');
+    }
+
+    function log(message, type = 'info') {
+        const logsDiv = document.getElementById('logs');
+        const time = new Date().toISOString().slice(11, 23);
+        const entry = document.createElement('div');
+        entry.className = `log-entry log-${type}`;
+        entry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
+        logsDiv.prepend(entry);
+    }
+</script>
+
+</body>
+</html>
