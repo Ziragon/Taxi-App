@@ -1,6 +1,7 @@
 package com.example.tripservice.service;
 
 import com.example.shared.dto.enums.VehicleClass;
+import com.example.tripservice.dto.data.CalculatePriceDto;
 import com.example.tripservice.dto.data.TariffDto;
 import com.example.tripservice.dto.data.TariffPriceData;
 import com.example.tripservice.dto.data.TripDto;

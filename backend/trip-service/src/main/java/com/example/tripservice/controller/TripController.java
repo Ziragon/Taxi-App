@@ -2,6 +2,7 @@ package com.example.tripservice.controller;
 
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.security.UserPrincipal;
+import com.example.tripservice.dto.data.AddressDto;
 import com.example.tripservice.dto.data.TripCreateDto;
 import com.example.tripservice.dto.data.TripDto;
 import com.example.tripservice.dto.request.TripCreateRequest;
@@ -36,7 +37,8 @@ public class TripController {
             @PathVariable Long tripId,
             @RequestParam VehicleClass vehicleClass
     ) {
-        tripService.startSearching(principal.userId(), tripId, vehicleClass);
+        AddressDto dto = tripService.startSearching(principal.userId(), tripId, vehicleClass);
+        tripService.beginDriverSearch(tripId, dto.longitude(), dto.latitude(), vehicleClass);
 
         return ResponseEntity.ok().build();
     }

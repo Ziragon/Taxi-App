@@ -78,8 +78,9 @@ public class TripService {
         return TripDto.from(saved, tariffDtos, route.geometry());
     }
 
+    // TripService
     @Transactional
-    public void startSearching(Long userId, Long tripId, VehicleClass vehicleClass) {
+    public AddressDto startSearching(Long userId, Long tripId, VehicleClass vehicleClass) {
 
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new TripNotFoundException(tripId));
@@ -89,14 +90,23 @@ public class TripService {
         }
 
         Tariff tariff = tariffService.getByVehicleClass(vehicleClass);
-
         TariffDto tariffDto = tariffService.calculatePrice(tariff, TripDto.from(trip, null, null));
+
         trip.setTripClass(vehicleClass);
         trip.setPrice(tariffDto.prices().price());
         trip.setDetails(PriceBreakdown.from(trip, tariffDto));
+        trip.setStatus(TripStatus.SEARCHING);
 
         tripRepository.save(trip);
-        // TODO - вызываем менеджер 
+        return new AddressDto(
+                trip.getOriginAddress(),
+                trip.getOriginLat(),
+                trip.getOriginLng()
+        );
+    }
+
+    public void beginDriverSearch(Long tripId, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {
+        driverService.searchDrivers(tripId, longitude, latitude, vehicleClass);
     }
 
     private Trip buildTrip(Long userId, TripCreateDto dto) {
