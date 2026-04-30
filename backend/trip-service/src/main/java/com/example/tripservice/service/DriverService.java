@@ -20,6 +20,7 @@ import java.util.concurrent.*;
 public class DriverService {
 
     private final DriverLocationClient locationClient;
+    private final TripStatusService tripStatusService;
     private final Map<Long, CompletableFuture<Long>> pendingOffers = new ConcurrentHashMap<>();
     private static final int SEARCH_DURATION = 15;
     private static final int[] radiuses = {10, 20, 30};
@@ -61,11 +62,17 @@ public class DriverService {
                 for (DriverLocationDto driver : drivers) {
                     alreadyOffered.add(driver.driverId());
 
+                    if (future.isCompletedExceptionally()) {
+                        future = new CompletableFuture<>();
+                        pendingOffers.put(tripId, future);
+                    }
+
                     // TODO: Отправка оффера водителю
 
                     boolean accepted = waitForAccept(future);
                     if (accepted) {
-                        // TODO: Апдейт статуса поездки
+                        Long driverId = future.getNow(null);
+                        tripStatusService.assignDriver(tripId, driverId);
                         return;
                     }
 
@@ -73,7 +80,7 @@ public class DriverService {
                 }
             }
 
-            // TODO: Cancellation статус поездки
+            tripStatusService.cancelSearch(tripId);
 
         } finally {
             pendingOffers.remove(tripId);
@@ -95,7 +102,6 @@ public class DriverService {
         }
     }
 
-    // TODO: Вызывается из контроллера при принятии заказа
     public void handleDriverAccept(Long tripId, Long driverId) {
         CompletableFuture<Long> future = pendingOffers.get(tripId);
         if (future != null) {
@@ -103,7 +109,6 @@ public class DriverService {
         }
     }
 
-    // TODO: Вызов. Отказ от поездки позволяет сразу перейти к следующему водителю
     public void handleDriverReject(Long tripId, Long driverId) {
         log.info("Driver {} rejected offer for trip {}", driverId, tripId);
         CompletableFuture<Long> future = pendingOffers.get(tripId);
