@@ -48,8 +48,8 @@ public class SecurityConfig {
                             );
                         })
                 )
-                .addFilterBefore(gatewayAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(internalAuthFilter, GatewayAuthFilter.class);
+                .addFilterBefore(internalAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(gatewayAuthFilter, InternalAuthFilter.class);
 
         return http.build();
     }

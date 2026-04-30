@@ -69,6 +69,7 @@ notification:
     header: ${INTERNAL_HEADER:X-Internal-Header}
     header-key: ${INTERNAL_KEY:dev-internal-secret-key-for-services}
     user-service-url: ${USER_SERVICE_URL:http://localhost:8080}
+
 springdoc:
   api-docs:
     enabled: true
@@ -96,3 +97,5 @@ logging:
     com.example.notificationservice: DEBUG
     org.springframework.web.socket: DEBUG
     org.springframework.messaging: DEBUG
+    com.example.notificationservice.client.UserServiceClient: DEBUG
+    feign: DEBUG

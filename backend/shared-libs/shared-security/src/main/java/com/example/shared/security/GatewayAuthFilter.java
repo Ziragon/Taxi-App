@@ -74,6 +74,19 @@ public class GatewayAuthFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.startsWith("/actuator") || path.startsWith("/v3/api-docs") || path.startsWith("/swagger-ui");
+
+        if (path.startsWith("/actuator")
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/swagger-ui")) {
+            return true;
+        }
+
+        if (path.startsWith("/api/v1/drivers/internal")
+                || path.startsWith("/api/v1/passengers/internal")
+                || path.startsWith("/api/v1/trips/internal")) {
+            return true;
+        }
+
+        return false;
     }
 }
