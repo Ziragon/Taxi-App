@@ -1,7 +1,7 @@
 package com.example.tripservice.dto.data;
 
 import com.example.tripservice.entity.Tariff;
-import com.example.tripservice.entity.enums.VehicleClass;
+import com.example.shared.dto.enums.VehicleClass;
 
 import java.math.BigDecimal;
 
@@ -17,16 +17,19 @@ public record TariffDto(
 
         BigDecimal pricePerMin,
 
-        TariffPriceData prices
+        TariffPriceData prices,
+
+        Integer driversNearby
 ) {
-    public static TariffDto from(Tariff tariff, TariffPriceData prices) {
+    public static TariffDto from(Tariff tariff, TariffPriceData prices, Integer driversNearby) {
         return new TariffDto(
                 tariff.getId(),
                 tariff.getTripClass(),
                 tariff.getBaseFare(),
                 tariff.getPricePerKm(),
                 tariff.getPricePerMin(),
-                prices
+                prices,
+                driversNearby
         );
     }
 }

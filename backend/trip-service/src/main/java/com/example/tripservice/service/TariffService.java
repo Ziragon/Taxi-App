@@ -1,13 +1,17 @@
 package com.example.tripservice.service;
 
+import com.example.shared.dto.enums.VehicleClass;
 import com.example.tripservice.dto.data.TariffDto;
 import com.example.tripservice.dto.data.TariffPriceData;
 import com.example.tripservice.dto.data.TripDto;
 import com.example.tripservice.entity.Tariff;
+import com.example.tripservice.exception.TariffNotActiveException;
+import com.example.tripservice.exception.TariffNotFoundException;
 import com.example.tripservice.repository.TariffRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -19,24 +23,30 @@ public class TariffService {
     private final TariffRepository tariffRepository;
     private final PriceService priceService;
 
-    public List<TariffDto> calculateAllTariffs(TripDto tripDto) {
+    @Transactional(readOnly = true)
+    public List<Tariff> getActiveTariffs() {
+        return tariffRepository.findAllByActive(true);
+    }
 
-        List<Tariff> tariffs = tariffRepository.findAllByActive(true);
+    @Transactional(readOnly = true)
+    public Tariff getByVehicleClass(VehicleClass vehicleClass) {
 
-        return tariffs.stream()
-                .map(tariff -> {
-                    TariffPriceData calculatedPrices = priceService.calculatePrice(
-                            tariff.getBaseFare(),
-                            tripDto.distanceKm(),
-                            tripDto.durationMin(),
-                            tariff.getPricePerKm(),
-                            tariff.getPricePerMin(),
-                            tripDto.weatherCoef(),
-                            tripDto.surgeCoef()
-                    );
+        Tariff tariff = tariffRepository.findByTripClass(vehicleClass)
+                .orElseThrow(() -> new TariffNotFoundException(vehicleClass));
 
-                    return TariffDto.from(tariff, calculatedPrices);
-                })
-                .toList();
+        if (!tariff.isActive()) {
+            throw new TariffNotActiveException(vehicleClass);
+        }
+
+        return tariff;
+    }
+
+    public TariffDto calculatePrice(Tariff tariff, TripDto tripDto) {
+
+        TariffPriceData prices = priceService.calculatePrice(
+                CalculatePriceDto.from(tariff, tripDto)
+        );
+
+        return TariffDto.from(tariff, prices, null);
     }
 }

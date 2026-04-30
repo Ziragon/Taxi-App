@@ -1,4 +1,4 @@
-package com.example.userservice.dto.data;
+package com.example.shared.dto.data;
 
 import java.math.BigDecimal;
 

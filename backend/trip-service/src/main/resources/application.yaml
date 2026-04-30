@@ -51,6 +51,10 @@ spring:
         prefetch: 10
         acknowledge-mode: auto
 
+  threads:
+    virtual:
+      enabled: true
+
 server:
   port: 8081
   shutdown: graceful
@@ -65,6 +69,13 @@ weather-api:
 gateway-auth:
   header: ${JWT_HEADER:X-Gateway-Header}
   header-key: ${HEADER_KEY:dev-secret-key-for-microservices}
+
+internal-auth:
+  header: ${INTERNAL_HEADER:X-Internal-Header}
+  header-key: ${HEADER_KEY:dev-secret-internal-key-for-microservices}
+
+internal:
+  user-service: ${USER_SERVICE:http://localhost:8080}
 
 springdoc:
   api-docs:

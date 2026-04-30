@@ -1,7 +1,7 @@
 package com.example.userservice.controller;
 
-import com.example.shared.dto.request.NearbyDriversRequest;
-import com.example.userservice.dto.data.DriverLocationDto;
+import com.example.shared.dto.enums.VehicleClass;
+import com.example.shared.dto.data.DriverLocationDto;
 import com.example.userservice.dto.request.DriverLocationRequest;
 import com.example.userservice.service.DriverLocationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -9,10 +9,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/drivers/internal")
+@RequestMapping("/api/v1/internal/drivers")
 @RequiredArgsConstructor
 @Tag(name = "Internal Requests (НЕ ДЛЯ ФРОНТА)")
 public class DriverLocationInternalController {
@@ -30,12 +31,15 @@ public class DriverLocationInternalController {
 
     @GetMapping("/nearby")
     public ResponseEntity<List<DriverLocationDto>> getNearbyDrivers(
-            @RequestBody NearbyDriversRequest request
+            @RequestParam BigDecimal lng,
+            @RequestParam BigDecimal lat,
+            @RequestParam BigDecimal rad,
+            @RequestParam(required = false) VehicleClass vehicleClass
     ) {
         return ResponseEntity.ok(
                 driverLocationService.getNearbyOnlineDrivers(
-                        request.longitude(), request.latitude(),
-                        request.radius(), request.vehicleClass()
+                        lng, lat,
+                        rad, vehicleClass
                 )
         );
     }

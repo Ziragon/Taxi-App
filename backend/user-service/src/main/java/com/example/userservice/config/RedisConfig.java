@@ -1,6 +1,6 @@
 package com.example.userservice.config;
 
-import com.example.userservice.dto.data.DriverLocationDto;
+import com.example.shared.dto.data.DriverLocationDto;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;

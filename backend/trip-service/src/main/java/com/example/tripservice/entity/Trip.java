@@ -2,7 +2,7 @@ package com.example.tripservice.entity;
 
 import com.example.tripservice.dto.data.PriceBreakdown;
 import com.example.tripservice.entity.enums.TripStatus;
-import com.example.tripservice.entity.enums.VehicleClass;
+import com.example.shared.dto.enums.VehicleClass;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
