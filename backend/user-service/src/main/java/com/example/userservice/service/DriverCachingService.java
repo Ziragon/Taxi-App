@@ -2,7 +2,7 @@ package com.example.userservice.service;
 
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.dto.data.DriverLocationDto;
-import com.example.userservice.entity.enums.DriverStatus;
+import com.example.shared.dto.enums.DriverStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,10 +12,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.domain.geo.GeoReference;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -100,6 +97,17 @@ public class DriverCachingService {
                         redisStringTemplate.opsForValue().get(KEY_STATUS_PREFIX + dto.driverId())))
                 .filter(dto -> vehicleClass == null || vehicleClass.equals(dto.vehicleClass()))
                 .toList();
+    }
+
+    public DriverStatus getStatus(Long driverId) {
+        String key = KEY_STATUS_PREFIX + driverId;
+        String statusName = redisStringTemplate.opsForValue().get(key);
+
+        if (statusName == null) {
+            return DriverStatus.OFFLINE;
+        }
+
+        return DriverStatus.valueOf(statusName);
     }
 
     public List<DriverLocationDto> getNearbyOnlineDrivers(

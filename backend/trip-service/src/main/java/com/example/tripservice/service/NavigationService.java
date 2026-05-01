@@ -8,6 +8,7 @@ import com.example.tripservice.exception.RouteNotFoundException;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -19,6 +20,11 @@ public class NavigationService {
 
     private final OsrmClient osrmClient;
 
+    // Кэширует точный маршрут по координатам
+    // Нужен если пользователь несколько раз случайно запросил один и тот же маршрут (несколько раз нажал подтвердить)
+    @Cacheable(value = "routes",
+            key = "{#originLng, #originLat, #destLng, #destLat}",
+            unless = "#result == null")
     public RouteDto getRouteInfo(BigDecimal originLng, BigDecimal originLat,
                                  BigDecimal destLng, BigDecimal destLat
     ) {

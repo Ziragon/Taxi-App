@@ -7,6 +7,7 @@ import com.example.tripservice.dto.data.*;
 import com.example.tripservice.entity.Tariff;
 import com.example.tripservice.entity.Trip;
 import com.example.tripservice.entity.enums.TripStatus;
+import com.example.tripservice.exception.TripAlreadyExistsException;
 import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.repository.TripRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,14 +34,27 @@ public class TripService {
     private final NavigationService navigationService;
     private final PriceService priceService;
     private final TariffService tariffService;
-    private final DriverService driverService;
+    private final DriverSearchService driverSearchService;
+    private final ProfileStatusService profileStatusService;
     @Qualifier("applicationTaskExecutor")
     private final AsyncTaskExecutor executor;
 
     @Transactional
     public TripDto createTrip(Long userId, TripCreateDto dto) {
 
-        Trip trip = buildTrip(userId, dto);
+        profileStatusService.verifyPassengerCanOrder(userId);
+
+        boolean hasActive = tripRepository.existsByPassengerIdAndStatusIn(userId,
+                List.of(TripStatus.SEARCHING, TripStatus.DRIVER_ASSIGNED, TripStatus.IN_PROGRESS));
+
+        if (hasActive) {
+            throw new TripAlreadyExistsException();
+        }
+
+        Trip trip = tripRepository.findFirstByPassengerIdAndStatusOrderByCreatedAtDesc(userId, TripStatus.CREATED)
+                .orElseGet(() -> buildTrip(userId, dto));
+
+        Trip updatedTrip = updateTripCoordinates(trip, dto);
 
         var routeFuture = CompletableFuture.supplyAsync(() ->
                 navigationService.getRouteInfo(dto.originLng(), dto.originLat(), dto.destLng(), dto.destLat()),
@@ -51,7 +65,7 @@ public class TripService {
                 executor);
 
         var driversFuture = CompletableFuture.supplyAsync(() ->
-                driverService.getNearbyDrivers(dto.originLng(), dto.originLat(), new BigDecimal("30")),
+                driverSearchService.getNearbyDrivers(dto.originLng(), dto.originLat(), new BigDecimal("30")),
                 executor);
 
         var tariffsFuture = CompletableFuture.supplyAsync(
@@ -66,20 +80,21 @@ public class TripService {
         List<DriverLocationDto> drivers = driversFuture.join();
         List<Tariff> tariffs = tariffsFuture.join();
 
-        trip.setDistanceKm(BigDecimal.valueOf(route.distance()).divide(new BigDecimal("1000"), 3, RoundingMode.HALF_UP));
-        trip.setDurationMin(BigDecimal.valueOf(route.duration()).divide(new BigDecimal("60"), 10, RoundingMode.HALF_UP));
-        trip.setWeatherCoef(weather.weatherCoef());
-        trip.setSurgeCoef(priceService.getSurgeCoef(weather.localtime()));
+        updatedTrip.setDistanceKm(BigDecimal.valueOf(route.distance()).divide(new BigDecimal("1000"), 3, RoundingMode.HALF_UP));
+        updatedTrip.setDurationMin(BigDecimal.valueOf(route.duration()).divide(new BigDecimal("60"), 10, RoundingMode.HALF_UP));
+        updatedTrip.setWeatherCoef(weather.weatherCoef());
+        updatedTrip.setSurgeCoef(priceService.getSurgeCoef(weather.localtime()));
 
-        List<TariffDto> tariffDtos = buildFilteredTariffs(tariffs, drivers, TripDto.from(trip, null, null));
+        List<TariffDto> tariffDtos = buildFilteredTariffs(tariffs, drivers, TripDto.from(updatedTrip, null, null));
 
-        Trip saved = tripRepository.save(trip);
+        Trip saved = tripRepository.save(updatedTrip);
 
         return TripDto.from(saved, tariffDtos, route.geometry());
     }
 
+    // Метод просто меняет статус поездки и заполняет его данными, сам поиск происходит в DriverService
     @Transactional
-    public void startSearching(Long userId, Long tripId, VehicleClass vehicleClass) {
+    public AddressDto startSearching(Long userId, Long tripId, VehicleClass vehicleClass) {
 
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new TripNotFoundException(tripId));
@@ -88,15 +103,38 @@ public class TripService {
             throw new AccessDeniedException();
         }
 
-        Tariff tariff = tariffService.getByVehicleClass(vehicleClass);
+        if (List.of(TripStatus.SEARCHING, TripStatus.DRIVER_ASSIGNED, TripStatus.IN_PROGRESS).contains(trip.getStatus())) {
+            throw new TripAlreadyExistsException();
+        }
 
+        Tariff tariff = tariffService.getByVehicleClass(vehicleClass);
         TariffDto tariffDto = tariffService.calculatePrice(tariff, TripDto.from(trip, null, null));
+
         trip.setTripClass(vehicleClass);
         trip.setPrice(tariffDto.prices().price());
         trip.setDetails(PriceBreakdown.from(trip, tariffDto));
+        trip.setStatus(TripStatus.SEARCHING);
 
         tripRepository.save(trip);
-        // TODO - вызываем менеджер 
+        return new AddressDto(
+                trip.getOriginAddress(),
+                trip.getOriginLat(),
+                trip.getOriginLng()
+        );
+    }
+
+    public void beginDriverSearch(Long tripId, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {
+        driverSearchService.searchDrivers(tripId, longitude, latitude, vehicleClass);
+    }
+
+    private Trip updateTripCoordinates(Trip trip, TripCreateDto dto) {
+        trip.setOriginAddress(dto.originAddress());
+        trip.setOriginLat(dto.originLat());
+        trip.setOriginLng(dto.originLng());
+        trip.setDestinationAddress(dto.destAddress());
+        trip.setDestinationLat(dto.destLat());
+        trip.setDestinationLng(dto.destLng());
+        return trip;
     }
 
     private Trip buildTrip(Long userId, TripCreateDto dto) {

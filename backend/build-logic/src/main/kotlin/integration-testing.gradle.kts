@@ -12,11 +12,17 @@ dependencies {
     testImplementation(libs.findLibrary("testcontainers-redis").get())
     testImplementation(libs.findLibrary("boot-webmvc-test").get())
     testImplementation(libs.findLibrary("boot-starter-security-test").get())
+    testImplementation(libs.findLibrary("boot-starter-jpa-test").get())
     testImplementation(libs.findLibrary("testcontainers-jdbc").get())
     testImplementation(libs.findLibrary("awaitility").get())
 }
 
 tasks.named<Test>("test") {
     description = "Runs all tests (unit and integration)."
+    maxParallelForks = 1
     useJUnitPlatform()
+
+    systemProperty("junit.jupiter.execution.parallel.enabled", "false")
+    systemProperty("junit.jupiter.execution.parallel.mode.default", "same_thread")
+    systemProperty("junit.jupiter.execution.parallel.mode.classes.default", "same_thread")
 }

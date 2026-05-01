@@ -4,7 +4,7 @@ import com.example.userservice.dto.data.AccountAdminDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.enums.AccountRole;
-import com.example.userservice.entity.enums.DriverStatus;
+import com.example.shared.dto.enums.DriverStatus;
 import com.example.userservice.repository.AccountRepository;
 import com.example.userservice.repository.DriverProfileRepository;
 import com.example.userservice.service.AccountService;

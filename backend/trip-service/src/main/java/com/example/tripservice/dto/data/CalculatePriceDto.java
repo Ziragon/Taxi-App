@@ -1,6 +1,5 @@
-package com.example.tripservice.service;
+package com.example.tripservice.dto.data;
 
-import com.example.tripservice.dto.data.TripDto;
 import com.example.tripservice.entity.Tariff;
 
 import java.math.BigDecimal;

@@ -1,5 +1,6 @@
 package com.example.tripservice.service;
 
+import com.example.tripservice.dto.data.CalculatePriceDto;
 import com.example.tripservice.dto.data.TariffPriceData;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -102,7 +102,7 @@ jobs:
         run: ./gradlew :${{ matrix.service }}:build
         env:
           TESTCONTAINERS_RYUK_DISABLED: false
-          TESTCONTAINERS_REUSE_ENABLE: true 
+          TESTCONTAINERS_REUSE_ENABLE: false
           TESTCONTAINERS_CHECKS_DISABLE: false
 
       - name: Upload test report
@@ -141,9 +141,6 @@ jobs:
       fail-fast: false
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.services) }}
-        exclude:
-          - service: trip-service
-          - service: notification-service
 
     steps:
       - uses: actions/checkout@v4
