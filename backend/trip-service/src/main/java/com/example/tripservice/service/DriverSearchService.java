@@ -3,7 +3,7 @@ package com.example.tripservice.service;
 import com.example.shared.dto.data.DriverLocationDto;
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.exception.common.ServiceUnavailableException;
-import com.example.tripservice.client.DriverLocationClient;
+import com.example.tripservice.client.UserServiceClient;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,9 +20,10 @@ import java.util.concurrent.*;
 @Slf4j
 public class DriverSearchService {
 
-    private final DriverLocationClient locationClient;
+    private final UserServiceClient locationClient;
     private final TripStatusService tripStatusService;
     private final OfferCacheService offerCacheService;
+    private final ProfileStatusService profileStatusService;
 
     private final DriverResponseSubscriber responseSubscriber;
     private final DriverResponsePublisher responsePublisher;
@@ -102,6 +103,7 @@ public class DriverSearchService {
 
     public void handleDriverAccept(Long tripId, Long driverId) {
         offerCacheService.validateActiveOffer(tripId, driverId);
+        profileStatusService.verifyDriverCanDrive(driverId);
         responsePublisher.publish(tripId, "ACCEPT", driverId);
     }
 

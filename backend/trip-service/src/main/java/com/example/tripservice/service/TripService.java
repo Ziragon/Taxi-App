@@ -35,11 +35,14 @@ public class TripService {
     private final PriceService priceService;
     private final TariffService tariffService;
     private final DriverSearchService driverSearchService;
+    private final ProfileStatusService profileStatusService;
     @Qualifier("applicationTaskExecutor")
     private final AsyncTaskExecutor executor;
 
     @Transactional
     public TripDto createTrip(Long userId, TripCreateDto dto) {
+
+        profileStatusService.verifyPassengerCanOrder(userId);
 
         boolean hasActive = tripRepository.existsByPassengerIdAndStatusIn(userId,
                 List.of(TripStatus.SEARCHING, TripStatus.DRIVER_ASSIGNED, TripStatus.IN_PROGRESS));

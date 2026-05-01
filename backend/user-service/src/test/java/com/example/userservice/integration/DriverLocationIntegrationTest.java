@@ -8,7 +8,7 @@ import com.example.userservice.entity.Account;
 import com.example.userservice.entity.DriverLocation;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.enums.AccountRole;
-import com.example.userservice.entity.enums.DriverStatus;
+import com.example.shared.dto.enums.DriverStatus;
 import com.example.userservice.repository.AccountRepository;
 import com.example.userservice.repository.DriverLocationRepository;
 import com.example.userservice.repository.DriverProfileRepository;

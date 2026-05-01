@@ -26,6 +26,7 @@ public class TripStatusService {
         tripRepository.save(trip);
 
         // TODO - WebSocket уведомление пассажиру
+        // Просчет OSRM-маршрута от водителя до пассажира и выдача результата обоим
     }
 
     @Transactional
@@ -37,5 +38,6 @@ public class TripStatusService {
         tripRepository.save(trip);
 
         // TODO - WebSocket уведомление пассажиру
+        // Просьба перезаказать
     }
 }

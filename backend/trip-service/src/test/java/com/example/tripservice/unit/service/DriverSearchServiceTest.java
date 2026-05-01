@@ -2,7 +2,7 @@ package com.example.tripservice.unit.service;
 
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.exception.common.ServiceUnavailableException;
-import com.example.tripservice.client.DriverLocationClient;
+import com.example.tripservice.client.UserServiceClient;
 import com.example.tripservice.service.*;
 import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +25,7 @@ import static org.mockito.Mockito.*;
 class DriverSearchServiceTest {
 
     @Mock
-    private DriverLocationClient locationClient;
+    private UserServiceClient locationClient;
     @Mock
     private TripStatusService tripStatusService;
     @Mock
