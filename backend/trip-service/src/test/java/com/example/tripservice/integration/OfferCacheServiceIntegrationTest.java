@@ -18,7 +18,7 @@ class OfferCacheServiceIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        clearCaches();
+        clearKeysByPattern("active_offer:");
     }
 
     @Test

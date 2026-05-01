@@ -31,8 +31,20 @@ public abstract class BaseIntegrationTest {
     @Autowired
     private RedisTemplate<Object, Object> redisTemplate;
 
-    protected void clearCaches() {
-        cacheManager.getCacheNames()
-                .forEach(name -> Objects.requireNonNull(cacheManager.getCache(name)).clear());
+    @Autowired
+    private RedisTemplate<String, Long> longRedisTemplate;
+
+    protected void clearKeysByPattern(String pattern) {
+        var keys = longRedisTemplate.keys(pattern + "*");
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+        }
+    }
+
+    protected void clearCache(String cacheName) {
+        var cache = cacheManager.getCache(cacheName);
+        if (cache != null) {
+            cache.clear();
+        }
     }
 }

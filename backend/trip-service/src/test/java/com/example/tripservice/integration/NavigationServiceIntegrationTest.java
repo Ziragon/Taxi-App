@@ -27,7 +27,7 @@ class NavigationServiceIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        clearCaches();
+        clearCache("routes");
     }
 
     private OsrmResponse buildSuccessResponse(double distance, int duration, String geometry) {

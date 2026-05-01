@@ -23,7 +23,7 @@ class WeatherServiceIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        clearCaches();
+        clearCache("weather");
     }
 
     private WeatherResponse buildMockResponse(String locationName, double temp, int code, String conditionText) {

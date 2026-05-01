@@ -25,11 +25,6 @@ class DriverResponseIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private DriverResponseSubscriber subscriber;
 
-    @BeforeEach
-    void setUp() {
-        clearCaches();
-    }
-
     @Test
     @DisplayName("Publish ACCEPT - Subscriber получает - future завершается с driverId")
     void publish_accept_futureCompletedWithDriverId() throws Exception {
