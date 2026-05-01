@@ -19,5 +19,6 @@ dependencies {
 
 tasks.named<Test>("test") {
     description = "Runs all tests (unit and integration)."
+    maxParallelForks = 1
     useJUnitPlatform()
 }
