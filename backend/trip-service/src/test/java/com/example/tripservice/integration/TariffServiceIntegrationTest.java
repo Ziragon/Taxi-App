@@ -1,6 +1,7 @@
 package com.example.tripservice.integration;
 
 import com.example.shared.dto.enums.VehicleClass;
+import com.example.tripservice.BaseIntegrationTest;
 import com.example.tripservice.config.TestContainersConfig;
 import com.example.tripservice.entity.Tariff;
 import com.example.tripservice.exception.TariffNotActiveException;
@@ -23,11 +24,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@Import(TestContainersConfig.class)
-@ActiveProfiles("test")
 @Transactional
-public class TariffServiceIntegrationTest {
+public class TariffServiceIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private TariffService tariffService;

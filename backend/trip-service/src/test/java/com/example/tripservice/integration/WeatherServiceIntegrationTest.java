@@ -1,7 +1,6 @@
 package com.example.tripservice.integration;
 
-import com.example.tripservice.client.WeatherAPIClient;
-import com.example.tripservice.config.TestContainersConfig;
+import com.example.tripservice.BaseIntegrationTest;
 import com.example.tripservice.dto.data.WeatherDto;
 import com.example.tripservice.dto.response.WeatherResponse;
 import com.example.tripservice.service.WeatherService;
@@ -9,38 +8,22 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cache.CacheManager;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@Import(TestContainersConfig.class)
-@ActiveProfiles("test")
-class WeatherServiceIntegrationTest {
+class WeatherServiceIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private WeatherService weatherService;
 
-    @Autowired
-    private CacheManager cacheManager;
-
-    @MockitoBean
-    private WeatherAPIClient weatherClient;
-
     @BeforeEach
-    void clearCaches() {
-        cacheManager.getCacheNames()
-                .forEach(name -> Objects.requireNonNull(cacheManager.getCache(name)).clear());
+    void setUp() {
+        clearCaches();
     }
 
     private WeatherResponse buildMockResponse(String locationName, double temp, int code, String conditionText) {
@@ -56,8 +39,8 @@ class WeatherServiceIntegrationTest {
         WeatherResponse response = buildMockResponse("Moscow", 20.0, 1000, "Sunny");
         when(weatherClient.getWeather(anyString(), anyString(), anyString())).thenReturn(response);
 
-        BigDecimal lat = new BigDecimal("55.7500");
-        BigDecimal lng = new BigDecimal("37.6200");
+        BigDecimal lat = new BigDecimal("69.7500");
+        BigDecimal lng = new BigDecimal("42.6200");
 
         WeatherDto first  = weatherService.getWeatherCoef(lng, lat);
         WeatherDto second = weatherService.getWeatherCoef(lng, lat);
@@ -73,8 +56,8 @@ class WeatherServiceIntegrationTest {
                 .thenReturn(buildMockResponse("Moscow",           20.0, 1000, "Sunny"))
                 .thenReturn(buildMockResponse("Saint Petersburg", 12.0, 1063, "Overcast"));
 
-        weatherService.getWeatherCoef(new BigDecimal("82.92"), new BigDecimal("55.03"));
-        weatherService.getWeatherCoef(new BigDecimal("30.32"), new BigDecimal("59.93"));
+        weatherService.getWeatherCoef(new BigDecimal("30.92"), new BigDecimal("30.03"));
+        weatherService.getWeatherCoef(new BigDecimal("52.32"), new BigDecimal("30.93"));
 
         verify(weatherClient, times(2)).getWeather(anyString(), anyString(), anyString());
     }
@@ -103,7 +86,7 @@ class WeatherServiceIntegrationTest {
                 .thenThrow(new RuntimeException("API unavailable"));
 
         WeatherDto result = weatherService.getWeatherCoef(
-                new BigDecimal("37.62"), new BigDecimal("55.75")
+                new BigDecimal("0.0"), new BigDecimal("0.0")
         );
 
         assertThat(result).isNotNull();

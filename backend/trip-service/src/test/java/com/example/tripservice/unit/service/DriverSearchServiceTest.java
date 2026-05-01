@@ -1,23 +1,23 @@
 package com.example.tripservice.unit.service;
 
-import com.example.shared.exception.common.AccessDeniedException;
+import com.example.shared.dto.enums.VehicleClass;
+import com.example.shared.exception.common.ServiceUnavailableException;
 import com.example.tripservice.client.DriverLocationClient;
-import com.example.tripservice.service.DriverSearchService;
-import com.example.tripservice.service.TripStatusService;
-import org.junit.jupiter.api.BeforeEach;
+import com.example.tripservice.service.*;
+import feign.FeignException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.Map;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
+import java.math.BigDecimal;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class DriverSearchServiceTest {
@@ -26,63 +26,61 @@ class DriverSearchServiceTest {
     private DriverLocationClient locationClient;
     @Mock
     private TripStatusService tripStatusService;
+    @Mock
+    private OfferCacheService offerCacheService;
+    @Mock
+    private DriverResponseSubscriber responseSubscriber;
+    @Mock
+    private DriverResponsePublisher responsePublisher;
 
     @InjectMocks
     private DriverSearchService driverSearchService;
 
-    private Map<Long, CompletableFuture<Long>> pendingOffers;
-    private Map<Long, Long> activeOffers;
-
-    @BeforeEach
-    @SuppressWarnings("unchecked")
-    void setUp() {
-        pendingOffers = (Map<Long, CompletableFuture<Long>>) ReflectionTestUtils.getField(driverSearchService, "pendingOffers");
-        activeOffers = (Map<Long, Long>) ReflectionTestUtils.getField(driverSearchService, "activeOffers");
-    }
-
     @Test
-    @DisplayName("Должен корректно обработать принятие заказа")
-    void handleDriverAccept_ShouldCompleteFuture_WhenDriverMatches() {
+    @DisplayName("handleDriverAccept: должен вызвать валидацию и опубликовать принятие")
+    void handleDriverAccept_ShouldValidateAndPublish() {
         Long tripId = 1L;
         Long driverId = 100L;
-        CompletableFuture<Long> future = new CompletableFuture<>();
-
-        pendingOffers.put(tripId, future);
-        activeOffers.put(tripId, driverId);
 
         driverSearchService.handleDriverAccept(tripId, driverId);
 
-        assertTrue(future.isDone());
-        assertEquals(driverId, future.join());
+        verify(offerCacheService).validateActiveOffer(tripId, driverId);
+        verify(responsePublisher).publish(tripId, "ACCEPT", driverId);
     }
 
     @Test
-    @DisplayName("Должен выкинуть AccessDenied при чужом доступе к Trip")
-    void handleDriverAccept_ShouldThrowAccessDenied_WhenDriverMismatches() {
+    @DisplayName("handleDriverReject: должен вызвать валидацию и опубликовать отказ")
+    void handleDriverReject_ShouldValidateAndPublish() {
         Long tripId = 1L;
-        Long actualDriverId = 100L;
-        Long wrongDriverId = 999L;
+        Long driverId = 100L;
 
-        activeOffers.put(tripId, actualDriverId);
+        driverSearchService.handleDriverReject(tripId, driverId);
 
-        assertThrows(AccessDeniedException.class, () ->
-                driverSearchService.handleDriverAccept(tripId, wrongDriverId)
+        verify(offerCacheService).validateActiveOffer(tripId, driverId);
+        verify(responsePublisher).publish(tripId, "REJECT", driverId);
+    }
+
+    @Test
+    @DisplayName("getNearbyDrivers: должен выбрасывать ServiceUnavailableException при ошибке Feign")
+    void getNearbyDrivers_ShouldThrowServiceUnavailable_WhenFeignFails() {
+        when(locationClient.getNearbyDrivers(any(), any(), any(), any()))
+                .thenThrow(mock(FeignException.class));
+
+        assertThrows(ServiceUnavailableException.class, () ->
+                driverSearchService.getNearbyDrivers(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.TEN)
         );
     }
 
     @Test
-    @DisplayName("Должен корректно обработать отказ от поездки")
-    void handleDriverReject_ShouldCompleteExceptionally_WhenDriverMatches() {
+    @DisplayName("searchDrivers: должен отменить поиск, если водители не найдены")
+    void searchDrivers_ShouldCancelSearch_WhenNoDriversFound() {
         Long tripId = 1L;
-        Long driverId = 100L;
-        CompletableFuture<Long> future = new CompletableFuture<>();
+        when(locationClient.getNearbyDrivers(any(), any(), any(), any())).thenReturn(List.of());
 
-        pendingOffers.put(tripId, future);
-        activeOffers.put(tripId, driverId);
+        driverSearchService.searchDrivers(tripId, BigDecimal.ZERO, BigDecimal.ZERO, VehicleClass.ECONOMY);
 
-        driverSearchService.handleDriverReject(tripId, driverId);
-
-        assertTrue(future.isCompletedExceptionally());
-        assertThrows(CancellationException.class, future::join);
+        verify(responseSubscriber).registerFuture(eq(tripId), any());
+        verify(tripStatusService).cancelSearch(tripId);
+        verify(responseSubscriber).removeFuture(tripId);
     }
 }
