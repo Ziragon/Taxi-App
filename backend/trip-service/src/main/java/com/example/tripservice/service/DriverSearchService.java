@@ -7,6 +7,7 @@ import com.example.tripservice.client.DriverLocationClient;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -26,8 +27,10 @@ public class DriverSearchService {
     private final DriverResponseSubscriber responseSubscriber;
     private final DriverResponsePublisher responsePublisher;
 
-    private static final int SEARCH_DURATION = 15;
-    private static final int[] RADIUSES = {5, 10, 15};
+    @Value("${searching.duration}")
+    private int searchDuration;
+    @Value("${searching.radiuses}")
+    private int[] radiuses;
 
     public List<DriverLocationDto> getNearbyDrivers(BigDecimal longitude, BigDecimal latitude, BigDecimal radius) {
         try {
@@ -55,7 +58,7 @@ public class DriverSearchService {
         responseSubscriber.registerFuture(tripId, future);
 
         try {
-            for (int radius : RADIUSES) {
+            for (int radius : radiuses) {
                 log.debug("Driver searching with radius {}", radius);
 
                 List<DriverLocationDto> drivers = getNearbyDrivers(
@@ -110,7 +113,7 @@ public class DriverSearchService {
 
     private boolean waitForAccept(CompletableFuture<Long> future) {
         try {
-            future.get(SEARCH_DURATION, TimeUnit.SECONDS);
+            future.get(searchDuration, TimeUnit.SECONDS);
             return true;
         } catch (TimeoutException _) {
             return false;

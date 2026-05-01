@@ -3,6 +3,7 @@ package com.example.tripservice.service;
 import com.example.shared.exception.common.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -15,14 +16,16 @@ public class OfferCacheService {
 
     private final RedisTemplate<String, Long> longRedisTemplate;
 
-    private static final int SEARCH_DURATION = 15;
+    @Value("${searching.duration}")
+    private int searchDuration;
+
     private static final String ACTIVE_OFFER_KEY = "active_offer:";
 
     public void setActiveOffer(Long tripId, Long driverId) {
         longRedisTemplate.opsForValue().set(
                 ACTIVE_OFFER_KEY + tripId,
                 driverId,
-                Duration.ofSeconds(SEARCH_DURATION + 5)
+                Duration.ofSeconds(searchDuration + 5)
         );
     }
 
