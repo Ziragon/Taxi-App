@@ -30,6 +30,9 @@ spring:
     deserialization:
       fail-on-unknown-properties: false
 
+  cache:
+    type: redis
+
   data:
     redis:
       host: ${REDIS_HOST:localhost}
