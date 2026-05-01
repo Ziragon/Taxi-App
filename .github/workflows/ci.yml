@@ -141,9 +141,6 @@ jobs:
       fail-fast: false
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.services) }}
-        exclude:
-          - service: trip-service
-          - service: notification-service
 
     steps:
       - uses: actions/checkout@v4

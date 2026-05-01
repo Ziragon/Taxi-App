@@ -31,6 +31,8 @@ class DriverSearchServiceTest {
     @Mock
     private OfferCacheService offerCacheService;
     @Mock
+    private ProfileStatusService profileStatusService;
+    @Mock
     private DriverResponseSubscriber responseSubscriber;
     @Mock
     private DriverResponsePublisher responsePublisher;
