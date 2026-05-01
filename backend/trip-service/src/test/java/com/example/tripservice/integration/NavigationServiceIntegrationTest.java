@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(TestContainersConfig.class)
 @ActiveProfiles("test")
 class NavigationServiceIntegrationTest {
@@ -96,8 +96,8 @@ class NavigationServiceIntegrationTest {
     @Test
     @DisplayName("OSRM выдал ошибку - RouteNotFoundException")
     void getRouteInfo_osrmNonOkCode_throwsRouteNotFoundException() {
-        when(osrmClient.getRoute(anyString(), anyString()))
-                .thenReturn(buildFailResponse());
+        OsrmResponse failResponse = buildFailResponse();
+        when(osrmClient.getRoute(anyString(), anyString())).thenReturn(failResponse);
 
         assertThatThrownBy(() ->
                 navigationService.getRouteInfo(ORIGIN_LNG, ORIGIN_LAT, DEST_LNG, DEST_LAT)
