@@ -7,6 +7,7 @@ import com.example.tripservice.dto.data.*;
 import com.example.tripservice.entity.Tariff;
 import com.example.tripservice.entity.Trip;
 import com.example.tripservice.entity.enums.TripStatus;
+import com.example.tripservice.exception.TripAlreadyExistsException;
 import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.repository.TripRepository;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +41,17 @@ public class TripService {
     @Transactional
     public TripDto createTrip(Long userId, TripCreateDto dto) {
 
-        Trip trip = buildTrip(userId, dto);
+        boolean hasActive = tripRepository.existsByPassengerIdAndStatusIn(userId,
+                List.of(TripStatus.SEARCHING, TripStatus.DRIVER_ASSIGNED, TripStatus.IN_PROGRESS));
+
+        if (hasActive) {
+            throw new TripAlreadyExistsException();
+        }
+
+        Trip trip = tripRepository.findFirstByPassengerIdAndStatusOrderByCreatedAtDesc(userId, TripStatus.CREATED)
+                .orElseGet(() -> buildTrip(userId, dto));
+
+        Trip updatedTrip = updateTripCoordinates(trip, dto);
 
         var routeFuture = CompletableFuture.supplyAsync(() ->
                 navigationService.getRouteInfo(dto.originLng(), dto.originLat(), dto.destLng(), dto.destLat()),
@@ -66,19 +77,19 @@ public class TripService {
         List<DriverLocationDto> drivers = driversFuture.join();
         List<Tariff> tariffs = tariffsFuture.join();
 
-        trip.setDistanceKm(BigDecimal.valueOf(route.distance()).divide(new BigDecimal("1000"), 3, RoundingMode.HALF_UP));
-        trip.setDurationMin(BigDecimal.valueOf(route.duration()).divide(new BigDecimal("60"), 10, RoundingMode.HALF_UP));
-        trip.setWeatherCoef(weather.weatherCoef());
-        trip.setSurgeCoef(priceService.getSurgeCoef(weather.localtime()));
+        updatedTrip.setDistanceKm(BigDecimal.valueOf(route.distance()).divide(new BigDecimal("1000"), 3, RoundingMode.HALF_UP));
+        updatedTrip.setDurationMin(BigDecimal.valueOf(route.duration()).divide(new BigDecimal("60"), 10, RoundingMode.HALF_UP));
+        updatedTrip.setWeatherCoef(weather.weatherCoef());
+        updatedTrip.setSurgeCoef(priceService.getSurgeCoef(weather.localtime()));
 
-        List<TariffDto> tariffDtos = buildFilteredTariffs(tariffs, drivers, TripDto.from(trip, null, null));
+        List<TariffDto> tariffDtos = buildFilteredTariffs(tariffs, drivers, TripDto.from(updatedTrip, null, null));
 
-        Trip saved = tripRepository.save(trip);
+        Trip saved = tripRepository.save(updatedTrip);
 
         return TripDto.from(saved, tariffDtos, route.geometry());
     }
 
-    // TripService
+    // Метод просто меняет статус поездки и заполняет его данными, сам поиск происходит в DriverService
     @Transactional
     public AddressDto startSearching(Long userId, Long tripId, VehicleClass vehicleClass) {
 
@@ -87,6 +98,10 @@ public class TripService {
 
         if (!trip.getPassengerId().equals(userId)) {
             throw new AccessDeniedException();
+        }
+
+        if (List.of(TripStatus.SEARCHING, TripStatus.DRIVER_ASSIGNED, TripStatus.IN_PROGRESS).contains(trip.getStatus())) {
+            throw new TripAlreadyExistsException();
         }
 
         Tariff tariff = tariffService.getByVehicleClass(vehicleClass);
@@ -107,6 +122,16 @@ public class TripService {
 
     public void beginDriverSearch(Long tripId, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {
         driverService.searchDrivers(tripId, longitude, latitude, vehicleClass);
+    }
+
+    private Trip updateTripCoordinates(Trip trip, TripCreateDto dto) {
+        trip.setOriginAddress(dto.originAddress());
+        trip.setOriginLat(dto.originLat());
+        trip.setOriginLng(dto.originLng());
+        trip.setDestinationAddress(dto.destAddress());
+        trip.setDestinationLat(dto.destLat());
+        trip.setDestinationLng(dto.destLng());
+        return trip;
     }
 
     private Trip buildTrip(Long userId, TripCreateDto dto) {
