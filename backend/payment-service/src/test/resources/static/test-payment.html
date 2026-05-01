@@ -373,33 +373,33 @@
             list.innerHTML = '';
 
             data.forEach(pm => {
-                const div = document.createElement('div');
-                div.className = 'pm-card';
+                const isDefault = pm.isDefault;
+                const isActive  = pm.isActive;
+
                 div.innerHTML = `
-                <div>
-                    <span style="color: #58a6ff">${pm.cardBrand?.toUpperCase() || 'CARD'}</span>
-                    &nbsp;<strong>**** ${pm.lastFour}</strong>
-                    &nbsp;${pm.default
-                    ? '<span class="badge badge-success">DEFAULT</span>'
-                    : '<span class="badge badge-pending">secondary</span>'}
-                    &nbsp;<span style="color: #484f58">id=${pm.id}</span>
-                </div>
-                <div>
-                    <button class="btn-primary"
-                        onclick="setDefaultMethod(${pm.id})"
-                        style="padding: 4px 10px; margin: 0 4px"
-                        ${pm.default ? 'disabled' : ''}>
-                        ⭐ Сделать основной
-                    </button>
-                    <button class="btn-danger"
-                        onclick="deleteMethod(${pm.id})"
-                        style="padding: 4px 10px; margin: 0"
-                        ${pm.default ? 'disabled' : ''}>
-                        🗑 Удалить
-                    </button>
-                </div>
-            `;
-                list.appendChild(div);
+                    <div>
+                        <span style="color: #58a6ff">${pm.cardBrand?.toUpperCase() || 'CARD'}</span>
+                        &nbsp;<strong>**** ${pm.lastFour}</strong>
+                        &nbsp;${isDefault
+                                ? '<span class="badge badge-success">DEFAULT</span>'
+                                : '<span class="badge badge-pending">secondary</span>'}
+                        &nbsp;<span style="color: #484f58">id=${pm.id}</span>
+                    </div>
+                    <div>
+                        <button class="btn-primary"
+                            onclick="setDefaultMethod(${pm.id})"
+                            style="padding: 4px 10px; margin: 0 4px"
+                            ${isDefault ? 'disabled' : ''}>
+                            ⭐ Сделать основной
+                        </button>
+                        <button class="btn-danger"
+                            onclick="deleteMethod(${pm.id})"
+                            style="padding: 4px 10px; margin: 0"
+                            ${isDefault ? 'disabled' : ''}>
+                            🗑 Удалить
+                        </button>
+                    </div>
+                `;
             });
         } else {
             await logError(response, 'Получить карты');

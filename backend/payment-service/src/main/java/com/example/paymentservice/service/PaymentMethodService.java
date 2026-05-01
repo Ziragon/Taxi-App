@@ -6,15 +6,14 @@ import com.example.paymentservice.exception.DuplicatePaymentMethodException;
 import com.example.paymentservice.exception.PaymentMethodNotActiveException;
 import com.example.paymentservice.exception.PaymentMethodNotFoundException;
 import com.example.paymentservice.repository.PaymentMethodRepository;
-import com.stripe.model.Customer;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-import static reactor.netty.http.HttpConnectionLiveness.log;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentMethodService {
@@ -114,12 +113,16 @@ public class PaymentMethodService {
             throw new DefaultPaymentMethodException(passengerId);
         }
 
-        stripeService.detachPaymentMethod(paymentMethod.getStripePaymentMethodId());
-
-
         paymentMethodRepository.deactivateById(paymentMethodId);
-        paymentMethodRepository.flush();
 
-        log.info("Карта деактивирована локально (Stripe пропущен)", paymentMethodId);
+        try {
+            stripeService.detachPaymentMethod(paymentMethod.getStripePaymentMethodId());
+        } catch (Exception e) {
+
+            log.warn("Could not detach payment method {} from Stripe, deactivated locally: {}",
+                    paymentMethodId, e.getMessage());
+        }
+
+        log.info("Payment method {} deactivated for passenger {}", paymentMethodId, passengerId);
     }
 }
