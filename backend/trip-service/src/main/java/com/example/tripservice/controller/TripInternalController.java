@@ -1,6 +1,6 @@
 package com.example.tripservice.controller;
 
-import com.example.tripservice.service.DriverService;
+import com.example.tripservice.service.DriverSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -14,14 +14,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class TripInternalController {
 
-    private final DriverService driverService;
+    private final DriverSearchService driverSearchService;
 
     @PostMapping("/{tripId}/accept")
     public ResponseEntity<Void> acceptTrip(
             @PathVariable Long tripId,
             @AuthenticationPrincipal Long driverId
     ) {
-        driverService.handleDriverAccept(tripId, driverId);
+        driverSearchService.handleDriverAccept(tripId, driverId);
 
         return ResponseEntity.ok().build();
     }
@@ -31,7 +31,7 @@ public class TripInternalController {
             @PathVariable Long tripId,
             @AuthenticationPrincipal Long driverId
     ) {
-        driverService.handleDriverReject(tripId, driverId);
+        driverSearchService.handleDriverReject(tripId, driverId);
 
         return ResponseEntity.ok().build();
     }

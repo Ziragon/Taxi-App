@@ -34,7 +34,7 @@ public class TripService {
     private final NavigationService navigationService;
     private final PriceService priceService;
     private final TariffService tariffService;
-    private final DriverService driverService;
+    private final DriverSearchService driverSearchService;
     @Qualifier("applicationTaskExecutor")
     private final AsyncTaskExecutor executor;
 
@@ -62,7 +62,7 @@ public class TripService {
                 executor);
 
         var driversFuture = CompletableFuture.supplyAsync(() ->
-                driverService.getNearbyDrivers(dto.originLng(), dto.originLat(), new BigDecimal("30")),
+                driverSearchService.getNearbyDrivers(dto.originLng(), dto.originLat(), new BigDecimal("30")),
                 executor);
 
         var tariffsFuture = CompletableFuture.supplyAsync(
@@ -121,7 +121,7 @@ public class TripService {
     }
 
     public void beginDriverSearch(Long tripId, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {
-        driverService.searchDrivers(tripId, longitude, latitude, vehicleClass);
+        driverSearchService.searchDrivers(tripId, longitude, latitude, vehicleClass);
     }
 
     private Trip updateTripCoordinates(Trip trip, TripCreateDto dto) {

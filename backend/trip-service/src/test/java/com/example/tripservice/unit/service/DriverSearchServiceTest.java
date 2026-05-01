@@ -2,7 +2,7 @@ package com.example.tripservice.unit.service;
 
 import com.example.shared.exception.common.AccessDeniedException;
 import com.example.tripservice.client.DriverLocationClient;
-import com.example.tripservice.service.DriverService;
+import com.example.tripservice.service.DriverSearchService;
 import com.example.tripservice.service.TripStatusService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
-class DriverServiceTest {
+class DriverSearchServiceTest {
 
     @Mock
     private DriverLocationClient locationClient;
@@ -28,7 +28,7 @@ class DriverServiceTest {
     private TripStatusService tripStatusService;
 
     @InjectMocks
-    private DriverService driverService;
+    private DriverSearchService driverSearchService;
 
     private Map<Long, CompletableFuture<Long>> pendingOffers;
     private Map<Long, Long> activeOffers;
@@ -36,8 +36,8 @@ class DriverServiceTest {
     @BeforeEach
     @SuppressWarnings("unchecked")
     void setUp() {
-        pendingOffers = (Map<Long, CompletableFuture<Long>>) ReflectionTestUtils.getField(driverService, "pendingOffers");
-        activeOffers = (Map<Long, Long>) ReflectionTestUtils.getField(driverService, "activeOffers");
+        pendingOffers = (Map<Long, CompletableFuture<Long>>) ReflectionTestUtils.getField(driverSearchService, "pendingOffers");
+        activeOffers = (Map<Long, Long>) ReflectionTestUtils.getField(driverSearchService, "activeOffers");
     }
 
     @Test
@@ -50,7 +50,7 @@ class DriverServiceTest {
         pendingOffers.put(tripId, future);
         activeOffers.put(tripId, driverId);
 
-        driverService.handleDriverAccept(tripId, driverId);
+        driverSearchService.handleDriverAccept(tripId, driverId);
 
         assertTrue(future.isDone());
         assertEquals(driverId, future.join());
@@ -66,7 +66,7 @@ class DriverServiceTest {
         activeOffers.put(tripId, actualDriverId);
 
         assertThrows(AccessDeniedException.class, () ->
-                driverService.handleDriverAccept(tripId, wrongDriverId)
+                driverSearchService.handleDriverAccept(tripId, wrongDriverId)
         );
     }
 
@@ -80,7 +80,7 @@ class DriverServiceTest {
         pendingOffers.put(tripId, future);
         activeOffers.put(tripId, driverId);
 
-        driverService.handleDriverReject(tripId, driverId);
+        driverSearchService.handleDriverReject(tripId, driverId);
 
         assertTrue(future.isCompletedExceptionally());
         assertThrows(CancellationException.class, future::join);
