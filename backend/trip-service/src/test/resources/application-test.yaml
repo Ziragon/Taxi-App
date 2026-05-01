@@ -1,11 +1,4 @@
-# =====================================================================
-# База данных — НЕ указываем, Testcontainers + @ServiceConnection
-# подставит всё сам через ServiceConnectionContextCustomizer
-# =====================================================================
-
 spring:
-  # Отключаем попытку Hibernate искать DDL в flyway/liquibase при тестах
-  # если используешь миграции — замени на validate или none
   jpa:
     hibernate:
       ddl-auto: create-drop
