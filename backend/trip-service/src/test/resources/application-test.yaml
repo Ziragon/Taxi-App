@@ -1,0 +1,29 @@
+# =====================================================================
+# База данных — НЕ указываем, Testcontainers + @ServiceConnection
+# подставит всё сам через ServiceConnectionContextCustomizer
+# =====================================================================
+
+spring:
+  # Отключаем попытку Hibernate искать DDL в flyway/liquibase при тестах
+  # если используешь миграции — замени на validate или none
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: false
+
+osrm:
+  base-url: http://localhost:9999
+
+internal:
+  user-service: http://localhost:9998
+
+weather-api:
+  key: test-api-key-stub
