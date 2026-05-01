@@ -39,8 +39,8 @@ class WeatherServiceIntegrationTest extends BaseIntegrationTest {
         WeatherResponse response = buildMockResponse("Moscow", 20.0, 1000, "Sunny");
         when(weatherClient.getWeather(anyString(), anyString(), anyString())).thenReturn(response);
 
-        BigDecimal lat = new BigDecimal("69.7500");
-        BigDecimal lng = new BigDecimal("42.6200");
+        BigDecimal lat = new BigDecimal("99.7500");
+        BigDecimal lng = new BigDecimal("99.6200");
 
         WeatherDto first  = weatherService.getWeatherCoef(lng, lat);
         WeatherDto second = weatherService.getWeatherCoef(lng, lat);

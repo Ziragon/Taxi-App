@@ -32,11 +32,6 @@ public abstract class BaseIntegrationTest {
     private RedisTemplate<Object, Object> redisTemplate;
 
     protected void clearCaches() {
-        redisTemplate.execute((RedisCallback<Object>) connection -> {
-            connection.serverCommands().flushAll();
-            return null;
-        });
-
         cacheManager.getCacheNames()
                 .forEach(name -> Objects.requireNonNull(cacheManager.getCache(name)).clear());
     }
