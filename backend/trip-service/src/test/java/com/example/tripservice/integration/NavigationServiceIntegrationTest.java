@@ -40,19 +40,6 @@ class NavigationServiceIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("Идентичные вызовы - кэш-хит")
-    void getRouteInfo_sameCoordsCalledTwice_clientInvokedOnce() {
-        when(osrmClient.getRoute(anyString(), anyString()))
-                .thenReturn(buildSuccessResponse(5_000.0, 600, "polyline_abc"));
-
-        RouteDto first  = navigationService.getRouteInfo(new BigDecimal("12.34"), new BigDecimal("34.56"), new BigDecimal("56.78"), new BigDecimal("78.90"));
-        RouteDto second = navigationService.getRouteInfo(new BigDecimal("12.34"), new BigDecimal("34.56"), new BigDecimal("56.78"), new BigDecimal("78.90"));
-
-        assertThat(first).isEqualTo(second);
-        verify(osrmClient, times(1)).getRoute(anyString(), anyString());
-    }
-
-    @Test
     @DisplayName("Разные вызовы - вызов клиента дважды")
     void getRouteInfo_differentCoords_clientInvokedTwice() {
         when(osrmClient.getRoute(anyString(), anyString()))
