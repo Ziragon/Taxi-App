@@ -1,4 +1,4 @@
-package com.example.userservice.entity.enums;
+package com.example.shared.dto.enums;
 
 public enum DriverStatus {
     ONLINE,

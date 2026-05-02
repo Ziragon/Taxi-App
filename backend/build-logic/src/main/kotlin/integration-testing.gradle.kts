@@ -12,6 +12,7 @@ dependencies {
     testImplementation(libs.findLibrary("testcontainers-redis").get())
     testImplementation(libs.findLibrary("boot-webmvc-test").get())
     testImplementation(libs.findLibrary("boot-starter-security-test").get())
+    testImplementation(libs.findLibrary("boot-starter-jpa-test").get())
     testImplementation(libs.findLibrary("testcontainers-jdbc").get())
     testImplementation(libs.findLibrary("awaitility").get())
 }

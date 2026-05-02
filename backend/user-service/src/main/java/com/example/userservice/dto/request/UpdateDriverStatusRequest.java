@@ -1,6 +1,6 @@
 package com.example.userservice.dto.request;
 
-import com.example.userservice.entity.enums.DriverStatus;
+import com.example.shared.dto.enums.DriverStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 

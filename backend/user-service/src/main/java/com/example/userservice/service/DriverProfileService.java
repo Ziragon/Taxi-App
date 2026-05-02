@@ -4,7 +4,7 @@ import com.example.shared.exception.common.ResourceNotFoundException;
 import com.example.userservice.dto.data.DriverProfileDto;
 import com.example.userservice.entity.Account;
 import com.example.userservice.entity.DriverProfile;
-import com.example.userservice.entity.enums.DriverStatus;
+import com.example.shared.dto.enums.DriverStatus;
 import com.example.userservice.exception.ProfileAlreadyExistsException;
 import com.example.userservice.repository.DriverProfileRepository;
 import com.example.userservice.repository.VehicleRepository;
@@ -24,6 +24,7 @@ public class DriverProfileService {
     private final DriverProfileRepository driverProfileRepository;
     private final VehicleRepository vehicleRepository;
     private final AccountService accountService;
+    private static final String DRIVER_PROFILE = "Driver profile";
 
     @Transactional
     public DriverProfileDto createProfile(Long accountId, String firstName, String lastName,
@@ -57,7 +58,7 @@ public class DriverProfileService {
     @Transactional(readOnly = true)
     public DriverProfileDto getProfile(Long accountId) {
         DriverProfile profile = driverProfileRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Driver profile", accountId));
+                .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
 
         return DriverProfileDto.from(profile);
     }
@@ -66,7 +67,7 @@ public class DriverProfileService {
     public DriverProfileDto updateProfile(Long accountId, String firstName, String lastName,
                                           String licenseNumber, String photoUrl) {
         DriverProfile profile = driverProfileRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Driver profile", accountId));
+                .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
 
         profile.setFirstName(firstName);
         profile.setLastName(lastName);
@@ -80,7 +81,7 @@ public class DriverProfileService {
     @Transactional
     public void updateStatus(Long accountId, DriverStatus status) {
         DriverProfile profile = driverProfileRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Driver profile", accountId));
+                .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
 
         if (status == DriverStatus.ONLINE) {
             validateOnlineRequirements(accountId, profile);
@@ -92,7 +93,7 @@ public class DriverProfileService {
     @Transactional
     public void verifyDriver(Long accountId) {
         DriverProfile profile = driverProfileRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Driver profile", accountId));
+                .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
 
         profile.setVerified(true);
         driverProfileRepository.save(profile);
@@ -121,7 +122,7 @@ public class DriverProfileService {
     @Transactional
     public void updateRating(Long accountId, BigDecimal newTripRating) {
         DriverProfile profile = driverProfileRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Driver profile", accountId));
+                .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
 
         profile.setAverageRating(com.example.userservice.util.RatingCalculator.calculate(
                 profile.getAverageRating(),

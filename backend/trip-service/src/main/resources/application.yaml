@@ -30,6 +30,9 @@ spring:
     deserialization:
       fail-on-unknown-properties: false
 
+  cache:
+    type: redis
+
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -76,6 +79,10 @@ internal-auth:
 
 internal:
   user-service: ${USER_SERVICE:http://localhost:8080}
+
+searching:
+  duration: ${DRIVER_SEARCH_DURATION_SECS:15}
+  radiuses: ${DRIVER_SEARCH_RADII:5,10,15}
 
 springdoc:
   api-docs:

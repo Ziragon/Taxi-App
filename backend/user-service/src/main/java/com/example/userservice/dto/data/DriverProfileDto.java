@@ -1,7 +1,7 @@
 package com.example.userservice.dto.data;
 
 import com.example.userservice.entity.DriverProfile;
-import com.example.userservice.entity.enums.DriverStatus;
+import com.example.shared.dto.enums.DriverStatus;
 
 import java.math.BigDecimal;
 

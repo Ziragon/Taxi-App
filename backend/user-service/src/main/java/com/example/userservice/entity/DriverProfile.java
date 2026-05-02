@@ -1,6 +1,6 @@
 package com.example.userservice.entity;
 
-import com.example.userservice.entity.enums.DriverStatus;
+import com.example.shared.dto.enums.DriverStatus;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -6,4 +6,5 @@ val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
 dependencies {
     implementation(libs.findLibrary("boot-starter-data-redis").get())
+    implementation(libs.findLibrary("boot-starter-cache").get())
 }
