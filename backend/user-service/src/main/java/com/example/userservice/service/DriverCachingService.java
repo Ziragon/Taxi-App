@@ -50,11 +50,18 @@ public class DriverCachingService {
 
     public void updateStatus(Long driverId, DriverStatus status) {
         String key = KEY_STATUS_PREFIX + driverId;
-        redisStringTemplate.opsForValue().set(key, status.name());
+
+        if (status == DriverStatus.BUSY) {
+            // BUSY - постоянное, пока не придет триггер
+            redisStringTemplate.opsForValue().set(key, status.name());
+        } else {
+            // ONLINE - действует пока водитель не пропадет из сети
+            redisStringTemplate.opsForValue().set(key, status.name(), ttlSeconds, TimeUnit.SECONDS);
+        }
 
         if (status == DriverStatus.ONLINE) {
             redisStringTemplate.opsForSet().add(ONLINE_DRIVERS_KEY, String.valueOf(driverId));
-        } else {
+        } else if (status == DriverStatus.OFFLINE) {
             redisStringTemplate.opsForSet().remove(ONLINE_DRIVERS_KEY, String.valueOf(driverId));
         }
     }
