@@ -12,7 +12,7 @@ spring:
             - id: user-service
               uri: ${USER_SERVICE_URL:http://localhost:8080}
               predicates:
-                - Path=/api/v1/auth/**, /api/v1/drivers/location, /api/v1/profiles/**, /api/v1/vehicles/**, /api/v1/admin/**
+                - Path=/api/v1/auth/**, /api/v1/driver/**, /api/v1/profiles/**, /api/v1/vehicles/**, /api/v1/admin/**
 
             - id: user-service-docs
               uri: ${USER_SERVICE_URL:http://localhost:8080}
