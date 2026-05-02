@@ -12,7 +12,7 @@ spring:
             - id: user-service
               uri: ${USER_SERVICE_URL:http://localhost:8080}
               predicates:
-                - Path=/api/v1/auth/**, /api/v1/drivers/location, /api/v1/profiles/**, /api/v1/vehicles/**, /api/v1/admin/**
+                - Path=/api/v1/auth/**, /api/v1/driver/**, /api/v1/profiles/**, /api/v1/vehicles/**, /api/v1/admin/**
 
             - id: user-service-docs
               uri: ${USER_SERVICE_URL:http://localhost:8080}
@@ -33,6 +33,18 @@ spring:
               filters:
                 - RewritePath=/trip-service/v3/api-docs, /v3/api-docs
 
+            - id: payment-service
+              uri: ${PAYMENT_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/v1/payment-methods/**, /api/v1/payout-accounts/**, /api/v1/transactions/**
+
+            - id: payment-service-docs
+              uri: ${PAYMENT_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/payment-service/v3/api-docs
+              filters:
+                - RewritePath=/payment-service/v3/api-docs, /v3/api-docs
+
 server:
   port: 8000
   shutdown: graceful
@@ -50,6 +62,7 @@ gateway:
     - /swagger-ui.html
     - /user-service/v3/api-docs
     - /trip-service/v3/api-docs
+    - /payment-service/v3/api-docs
     - /webjars/**
     - /v3/api-docs/**
 
@@ -65,6 +78,8 @@ springdoc:
         url: /user-service/v3/api-docs
       - name: trip-service
         url: /trip-service/v3/api-docs
+      - name: payment-service
+        url: /payment-service/v3/api-docs
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:*}

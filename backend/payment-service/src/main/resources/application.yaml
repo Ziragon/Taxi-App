@@ -78,6 +78,9 @@ management:
     tags:
       application: ${spring.application.name}
 
+internal:
+  trip-service: ${TRIP_SERVICE_URL:http://localhost:8081}
+
 logging:
   level:
     root: INFO

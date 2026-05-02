@@ -1,6 +1,7 @@
 package com.example.paymentservice.dto.response;
 
 import com.example.paymentservice.entity.PaymentMethod;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
@@ -20,9 +21,11 @@ public record PaymentMethodResponse(
         @Schema(description = "Последние 4 цифры", example = "4242")
         String lastFour,
 
+        @JsonProperty("isDefault")
         @Schema(description = "Является дефолтным", example = "true")
         boolean isDefault,
 
+        @JsonProperty("isActive")
         @Schema(description = "Активен", example = "true")
         boolean isActive,
 

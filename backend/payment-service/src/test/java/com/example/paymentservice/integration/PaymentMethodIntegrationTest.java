@@ -8,7 +8,6 @@ import com.example.paymentservice.exception.PaymentMethodNotFoundException;
 import com.example.paymentservice.repository.PaymentMethodRepository;
 import com.example.paymentservice.service.PaymentMethodService;
 import com.example.paymentservice.service.StripeService;
-import com.stripe.model.Customer;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,15 +47,10 @@ class PaymentMethodIntegrationTest extends BaseIntegrationTest {
     void setUp() {
         paymentMethodRepository.deleteAll();
 
-        Customer mockCustomer = new Customer();
-        mockCustomer.setId("cus_test123");
+        StripeService.FakeCustomer mockCustomer = new StripeService.FakeCustomer("cus_test123");
 
-        com.stripe.model.PaymentMethod mockStripePaymentMethod = new com.stripe.model.PaymentMethod();
-        mockStripePaymentMethod.setId("pm_test123");
-        com.stripe.model.PaymentMethod.Card card = new com.stripe.model.PaymentMethod.Card();
-        card.setBrand("visa");
-        card.setLast4("4242");
-        mockStripePaymentMethod.setCard(card);
+        StripeService.FakePaymentMethod mockStripePaymentMethod =
+                new StripeService.FakePaymentMethod("pm_test123", "visa", "4242");
 
         when(stripeService.getOrCreateCustomer(anyLong())).thenReturn(mockCustomer);
         when(stripeService.attachPaymentMethodToCustomer(anyString(), anyString()))
@@ -78,12 +72,8 @@ class PaymentMethodIntegrationTest extends BaseIntegrationTest {
             assertThat(pm.getLastFour()).isEqualTo("4242");
         });
 
-        com.stripe.model.PaymentMethod secondStripeMethod = new com.stripe.model.PaymentMethod();
-        secondStripeMethod.setId("pm_second456");
-        com.stripe.model.PaymentMethod.Card card2 = new com.stripe.model.PaymentMethod.Card();
-        card2.setBrand("mastercard");
-        card2.setLast4("5555");
-        secondStripeMethod.setCard(card2);
+        StripeService.FakePaymentMethod secondStripeMethod =
+                new StripeService.FakePaymentMethod("pm_second456", "mastercard", "5555");
 
         when(stripeService.attachPaymentMethodToCustomer(anyString(), anyString()))
                 .thenReturn(secondStripeMethod);
@@ -132,12 +122,8 @@ class PaymentMethodIntegrationTest extends BaseIntegrationTest {
     void secondCardWithFlagBecomesDefault() {
         paymentMethodService.addPaymentMethod(100L, "pm_test123", false);
 
-        com.stripe.model.PaymentMethod secondStripe = new com.stripe.model.PaymentMethod();
-        secondStripe.setId("pm_second");
-        com.stripe.model.PaymentMethod.Card card = new com.stripe.model.PaymentMethod.Card();
-        card.setBrand("mastercard");
-        card.setLast4("5555");
-        secondStripe.setCard(card);
+        StripeService.FakePaymentMethod secondStripe =
+                new StripeService.FakePaymentMethod("pm_second", "mastercard", "5555");
 
         when(stripeService.attachPaymentMethodToCustomer(anyString(), anyString()))
                 .thenReturn(secondStripe);
@@ -178,12 +164,8 @@ class PaymentMethodIntegrationTest extends BaseIntegrationTest {
     void cannotSetInactiveMethodAsDefault() {
         paymentMethodService.addPaymentMethod(100L, "pm_first", false);
 
-        com.stripe.model.PaymentMethod secondStripe = new com.stripe.model.PaymentMethod();
-        secondStripe.setId("pm_second");
-        com.stripe.model.PaymentMethod.Card card = new com.stripe.model.PaymentMethod.Card();
-        card.setBrand("mastercard");
-        card.setLast4("5555");
-        secondStripe.setCard(card);
+        StripeService.FakePaymentMethod secondStripe =
+                new StripeService.FakePaymentMethod("pm_second", "mastercard", "5555");
 
         when(stripeService.attachPaymentMethodToCustomer(anyString(), anyString()))
                 .thenReturn(secondStripe);
@@ -221,12 +203,8 @@ class PaymentMethodIntegrationTest extends BaseIntegrationTest {
     void getAllByPassengerIdReturnsAllCards() {
         paymentMethodService.addPaymentMethod(100L, "pm_first", false);
 
-        com.stripe.model.PaymentMethod secondStripe = new com.stripe.model.PaymentMethod();
-        secondStripe.setId("pm_second");
-        com.stripe.model.PaymentMethod.Card card = new com.stripe.model.PaymentMethod.Card();
-        card.setBrand("mastercard");
-        card.setLast4("5555");
-        secondStripe.setCard(card);
+        StripeService.FakePaymentMethod secondStripe =
+                new StripeService.FakePaymentMethod("pm_second", "mastercard", "5555");
 
         when(stripeService.attachPaymentMethodToCustomer(anyString(), anyString()))
                 .thenReturn(secondStripe);

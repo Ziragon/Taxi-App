@@ -5,7 +5,6 @@ import com.example.paymentservice.exception.DriverPayoutAccountNotFoundException
 import com.example.paymentservice.exception.DuplicatePaymentMethodException;
 import com.example.paymentservice.exception.PayoutAccountNotVerifiedException;
 import com.example.paymentservice.repository.DriverPayoutAccountRepository;
-import com.stripe.model.Account;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,20 +23,20 @@ public class DriverPayoutAccountService {
     @Transactional
     public DriverPayoutAccount addPayoutAccount(Long driverId, String lastFour) {
 
-        Account stripeAccount = stripeService.getOrCreateConnectAccount(driverId);
+        StripeService.FakeAccount stripeAccount = stripeService.getOrCreateConnectAccount(driverId);
 
-        if (driverPayoutAccountRepository.existsByDriverIdAndStripeAccountId(driverId, stripeAccount.getId())) {
+        if (driverPayoutAccountRepository.existsByDriverIdAndStripeAccountId(driverId, stripeAccount.id())) {
             throw new DuplicatePaymentMethodException(
                     "Payout account already exists for driver: %s".formatted(driverId)
             );
         }
 
         boolean isFirst = driverPayoutAccountRepository.findAllByDriverId(driverId).isEmpty();
-        boolean isVerified = stripeService.isAccountVerified(stripeAccount.getId());
+        boolean isVerified = stripeService.isAccountVerified(stripeAccount.id());
 
         DriverPayoutAccount payoutAccount = DriverPayoutAccount.builder()
                 .driverId(driverId)
-                .stripeAccountId(stripeAccount.getId())
+                .stripeAccountId(stripeAccount.id())
                 .lastFour(lastFour)
                 .verified(isVerified)
                 .defaultvalue(isFirst)

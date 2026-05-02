@@ -6,13 +6,14 @@ import com.example.paymentservice.exception.DuplicatePaymentMethodException;
 import com.example.paymentservice.exception.PaymentMethodNotActiveException;
 import com.example.paymentservice.exception.PaymentMethodNotFoundException;
 import com.example.paymentservice.repository.PaymentMethodRepository;
-import com.stripe.model.Customer;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentMethodService {
@@ -30,12 +31,10 @@ public class PaymentMethodService {
             );
         }
 
-        Customer customer = stripeService.getOrCreateCustomer(passengerId);
+        StripeService.FakeCustomer customer = stripeService.getOrCreateCustomer(passengerId);
 
-        com.stripe.model.PaymentMethod stripePaymentMethod = stripeService.attachPaymentMethodToCustomer(
-                stripePaymentMethodId,
-                customer.getId()
-        );
+        StripeService.FakePaymentMethod stripePaymentMethod =
+                stripeService.attachPaymentMethodToCustomer(stripePaymentMethodId, customer.id());
 
         boolean isFirst = paymentMethodRepository.findAllByPassengerId(passengerId).isEmpty();
         boolean shouldBeDefault = isFirst || setAsDefault;
@@ -46,10 +45,10 @@ public class PaymentMethodService {
 
         PaymentMethod paymentMethod = PaymentMethod.builder()
                 .passengerId(passengerId)
-                .stripeCustomerId(customer.getId())
+                .stripeCustomerId(customer.id())
                 .stripePaymentMethodId(stripePaymentMethodId)
-                .cardBrand(stripePaymentMethod.getCard().getBrand())
-                .lastFour(stripePaymentMethod.getCard().getLast4())
+                .cardBrand(stripePaymentMethod.brand())
+                .lastFour(stripePaymentMethod.last4())
                 .defaultvalue(shouldBeDefault)
                 .active(true)
                 .build();
@@ -57,7 +56,7 @@ public class PaymentMethodService {
         PaymentMethod saved = paymentMethodRepository.save(paymentMethod);
 
         if (shouldBeDefault) {
-            stripeService.setDefaultPaymentMethod(customer.getId(), stripePaymentMethodId);
+            stripeService.setDefaultPaymentMethod(customer.id(), stripePaymentMethodId);
         }
 
         return saved;
@@ -114,8 +113,16 @@ public class PaymentMethodService {
             throw new DefaultPaymentMethodException(passengerId);
         }
 
-        stripeService.detachPaymentMethod(paymentMethod.getStripePaymentMethodId());
-
         paymentMethodRepository.deactivateById(paymentMethodId);
+
+        try {
+            stripeService.detachPaymentMethod(paymentMethod.getStripePaymentMethodId());
+        } catch (Exception e) {
+
+            log.warn("Could not detach payment method {} from Stripe, deactivated locally: {}",
+                    paymentMethodId, e.getMessage());
+        }
+
+        log.info("Payment method {} deactivated for passenger {}", paymentMethodId, passengerId);
     }
 }

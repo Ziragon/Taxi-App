@@ -27,6 +27,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final RabbitTemplate rabbitTemplate;
+    private final DriverProfileService driverProfileService;
 
     @Transactional
     public AuthDto register(String email, String phone, String password) {
@@ -68,6 +69,7 @@ public class AuthService {
     @Transactional
     public void logout(Long accountId) {
         tokenService.revokeAllTokens(accountId);
+        driverProfileService.setOfflineIfDriver(accountId);
     }
 
     private AuthDto generateTokens(Account account) {

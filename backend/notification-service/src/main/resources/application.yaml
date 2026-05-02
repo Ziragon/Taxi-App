@@ -67,7 +67,7 @@ notification:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
   internal:
     header: ${INTERNAL_HEADER:X-Internal-Header}
-    header-key: ${INTERNAL_KEY:dev-internal-secret-key-for-services}
+    header-key: ${HEADER_KEY:dev-secret-internal-key-for-microservices}
     user-service-url: ${USER_SERVICE_URL:http://localhost:8080}
 
 springdoc:

@@ -9,16 +9,20 @@ import com.example.userservice.exception.ProfileAlreadyExistsException;
 import com.example.userservice.repository.DriverProfileRepository;
 import com.example.userservice.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DriverProfileService {
 
     private final DriverProfileRepository driverProfileRepository;
+    private final DriverCachingService driverCachingService;
     private final VehicleRepository vehicleRepository;
     private final AccountService accountService;
     private static final String DRIVER_PROFILE = "Driver profile";
@@ -84,6 +88,7 @@ public class DriverProfileService {
             validateOnlineRequirements(accountId, profile);
         }
 
+        driverCachingService.updateStatus(accountId, status);
         driverProfileRepository.updateStatus(accountId, status);
     }
 
@@ -94,6 +99,26 @@ public class DriverProfileService {
 
         profile.setVerified(true);
         driverProfileRepository.save(profile);
+    }
+
+    @Transactional
+    public void setOfflineIfDriver(Long accountId) {
+        driverProfileRepository.findById(accountId).ifPresent(profile -> {
+            if (profile.getStatus() != DriverStatus.OFFLINE) {
+                driverProfileRepository.updateStatus(accountId, DriverStatus.OFFLINE);
+                log.info("Driver status set to OFFLINE on logout: accountId={}", accountId);
+            }
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public List<DriverProfile> getOnlineDrivers() {
+        return driverProfileRepository.findAllByStatus(DriverStatus.ONLINE);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DriverProfile> getVerifiedDrivers() {
+        return driverProfileRepository.findAllByVerifiedTrue();
     }
 
     @Transactional

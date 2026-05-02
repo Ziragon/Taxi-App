@@ -1,6 +1,5 @@
 package com.example.paymentservice.unit;
 
-
 import com.example.paymentservice.entity.DriverPayoutAccount;
 import com.example.paymentservice.exception.DriverPayoutAccountNotFoundException;
 import com.example.paymentservice.exception.DuplicatePaymentMethodException;
@@ -8,7 +7,6 @@ import com.example.paymentservice.exception.PayoutAccountNotVerifiedException;
 import com.example.paymentservice.repository.DriverPayoutAccountRepository;
 import com.example.paymentservice.service.DriverPayoutAccountService;
 import com.example.paymentservice.service.StripeService;
-import com.stripe.model.Account;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,13 +36,13 @@ class DriverPayoutAccountServiceTest {
     @InjectMocks
     private DriverPayoutAccountService service;
 
-    private Account mockStripeAccount;
+    private StripeService.FakeAccount mockStripeAccount;
     private DriverPayoutAccount mockPayoutAccount;
 
     @BeforeEach
     void setUp() {
-        mockStripeAccount = new Account();
-        mockStripeAccount.setId("acct_test123");
+
+        mockStripeAccount = new StripeService.FakeAccount("acct_test123");
 
         mockPayoutAccount = DriverPayoutAccount.builder()
                 .id(1L)
@@ -59,15 +57,14 @@ class DriverPayoutAccountServiceTest {
     @Test
     @DisplayName("Should add first payout account successfully")
     void shouldAddFirstPayoutAccount() {
-
         Long driverId = 100L;
         String lastFour = "4242";
 
         when(stripeService.getOrCreateConnectAccount(driverId)).thenReturn(mockStripeAccount);
-        when(repository.existsByDriverIdAndStripeAccountId(driverId, mockStripeAccount.getId()))
+        when(repository.existsByDriverIdAndStripeAccountId(driverId, mockStripeAccount.id()))
                 .thenReturn(false);
         when(repository.findAllByDriverId(driverId)).thenReturn(Collections.emptyList());
-        when(stripeService.isAccountVerified(mockStripeAccount.getId())).thenReturn(true);
+        when(stripeService.isAccountVerified(mockStripeAccount.id())).thenReturn(true);
         when(repository.save(any(DriverPayoutAccount.class))).thenReturn(mockPayoutAccount);
 
         DriverPayoutAccount result = service.addPayoutAccount(driverId, lastFour);
@@ -87,14 +84,12 @@ class DriverPayoutAccountServiceTest {
     @Test
     @DisplayName("Should throw exception when duplicate payout account")
     void shouldThrowExceptionWhenDuplicate() {
-
         Long driverId = 100L;
         String lastFour = "4242";
 
         when(stripeService.getOrCreateConnectAccount(driverId)).thenReturn(mockStripeAccount);
-        when(repository.existsByDriverIdAndStripeAccountId(driverId, mockStripeAccount.getId()))
+        when(repository.existsByDriverIdAndStripeAccountId(driverId, mockStripeAccount.id()))
                 .thenReturn(true);
-
 
         assertThatThrownBy(() -> service.addPayoutAccount(driverId, lastFour))
                 .isInstanceOf(DuplicatePaymentMethodException.class)
@@ -106,7 +101,6 @@ class DriverPayoutAccountServiceTest {
     @Test
     @DisplayName("Should get payout account by ID")
     void shouldGetById() {
-
         when(repository.findById(1L)).thenReturn(Optional.of(mockPayoutAccount));
 
         DriverPayoutAccount result = service.getById(1L);
@@ -118,7 +112,6 @@ class DriverPayoutAccountServiceTest {
     @Test
     @DisplayName("Should throw exception when payout account not found")
     void shouldThrowExceptionWhenNotFound() {
-
         when(repository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getById(999L))
@@ -128,7 +121,6 @@ class DriverPayoutAccountServiceTest {
     @Test
     @DisplayName("Should get default payout account for driver")
     void shouldGetDefaultForDriver() {
-
         Long driverId = 100L;
         when(repository.findByDriverIdAndDefaultvalueTrue(driverId))
                 .thenReturn(Optional.of(mockPayoutAccount));
@@ -142,7 +134,6 @@ class DriverPayoutAccountServiceTest {
     @Test
     @DisplayName("Should get verified default payout account")
     void shouldGetVerifiedDefaultForDriver() {
-
         Long driverId = 100L;
         when(repository.findByDriverIdAndDefaultvalueTrue(driverId))
                 .thenReturn(Optional.of(mockPayoutAccount));
@@ -156,7 +147,6 @@ class DriverPayoutAccountServiceTest {
     @Test
     @DisplayName("Should throw exception when default account is not verified")
     void shouldThrowExceptionWhenDefaultNotVerified() {
-
         Long driverId = 100L;
         mockPayoutAccount.setVerified(false);
         when(repository.findByDriverIdAndDefaultvalueTrue(driverId))
@@ -169,7 +159,6 @@ class DriverPayoutAccountServiceTest {
     @Test
     @DisplayName("Should get all payout accounts for driver")
     void shouldGetAllByDriverId() {
-
         Long driverId = 100L;
         List<DriverPayoutAccount> accounts = List.of(mockPayoutAccount);
         when(repository.findAllByDriverId(driverId)).thenReturn(accounts);
@@ -183,7 +172,6 @@ class DriverPayoutAccountServiceTest {
     @Test
     @DisplayName("Should set default payout account")
     void shouldSetDefault() {
-
         Long driverId = 100L;
         Long accountId = 1L;
         when(repository.findById(accountId)).thenReturn(Optional.of(mockPayoutAccount));
@@ -198,7 +186,6 @@ class DriverPayoutAccountServiceTest {
     @Test
     @DisplayName("Should throw exception when setting unverified account as default")
     void shouldThrowExceptionWhenSetUnverifiedAsDefault() {
-
         Long driverId = 100L;
         Long accountId = 1L;
         mockPayoutAccount.setVerified(false);
@@ -212,7 +199,6 @@ class DriverPayoutAccountServiceTest {
     @Test
     @DisplayName("Should sync verification status")
     void shouldSyncVerificationStatus() {
-
         Long accountId = 1L;
         when(repository.findById(accountId)).thenReturn(Optional.of(mockPayoutAccount));
         when(stripeService.isAccountVerified(mockPayoutAccount.getStripeAccountId()))
@@ -226,7 +212,6 @@ class DriverPayoutAccountServiceTest {
     @Test
     @DisplayName("Should verify payout account")
     void shouldVerify() {
-
         Long accountId = 1L;
         when(repository.findById(accountId)).thenReturn(Optional.of(mockPayoutAccount));
         when(stripeService.isAccountVerified(mockPayoutAccount.getStripeAccountId()))
@@ -240,7 +225,6 @@ class DriverPayoutAccountServiceTest {
     @Test
     @DisplayName("Should throw exception when verifying unverified Stripe account")
     void shouldThrowExceptionWhenVerifyingUnverifiedStripeAccount() {
-
         Long accountId = 1L;
         when(repository.findById(accountId)).thenReturn(Optional.of(mockPayoutAccount));
         when(stripeService.isAccountVerified(mockPayoutAccount.getStripeAccountId()))
@@ -254,7 +238,6 @@ class DriverPayoutAccountServiceTest {
     @Test
     @DisplayName("Should unverify payout account")
     void shouldUnverify() {
-
         Long accountId = 1L;
 
         service.unverify(accountId);

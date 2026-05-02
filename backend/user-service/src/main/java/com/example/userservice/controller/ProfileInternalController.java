@@ -3,6 +3,7 @@ package com.example.userservice.controller;
 import com.example.shared.dto.enums.DriverStatus;
 import com.example.userservice.repository.PassengerProfileRepository;
 import com.example.userservice.service.DriverCachingService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,8 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/internal/")
+@RequestMapping("/api/v1/internal")
 @RequiredArgsConstructor
+@Tag(name = "Internal Requests (НЕ ДЛЯ ФРОНТА)")
 public class ProfileInternalController {
 
     private final PassengerProfileRepository passengerRepo;

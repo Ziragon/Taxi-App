@@ -1,16 +1,34 @@
 package com.example.tripservice.controller;
 
-import com.example.tripservice.service.TripService;
+import com.example.shared.security.UserPrincipal;
+import com.example.tripservice.service.TripStatusService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/trips")
 @RequiredArgsConstructor
 public class TripDriverController {
 
-    private final TripService tripService;
+    private final TripStatusService tripStatusService;
 
-    
+    @PostMapping("/{tripId}/start")
+    public ResponseEntity<Void> startTrip(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long tripId
+    ) {
+        tripStatusService.startTrip(tripId, principal.userId());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{tripId}/complete")
+    public ResponseEntity<Void> completeTrip(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long tripId
+    ) {
+        tripStatusService.completeTrip(tripId, principal.userId());
+        return ResponseEntity.ok().build();
+    }
 }

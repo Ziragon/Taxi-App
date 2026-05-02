@@ -6,14 +6,14 @@ import com.example.notificationservice.entity.enums.Channel;
 import com.example.notificationservice.entity.enums.EventType;
 import com.example.notificationservice.entity.enums.RecipientType;
 import com.example.notificationservice.service.NotificationService;
-import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.messaging.handler.annotation.Header;
-import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -26,17 +26,19 @@ import static com.example.notificationservice.config.RabbitMqConfig.NOTIFICATION
 public class UniversalNotificationConsumer {
 
     private final NotificationService notificationService;
-    private final JsonMapper jsonMapper;
+    private final ObjectMapper objectMapper;
+    private final MessageConverter messageConverter;
 
-    @RabbitListener(queues = NOTIFICATION_QUEUE)
+    @RabbitListener(queues = NOTIFICATION_QUEUE, containerFactory = "rabbitListenerContainerFactory")
     public void consume(
-            @Payload Object rawEvent,
-            @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey,
-            Message message
+            Message message,
+            @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey
     ) {
+        Object rawEvent = messageConverter.fromMessage(message);
+
         log.debug("Received event: routingKey={}, type={}, messageId={}",
                 routingKey,
-                rawEvent.getClass().getSimpleName(),
+                rawEvent != null ? rawEvent.getClass().getSimpleName() : "null",
                 message.getMessageProperties().getMessageId()
         );
 
@@ -103,7 +105,7 @@ public class UniversalNotificationConsumer {
             }
 
             if (rawEvent instanceof Map) {
-                return jsonMapper.convertValue(rawEvent, NotificationEventDto.class);
+                return objectMapper.convertValue(rawEvent, NotificationEventDto.class);
             }
         }
 

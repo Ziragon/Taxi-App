@@ -7,7 +7,6 @@ import com.example.paymentservice.exception.PayoutAccountNotVerifiedException;
 import com.example.paymentservice.repository.DriverPayoutAccountRepository;
 import com.example.paymentservice.service.DriverPayoutAccountService;
 import com.example.paymentservice.service.StripeService;
-import com.stripe.model.Account;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,8 +46,7 @@ class DriverPayoutAccountIntegrationTest extends BaseIntegrationTest {
     void setUp() {
         payoutAccountRepository.deleteAll();
 
-        Account mockStripeAccount = new Account();
-        mockStripeAccount.setId("acct_test123");
+        StripeService.FakeAccount mockStripeAccount = new StripeService.FakeAccount("acct_test123");
 
         when(stripeService.getOrCreateConnectAccount(anyLong())).thenReturn(mockStripeAccount);
         when(stripeService.isAccountVerified(anyString())).thenReturn(true);
@@ -67,8 +65,7 @@ class DriverPayoutAccountIntegrationTest extends BaseIntegrationTest {
             assertThat(acc.isDefaultvalue()).isTrue();
         });
 
-        Account secondStripeAccount = new Account();
-        secondStripeAccount.setId("acct_second456");
+        StripeService.FakeAccount secondStripeAccount = new StripeService.FakeAccount("acct_second456");
 
         when(stripeService.getOrCreateConnectAccount(201L)).thenReturn(secondStripeAccount);
         when(stripeService.isAccountVerified("acct_second456")).thenReturn(false);
@@ -90,8 +87,6 @@ class DriverPayoutAccountIntegrationTest extends BaseIntegrationTest {
         DriverPayoutAccount defaultForFirst = payoutAccountService.getDefaultForDriver(200L);
         assertThat(defaultForFirst.getId()).isEqualTo(first.getId());
     }
-
-
 
     @Test
     @DisplayName("Первый аккаунт всегда становится default")
@@ -169,8 +164,7 @@ class DriverPayoutAccountIntegrationTest extends BaseIntegrationTest {
     void getAllByDriverIdReturnsAll() {
         payoutAccountService.addPayoutAccount(200L, "4242");
 
-        Account second = new Account();
-        second.setId("acct_second");
+        StripeService.FakeAccount second = new StripeService.FakeAccount("acct_second");
         when(stripeService.getOrCreateConnectAccount(300L)).thenReturn(second);
         when(stripeService.isAccountVerified("acct_second")).thenReturn(true);
 

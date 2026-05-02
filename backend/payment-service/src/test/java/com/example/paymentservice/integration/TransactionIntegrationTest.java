@@ -7,14 +7,12 @@ import com.example.paymentservice.entity.enums.TransactionStatus;
 import com.example.paymentservice.entity.enums.TransactionType;
 import com.example.paymentservice.exception.InvalidPaymentOperationException;
 import com.example.paymentservice.exception.TransactionNotFoundException;
+import com.example.paymentservice.messaging.PaymentEventPublisher;
 import com.example.paymentservice.repository.DriverPayoutAccountRepository;
 import com.example.paymentservice.repository.PaymentMethodRepository;
 import com.example.paymentservice.repository.TransactionRepository;
 import com.example.paymentservice.service.StripeService;
 import com.example.paymentservice.service.TransactionService;
-import com.stripe.model.PaymentIntent;
-import com.stripe.model.Refund;
-import com.stripe.model.Transfer;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,13 +49,16 @@ class TransactionIntegrationTest extends BaseIntegrationTest {
     private DriverPayoutAccountRepository payoutAccountRepository;
 
     @MockitoBean
+    private PaymentEventPublisher paymentEventPublisher;
+
+    @MockitoBean
     private StripeService stripeService;
 
     @Autowired
     private EntityManager entityManager;
 
     private PaymentMethod testPaymentMethod;
-    private PaymentIntent mockPaymentIntent;
+    private StripeService.FakePaymentIntent mockPaymentIntent; 
 
     @BeforeEach
     void setUp() {
@@ -85,9 +86,7 @@ class TransactionIntegrationTest extends BaseIntegrationTest {
                 .build();
         payoutAccountRepository.save(testPayoutAccount);
 
-        mockPaymentIntent = new PaymentIntent();
-        mockPaymentIntent.setId("pi_test123");
-        mockPaymentIntent.setStatus("succeeded");
+        mockPaymentIntent = new StripeService.FakePaymentIntent("pi_test123", "succeeded");
 
         when(stripeService.createPaymentIntent(any(), anyString(), anyString(), anyString(), any()))
                 .thenReturn(mockPaymentIntent);
@@ -114,9 +113,7 @@ class TransactionIntegrationTest extends BaseIntegrationTest {
 
         assertThat(transactionRepository.count()).isEqualTo(1);
 
-        Refund mockRefund = new Refund();
-        mockRefund.setId("re_test123");
-        mockRefund.setStatus("succeeded");
+        StripeService.FakeRefund mockRefund = new StripeService.FakeRefund("re_test123", "succeeded");
         when(stripeService.createRefund(anyString(), any())).thenReturn(mockRefund);
 
         Transaction refund = transactionService.createRefund(
@@ -159,9 +156,7 @@ class TransactionIntegrationTest extends BaseIntegrationTest {
                 BigDecimal.valueOf(100.00), "usd"
         );
 
-        Refund mockRefund = new Refund();
-        mockRefund.setId("re_partial");
-        mockRefund.setStatus("succeeded");
+        StripeService.FakeRefund mockRefund = new StripeService.FakeRefund("re_partial", "succeeded");
         when(stripeService.createRefund(anyString(), any())).thenReturn(mockRefund);
 
         Transaction refund = transactionService.createRefund(
@@ -215,8 +210,7 @@ class TransactionIntegrationTest extends BaseIntegrationTest {
     @Test
     @DisplayName("Payout flow: создание выплаты водителю")
     void payoutFlow() {
-        Transfer mockTransfer = new Transfer();
-        mockTransfer.setId("tr_test123");
+        StripeService.FakeTransfer mockTransfer = new StripeService.FakeTransfer("tr_test123");
         when(stripeService.createTransfer(any(), anyString(), anyString(), any()))
                 .thenReturn(mockTransfer);
 
@@ -237,9 +231,8 @@ class TransactionIntegrationTest extends BaseIntegrationTest {
     @Test
     @DisplayName("markSucceeded обновляет статус транзакции")
     void markSucceededUpdatesStatus() {
-        PaymentIntent pendingIntent = new PaymentIntent();
-        pendingIntent.setId("pi_pending");
-        pendingIntent.setStatus("processing");
+        StripeService.FakePaymentIntent pendingIntent =
+                new StripeService.FakePaymentIntent("pi_pending", "processing");
         when(stripeService.createPaymentIntent(any(), anyString(), anyString(), anyString(), any()))
                 .thenReturn(pendingIntent);
 
@@ -294,9 +287,7 @@ class TransactionIntegrationTest extends BaseIntegrationTest {
 
         transactionService.createCharge(310L, 100L, 200L, null, BigDecimal.valueOf(25.50), "usd");
 
-        PaymentIntent second = new PaymentIntent();
-        second.setId("pi_second");
-        second.setStatus("succeeded");
+        StripeService.FakePaymentIntent second = new StripeService.FakePaymentIntent("pi_second", "succeeded");
         when(stripeService.createPaymentIntent(any(), anyString(), anyString(), anyString(), any()))
                 .thenReturn(second);
 

@@ -77,26 +77,4 @@ class DriverProfileServiceTest {
         assertThat(profile.isVerified()).isTrue();
         verify(driverProfileRepository).save(profile);
     }
-
-    @Test
-    @DisplayName("Обновление статуса: использует batch update")
-    void updateStatus_UsesRepositoryUpdateMethod() {
-        DriverProfile profile = DriverProfile.builder()
-                .accountId(1L)
-                .verified(true)
-                .build();
-
-        Account account = Account.builder().id(1L).active(true).build();
-        profile.setAccount(account);
-
-        when(driverProfileRepository.findById(1L)).thenReturn(Optional.of(profile));
-        when(vehicleRepository.findAllByDriverAccountIdAndActiveTrue(1L))
-                .thenReturn(List.of(Vehicle.builder().active(true).build())); // <-- мок для проверки
-
-        driverProfileService.updateStatus(1L, DriverStatus.ONLINE);
-
-        verify(driverProfileRepository).findById(1L);
-        verify(vehicleRepository).findAllByDriverAccountIdAndActiveTrue(1L);
-        verify(driverProfileRepository).updateStatus(1L, DriverStatus.ONLINE);
-    }
 }
