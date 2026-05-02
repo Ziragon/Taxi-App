@@ -29,7 +29,7 @@ public class DriverStatusController {
                     @ApiResponse(responseCode = "204", description = "Статус обновлён")
             }
     )
-    public ResponseEntity<Void> onlineStatus(
+    public ResponseEntity<Void> setOnlineStatus(
             @AuthenticationPrincipal UserPrincipal principal
     ) {
 
@@ -46,7 +46,7 @@ public class DriverStatusController {
                     @ApiResponse(responseCode = "204", description = "Статус обновлён")
             }
     )
-    public ResponseEntity<Void> offlineStatus(
+    public ResponseEntity<Void> setOfflineStatus(
             @AuthenticationPrincipal UserPrincipal principal
     ) {
 
