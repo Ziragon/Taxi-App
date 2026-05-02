@@ -105,16 +105,6 @@ public class DriverProfileService {
     }
 
     @Transactional
-    public void setOfflineIfDriver(Long accountId) {
-        driverProfileRepository.findById(accountId).ifPresent(profile -> {
-            if (profile.getStatus() != DriverStatus.OFFLINE) {
-                driverProfileRepository.updateStatus(accountId, DriverStatus.OFFLINE);
-                log.info("Driver status set to OFFLINE on logout: accountId={}", accountId);
-            }
-        });
-    }
-
-    @Transactional
     public void updateRating(Long accountId, BigDecimal newTripRating) {
         DriverProfile profile = driverProfileRepository.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
