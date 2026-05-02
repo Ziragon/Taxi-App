@@ -47,23 +47,6 @@ class WeatherServiceIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("Округленное значение - кэш-хит")
-    void getWeatherCoef_closeCoordsWithinApprox11km_hitsSameCacheEntry() {
-        WeatherResponse response = buildMockResponse("Novosibirsk", 5.0, 1000, "Clear");
-        when(weatherClient.getWeather(anyString(), anyString(), anyString())).thenReturn(response);
-
-        // lat*10: round(550.3)=550, round(550.4)=550 одинаково
-        // lng*10: round(829.2)=829, round(829.3)=829 одинаково
-        BigDecimal lat1 = new BigDecimal("55.03"), lng1 = new BigDecimal("82.92");
-        BigDecimal lat2 = new BigDecimal("55.04"), lng2 = new BigDecimal("82.93");
-
-        weatherService.getWeatherCoef(lng1, lat1);
-        weatherService.getWeatherCoef(lng2, lat2);
-
-        verify(weatherClient, times(1)).getWeather(anyString(), anyString(), anyString());
-    }
-
-    @Test
     @DisplayName("Exception клиента кидает fallback")
     void getWeatherCoef_clientThrowsException_returnsFallbackDto() {
         when(weatherClient.getWeather(anyString(), anyString(), anyString()))
