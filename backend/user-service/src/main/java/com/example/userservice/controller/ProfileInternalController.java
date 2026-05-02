@@ -3,6 +3,7 @@ package com.example.userservice.controller;
 import com.example.shared.dto.enums.DriverStatus;
 import com.example.userservice.repository.PassengerProfileRepository;
 import com.example.userservice.service.DriverCachingService;
+import com.example.userservice.service.DriverProfileService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProfileInternalController {
 
     private final PassengerProfileRepository passengerRepo;
-    private final DriverCachingService cachingService;
+    private final DriverProfileService driverService;
 
     @GetMapping("/passenger/{accountId}/exists")
     public ResponseEntity<Boolean> hasPassengerProfile(@PathVariable Long accountId) {
@@ -28,7 +29,7 @@ public class ProfileInternalController {
     @GetMapping("/driver/{driverId}/status")
     public ResponseEntity<DriverStatus> getDriverStatus(@PathVariable Long driverId) {
         return ResponseEntity.ok(
-                cachingService.getStatus(driverId)
+                driverService.getStatus(driverId)
         );
     }
 }
