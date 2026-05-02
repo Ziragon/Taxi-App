@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 public class DriverProfileService {
 
     private final DriverProfileRepository driverProfileRepository;
+    private final DriverCachingService driverCachingService;
     private final VehicleRepository vehicleRepository;
     private final AccountService accountService;
     private static final String DRIVER_PROFILE = "Driver profile";
@@ -84,6 +85,7 @@ public class DriverProfileService {
             validateOnlineRequirements(accountId, profile);
         }
 
+        driverCachingService.updateStatus(accountId, status);
         driverProfileRepository.updateStatus(accountId, status);
     }
 
