@@ -7,6 +7,7 @@ import com.example.paymentservice.entity.enums.TransactionStatus;
 import com.example.paymentservice.entity.enums.TransactionType;
 import com.example.paymentservice.exception.InvalidPaymentOperationException;
 import com.example.paymentservice.exception.TransactionNotFoundException;
+import com.example.paymentservice.messaging.PaymentEventPublisher;
 import com.example.paymentservice.repository.DriverPayoutAccountRepository;
 import com.example.paymentservice.repository.PaymentMethodRepository;
 import com.example.paymentservice.repository.TransactionRepository;
@@ -46,6 +47,9 @@ class TransactionIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private DriverPayoutAccountRepository payoutAccountRepository;
+
+    @MockitoBean
+    private PaymentEventPublisher paymentEventPublisher;
 
     @MockitoBean
     private StripeService stripeService;
