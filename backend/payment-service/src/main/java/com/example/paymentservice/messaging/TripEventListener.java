@@ -1,15 +1,14 @@
 package com.example.paymentservice.messaging;
 
-import com.example.paymentservice.service.TransactionService;
 import com.example.shared.dto.event.RefundRequestedEvent;
 import com.example.shared.dto.event.TripCompletedEvent;
+import com.example.paymentservice.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
-import static com.example.paymentservice.config.RabbitMQConfig.REFUND_REQUESTED_QUEUE;
-import static com.example.paymentservice.config.RabbitMQConfig.TRIP_COMPLETED_QUEUE;
+import static com.example.paymentservice.config.RabbitMQConfig.*;
 
 @Slf4j
 @Component
@@ -19,9 +18,9 @@ public class TripEventListener {
     private final TransactionService transactionService;
 
     @RabbitListener(queues = TRIP_COMPLETED_QUEUE)
-    public void handleTripCompleted(TripCompletedEvent event) {
-        log.info("Received TripCompletedEvent: tripId={}, passengerId={}, amount={}",
-                event.tripId(), event.passengerId(), event.amount());
+    public void onTripCompleted(TripCompletedEvent event) {
+        log.info("Received TripCompletedEvent: tripId={}, amount={}",
+                event.tripId(), event.amount());
 
         try {
             transactionService.createCharge(
@@ -32,35 +31,27 @@ public class TripEventListener {
                     event.amount(),
                     event.currency()
             );
-
-            log.info("Charge created successfully for trip {}", event.tripId());
-
         } catch (Exception e) {
-            log.error("Failed to process charge for trip {}: {}", event.tripId(), e.getMessage(), e);
-            throw e;
+            log.error("Failed to create charge for trip {}: {}", event.tripId(), e.getMessage());
         }
     }
 
     @RabbitListener(queues = REFUND_REQUESTED_QUEUE)
-    public void handleRefundRequested(RefundRequestedEvent event) {
-        log.info("Received RefundRequestedEvent: tripId={}, passengerId={}, amount={}",
-                event.tripId(), event.passengerId(), event.amount());
+    public void onRefundRequested(RefundRequestedEvent event) {
+        log.info("Received RefundRequestedEvent: tripId={}, amount={}",
+                event.tripId(), event.amount());
 
         try {
 
-            var originalTransaction = transactionService.getByTripId(event.tripId());
+            var transaction = transactionService.getByTripId(event.tripId());
 
             transactionService.createRefund(
-                    originalTransaction.getId(),
+                    transaction.getId(),
                     event.amount(),
                     event.reason()
             );
-
-            log.info("Refund created successfully for trip {}", event.tripId());
-
         } catch (Exception e) {
-            log.error("Failed to process refund for trip {}: {}", event.tripId(), e.getMessage(), e);
-            throw e;
+            log.error("Failed to create refund for trip {}: {}", event.tripId(), e.getMessage());
         }
     }
 }

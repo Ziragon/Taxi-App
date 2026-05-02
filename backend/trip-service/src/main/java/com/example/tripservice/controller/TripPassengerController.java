@@ -8,6 +8,7 @@ import com.example.tripservice.dto.data.TripDto;
 import com.example.tripservice.dto.request.TripCreateRequest;
 import com.example.tripservice.dto.response.TripResponse;
 import com.example.tripservice.service.TripService;
+import com.example.tripservice.service.TripStatusService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class TripPassengerController {
 
     private final TripService tripService;
+    private final TripStatusService tripStatusService;
 
     @PostMapping
     public ResponseEntity<TripResponse> createTrip(
@@ -40,6 +42,15 @@ public class TripPassengerController {
         AddressDto dto = tripService.startSearching(principal.userId(), tripId, vehicleClass);
         tripService.beginDriverSearch(tripId, dto.longitude(), dto.latitude(), vehicleClass);
 
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{tripId}/cancel")
+    public ResponseEntity<Void> cancelTrip(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long tripId
+    ) {
+        tripStatusService.cancelTrip(tripId, principal.userId());
         return ResponseEntity.ok().build();
     }
 }

@@ -79,6 +79,7 @@ internal-auth:
 
 internal:
   user-service: ${USER_SERVICE:http://localhost:8080}
+  payment-service: ${PAYMENT_SERVICE_URL:http://localhost:8082}
 
 searching:
   duration: ${DRIVER_SEARCH_DURATION_SECS:15}

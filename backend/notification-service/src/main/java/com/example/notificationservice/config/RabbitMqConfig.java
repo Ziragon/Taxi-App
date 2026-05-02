@@ -107,7 +107,7 @@ public class RabbitMqConfig {
         return template;
     }
 
-    @Bean
+    @Bean(name = "rabbitListenerContainerFactory")
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
             ConnectionFactory connectionFactory
     ) {
