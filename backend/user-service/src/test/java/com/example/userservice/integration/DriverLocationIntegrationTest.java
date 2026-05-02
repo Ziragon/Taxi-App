@@ -127,13 +127,16 @@ class DriverLocationIntegrationTest {
     }
 
     private void setupDriverInRedis(Long driverId, DriverStatus status, VehicleClass vehicleClass) {
-        DriverLocationDto dto = new DriverLocationDto(
-                driverId,
-                new LocationDto(CENTER_LNG, CENTER_LAT),
-                vehicleClass
-        );
-        driverCachingService.updateLocation(dto);
         driverCachingService.updateStatus(driverId, status);
+
+        if (status != DriverStatus.OFFLINE) {
+            DriverLocationDto dto = new DriverLocationDto(
+                    driverId,
+                    new LocationDto(CENTER_LNG, CENTER_LAT),
+                    vehicleClass
+            );
+            driverCachingService.updateLocation(dto);
+        }
     }
 
     private void expireLocationKey(Long driverId) {
@@ -190,6 +193,7 @@ class DriverLocationIntegrationTest {
 
             List<DriverLocation> saved = driverLocationRepository.findAll();
             assertThat(saved).hasSize(1);
+            assertThat(saved.getFirst().getVehicleClass()).isEqualTo(COMFORT);
         }
 
         @Test

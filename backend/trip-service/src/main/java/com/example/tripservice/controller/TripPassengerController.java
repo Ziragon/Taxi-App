@@ -42,7 +42,7 @@ public class TripPassengerController {
         AddressDto dto = tripService.startSearching(principal.userId(), tripId, vehicleClass);
         tripService.beginDriverSearch(tripId, dto.longitude(), dto.latitude(), vehicleClass);
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{tripId}/cancel")
@@ -51,6 +51,7 @@ public class TripPassengerController {
             @PathVariable Long tripId
     ) {
         tripStatusService.cancelTrip(tripId, principal.userId());
-        return ResponseEntity.ok().build();
+
+        return ResponseEntity.noContent().build();
     }
 }

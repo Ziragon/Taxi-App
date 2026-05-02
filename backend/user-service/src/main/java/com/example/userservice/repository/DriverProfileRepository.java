@@ -9,20 +9,16 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface DriverProfileRepository extends JpaRepository<DriverProfile, Long> {
 
-    List<DriverProfile> findAllByStatus(DriverStatus status);
-
-    List<DriverProfile> findAllByVerifiedTrue();
-
     boolean existsByLicenseNumber(String licenseNumber);
-
-    @Modifying
-    @Query("UPDATE DriverProfile dp SET dp.status = :status WHERE dp.accountId = :accountId")
-    int updateStatus(@Param("accountId") Long accountId, @Param("status") DriverStatus status);
 
     @Query("SELECT dp FROM DriverProfile dp JOIN FETCH dp.account")
     List<DriverProfile> findAllWithAccount();
+
+    @Query("SELECT p FROM DriverProfile p JOIN FETCH p.account WHERE p.accountId = :id")
+    Optional<DriverProfile> findByIdWithAccount(@Param("id") Long id);
 }

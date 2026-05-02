@@ -1,5 +1,6 @@
 package com.example.userservice.service;
 
+import com.example.shared.exception.common.AccessDeniedException;
 import com.example.shared.exception.common.ResourceNotFoundException;
 import com.example.userservice.dto.data.DriverProfileDto;
 import com.example.userservice.entity.Account;
@@ -14,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -79,17 +79,21 @@ public class DriverProfileService {
         return DriverProfileDto.from(saved);
     }
 
-    @Transactional
+    public DriverStatus getStatus(Long driverId) {
+        return driverCachingService.getStatus(driverId);
+    }
+
     public void updateStatus(Long accountId, DriverStatus status) {
-        DriverProfile profile = driverProfileRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
-
         if (status == DriverStatus.ONLINE) {
+            DriverProfile profile = driverProfileRepository.findByIdWithAccount(accountId)
+                    .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
             validateOnlineRequirements(accountId, profile);
+            driverCachingService.updateStatus(accountId, DriverStatus.ONLINE);
+        } else if (status == DriverStatus.OFFLINE) {
+            driverCachingService.deleteDriver(accountId);
+        } else if (status == DriverStatus.BUSY) {
+            driverCachingService.updateStatus(accountId, DriverStatus.BUSY);
         }
-
-        driverCachingService.updateStatus(accountId, status);
-        driverProfileRepository.updateStatus(accountId, status);
     }
 
     @Transactional
@@ -99,26 +103,6 @@ public class DriverProfileService {
 
         profile.setVerified(true);
         driverProfileRepository.save(profile);
-    }
-
-    @Transactional
-    public void setOfflineIfDriver(Long accountId) {
-        driverProfileRepository.findById(accountId).ifPresent(profile -> {
-            if (profile.getStatus() != DriverStatus.OFFLINE) {
-                driverProfileRepository.updateStatus(accountId, DriverStatus.OFFLINE);
-                log.info("Driver status set to OFFLINE on logout: accountId={}", accountId);
-            }
-        });
-    }
-
-    @Transactional(readOnly = true)
-    public List<DriverProfile> getOnlineDrivers() {
-        return driverProfileRepository.findAllByStatus(DriverStatus.ONLINE);
-    }
-
-    @Transactional(readOnly = true)
-    public List<DriverProfile> getVerifiedDrivers() {
-        return driverProfileRepository.findAllByVerifiedTrue();
     }
 
     @Transactional
@@ -136,15 +120,15 @@ public class DriverProfileService {
 
     private void validateOnlineRequirements(Long accountId, DriverProfile profile) {
         if (!profile.isVerified()) {
-            throw new IllegalStateException("Driver must be verified to go online");
+            throw new AccessDeniedException("Driver must be verified to go online");
         }
 
         if (!profile.getAccount().isActive()) {
-            throw new IllegalStateException("Account is not active");
+            throw new AccessDeniedException("Account is not active");
         }
 
         if (vehicleRepository.findAllByDriverAccountIdAndActiveTrue(accountId).isEmpty()) {
-            throw new IllegalStateException("Driver must have an active vehicle to go online");
+            throw new AccessDeniedException("Driver must have an active vehicle to go online");
         }
     }
 }

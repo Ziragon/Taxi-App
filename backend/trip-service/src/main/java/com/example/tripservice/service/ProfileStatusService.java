@@ -27,4 +27,8 @@ public class ProfileStatusService {
             throw new AccessDeniedException("Driver profile not found");
         }
     }
+
+    public void setDriverStatusBusy(Long driverId) {
+        userClient.setBusyStatus(driverId);
+    }
 }

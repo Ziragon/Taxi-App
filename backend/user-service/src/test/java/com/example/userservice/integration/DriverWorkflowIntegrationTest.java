@@ -120,16 +120,15 @@ class DriverWorkflowIntegrationTest {
                 .isEqualTo(vehicle1.id());
 
         driverProfileService.verifyDriver(driverId);
-        driverProfileService.updateStatus(driverId, DriverStatus.ONLINE);
         entityManager.flush();
         entityManager.clear();
 
-        DriverProfileDto updatedProfile = driverProfileService.getProfile(driverId);
-        assertThat(updatedProfile.status()).isEqualTo(DriverStatus.ONLINE);
-
-        driverProfileService.verifyDriver(driverId);
         DriverProfileDto verifiedProfile = driverProfileService.getProfile(driverId);
         assertThat(verifiedProfile.verified()).isTrue();
+
+        driverProfileService.updateStatus(driverId, DriverStatus.ONLINE);
+
+        assertThat(driverProfileService.getStatus(driverId)).isEqualTo(DriverStatus.ONLINE);
     }
 
     @Test

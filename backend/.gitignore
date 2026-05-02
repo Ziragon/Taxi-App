@@ -45,3 +45,15 @@ nginx/certs/
 
 ### Environment ###
 .env
+
+### Python venv ###
+.venv/
+venv/
+ENV/
+env/
+
+### Pycache ###
+__pycache__/
+*.py[cod]
+*$py.class
+state.json

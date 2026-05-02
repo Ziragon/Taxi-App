@@ -102,11 +102,13 @@ public class DriverSearchService {
     }
 
     public void handleDriverAccept(Long tripId, Long driverId) {
-        offerCacheService.validateActiveOffer(tripId, driverId);
         profileStatusService.verifyDriverCanDrive(driverId);
+        offerCacheService.validateActiveOffer(tripId, driverId);
         responsePublisher.publish(tripId, "ACCEPT", driverId);
+        profileStatusService.setDriverStatusBusy(driverId);
     }
 
+    // В будущем желательно сделать какой-либо штраф и тд.
     public void handleDriverReject(Long tripId, Long driverId) {
         offerCacheService.validateActiveOffer(tripId, driverId);
         log.info("Driver {} rejected offer for trip {}", driverId, tripId);

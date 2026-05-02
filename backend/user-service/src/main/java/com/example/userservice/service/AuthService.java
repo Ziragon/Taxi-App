@@ -69,7 +69,6 @@ public class AuthService {
     @Transactional
     public void logout(Long accountId) {
         tokenService.revokeAllTokens(accountId);
-        driverProfileService.setOfflineIfDriver(accountId);
     }
 
     private AuthDto generateTokens(Account account) {

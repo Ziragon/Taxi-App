@@ -4,7 +4,6 @@ import com.example.shared.security.UserPrincipal;
 import com.example.userservice.dto.data.DriverProfileDto;
 import com.example.userservice.dto.request.CreateDriverProfileRequest;
 import com.example.userservice.dto.request.UpdateDriverProfileRequest;
-import com.example.userservice.dto.request.UpdateDriverStatusRequest;
 import com.example.userservice.dto.response.DriverProfileResponse;
 import com.example.userservice.service.DriverProfileService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -113,32 +112,5 @@ public class DriverProfileController {
         );
 
         return ResponseEntity.ok(DriverProfileResponse.from(profile));
-    }
-
-    @PutMapping("/status")
-    @Operation(
-            summary = "Обновить статус водителя",
-            description = "Водитель меняет свой статус (ONLINE/OFFLINE/BUSY)",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(value = """
-                                    {
-                                      "status": "ONLINE"
-                                    }
-                                    """)
-                    )
-            ),
-            responses = {
-                    @ApiResponse(responseCode = "204", description = "Статус обновлён")
-            }
-    )
-    public ResponseEntity<Void> updateStatus(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @Valid @RequestBody UpdateDriverStatusRequest request) {
-
-        driverProfileService.updateStatus(principal.userId(), request.status());
-
-        return ResponseEntity.noContent().build();
     }
 }
