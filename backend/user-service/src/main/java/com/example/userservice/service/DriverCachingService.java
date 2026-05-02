@@ -36,7 +36,10 @@ public class DriverCachingService {
         redisLocationTemplate.opsForValue().set(locationKey, dto, ttlSeconds, TimeUnit.SECONDS);
 
         String statusKey = KEY_STATUS_PREFIX + dto.driverId();
-        redisStringTemplate.expire(statusKey, ttlSeconds, TimeUnit.SECONDS);
+        String currentStatus = redisStringTemplate.opsForValue().get(statusKey);
+        if (DriverStatus.ONLINE.name().equals(currentStatus)) {
+            redisStringTemplate.expire(statusKey, ttlSeconds, TimeUnit.SECONDS);
+        }
 
         redisStringTemplate.opsForGeo().add(
                 GEO_KEY,
@@ -52,10 +55,8 @@ public class DriverCachingService {
         String key = KEY_STATUS_PREFIX + driverId;
 
         if (status == DriverStatus.BUSY) {
-            // BUSY - постоянное, пока не придет триггер
             redisStringTemplate.opsForValue().set(key, status.name());
         } else {
-            // ONLINE - действует пока водитель не пропадет из сети
             redisStringTemplate.opsForValue().set(key, status.name(), ttlSeconds, TimeUnit.SECONDS);
         }
 

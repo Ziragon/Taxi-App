@@ -79,17 +79,21 @@ public class DriverProfileService {
         return DriverProfileDto.from(saved);
     }
 
-    @Transactional
+    public DriverStatus getStatus(Long driverId) {
+        return driverCachingService.getStatus(driverId);
+    }
+
     public void updateStatus(Long accountId, DriverStatus status) {
-        DriverProfile profile = driverProfileRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
-
         if (status == DriverStatus.ONLINE) {
+            DriverProfile profile = driverProfileRepository.findById(accountId)
+                    .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
             validateOnlineRequirements(accountId, profile);
+            driverCachingService.updateStatus(accountId, DriverStatus.ONLINE);
+        } else if (status == DriverStatus.OFFLINE) {
+            driverCachingService.deleteDriver(accountId);
+        } else if (status == DriverStatus.BUSY) {
+            driverCachingService.updateStatus(accountId, DriverStatus.BUSY);
         }
-
-        driverCachingService.updateStatus(accountId, status);
-        driverProfileRepository.updateStatus(accountId, status);
     }
 
     @Transactional
