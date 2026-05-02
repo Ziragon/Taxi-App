@@ -32,8 +32,11 @@ public class DriverCachingService {
     private long ttlSeconds;
 
     public void updateLocation(DriverLocationDto dto) {
-        String key = KEY_LOCATION_PREFIX + dto.driverId();
-        redisLocationTemplate.opsForValue().set(key, dto, ttlSeconds, TimeUnit.SECONDS);
+        String locationKey = KEY_LOCATION_PREFIX + dto.driverId();
+        redisLocationTemplate.opsForValue().set(locationKey, dto, ttlSeconds, TimeUnit.SECONDS);
+
+        String statusKey = KEY_STATUS_PREFIX + dto.driverId();
+        redisStringTemplate.expire(statusKey, ttlSeconds, TimeUnit.SECONDS);
 
         redisStringTemplate.opsForGeo().add(
                 GEO_KEY,
@@ -47,7 +50,7 @@ public class DriverCachingService {
 
     public void updateStatus(Long driverId, DriverStatus status) {
         String key = KEY_STATUS_PREFIX + driverId;
-        redisStringTemplate.opsForValue().set(key, status.name(), ttlSeconds, TimeUnit.SECONDS);
+        redisStringTemplate.opsForValue().set(key, status.name());
 
         if (status == DriverStatus.ONLINE) {
             redisStringTemplate.opsForSet().add(ONLINE_DRIVERS_KEY, String.valueOf(driverId));
@@ -77,7 +80,6 @@ public class DriverCachingService {
         GeoResults<RedisGeoCommands.GeoLocation<String>> geoResults =
                 redisStringTemplate.opsForGeo()
                         .search(GEO_KEY, center, radius, args);
-
         if (geoResults == null) return Collections.emptyList();
 
         List<String> locationKeys = geoResults.getContent().stream()

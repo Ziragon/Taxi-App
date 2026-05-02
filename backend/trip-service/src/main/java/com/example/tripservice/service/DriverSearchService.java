@@ -67,7 +67,7 @@ public class DriverSearchService {
                         .stream()
                         .filter(d -> !alreadyOffered.contains(d.driverId()))
                         .toList();
-
+                log.info(drivers.toString());
                 for (DriverLocationDto driver : drivers) {
                     alreadyOffered.add(driver.driverId());
 
