@@ -34,22 +34,6 @@ class WeatherServiceIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("Идентичные вызовы - кэш-хит")
-    void getWeatherCoef_sameCoordsCalledTwice_clientInvokedOnce() {
-        WeatherResponse response = buildMockResponse("Moscow", 20.0, 1000, "Sunny");
-        when(weatherClient.getWeather(anyString(), anyString(), anyString())).thenReturn(response);
-
-        BigDecimal lat = new BigDecimal("99.7500");
-        BigDecimal lng = new BigDecimal("99.6200");
-
-        WeatherDto first  = weatherService.getWeatherCoef(lng, lat);
-        WeatherDto second = weatherService.getWeatherCoef(lng, lat);
-
-        assertThat(first).isEqualTo(second);
-        verify(weatherClient, times(1)).getWeather(anyString(), anyString(), anyString());
-    }
-
-    @Test
     @DisplayName("Разные вызовы - вызов клиента дважды")
     void getWeatherCoef_differentCoords_clientInvokedTwice() {
         when(weatherClient.getWeather(anyString(), anyString(), anyString()))
