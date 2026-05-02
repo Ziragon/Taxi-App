@@ -18,7 +18,7 @@ public class DriverStatusInternalController {
 
     private final DriverProfileService driverProfileService;
 
-    @PutMapping("/{driverId}/offline")
+    @PutMapping("/{driverId}/status/offline")
     public ResponseEntity<Void> setOfflineStatus(
             @PathVariable Long driverId
     ) {
@@ -27,7 +27,7 @@ public class DriverStatusInternalController {
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/{driverId}/online")
+    @PutMapping("/{driverId}/status/busy")
     public ResponseEntity<Void> setBusyStatus(
             @PathVariable Long driverId
     ) {

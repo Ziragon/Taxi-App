@@ -107,6 +107,8 @@ public class TripService {
             throw new TripAlreadyExistsException();
         }
 
+        // TODO - Заморозка средств с карты пассажира
+
         Tariff tariff = tariffService.getByVehicleClass(vehicleClass);
         TariffDto tariffDto = tariffService.calculatePrice(tariff, TripDto.from(trip, null, null));
 
