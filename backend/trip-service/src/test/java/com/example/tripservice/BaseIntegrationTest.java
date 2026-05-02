@@ -7,12 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-
-import java.util.Objects;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(TestContainersConfig.class)
@@ -37,7 +34,7 @@ public abstract class BaseIntegrationTest {
     protected void clearKeysByPattern(String pattern) {
         var keys = longRedisTemplate.keys(pattern + "*");
         if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
+            longRedisTemplate.delete(keys);
         }
     }
 
