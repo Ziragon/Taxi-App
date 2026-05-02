@@ -84,7 +84,7 @@ public class DriverProfileService {
 
     public void updateStatus(Long accountId, DriverStatus status) {
         if (status == DriverStatus.ONLINE) {
-            DriverProfile profile = driverProfileRepository.findById(accountId)
+            DriverProfile profile = driverProfileRepository.findByIdWithAccount(accountId)
                     .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
             validateOnlineRequirements(accountId, profile);
             driverCachingService.updateStatus(accountId, DriverStatus.ONLINE);
