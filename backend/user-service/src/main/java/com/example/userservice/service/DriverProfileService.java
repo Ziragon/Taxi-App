@@ -1,5 +1,6 @@
 package com.example.userservice.service;
 
+import com.example.shared.exception.common.AccessDeniedException;
 import com.example.shared.exception.common.ResourceNotFoundException;
 import com.example.userservice.dto.data.DriverProfileDto;
 import com.example.userservice.entity.Account;
@@ -119,15 +120,15 @@ public class DriverProfileService {
 
     private void validateOnlineRequirements(Long accountId, DriverProfile profile) {
         if (!profile.isVerified()) {
-            throw new IllegalStateException("Driver must be verified to go online");
+            throw new AccessDeniedException("Driver must be verified to go online");
         }
 
         if (!profile.getAccount().isActive()) {
-            throw new IllegalStateException("Account is not active");
+            throw new AccessDeniedException("Account is not active");
         }
 
         if (vehicleRepository.findAllByDriverAccountIdAndActiveTrue(accountId).isEmpty()) {
-            throw new IllegalStateException("Driver must have an active vehicle to go online");
+            throw new AccessDeniedException("Driver must have an active vehicle to go online");
         }
     }
 }
