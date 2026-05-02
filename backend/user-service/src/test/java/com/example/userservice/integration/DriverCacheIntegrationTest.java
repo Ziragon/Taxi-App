@@ -40,19 +40,16 @@ class DriverCacheIntegrationTest {
     private static final Long DRIVER_ID_2 = 2L;
     private static final Long DRIVER_ID_3 = 3L;
 
-    // Координаты точки
     private static final double CENTER_LNG = 37.61;
     private static final double CENTER_LAT = 55.75;
 
-    // Координаты в радиусе 5 км
     private static final String NEAR_LNG_1 = "37.62";   // ~0.8 км от центра
     private static final String NEAR_LAT_1 = "55.76";
 
     private static final String NEAR_LNG_2 = "37.63";   // ~2.1 км от центра
     private static final String NEAR_LAT_2 = "55.77";
 
-    // Координаты за пределами 5 км (~85 км)
-    private static final String FAR_LNG_3  = "38.50";
+    private static final String FAR_LNG_3  = "38.50";   // ~85 км от центра
     private static final String FAR_LAT_3  = "56.30";
 
     private static final double SEARCH_RADIUS_KM = 5.0;
@@ -96,6 +93,16 @@ class DriverCacheIntegrationTest {
         );
     }
 
+    private void setupOnlineDriverWithLocation(Long driverId, String lng, String lat) {
+        driverCachingService.updateStatus(driverId, DriverStatus.ONLINE);
+        driverCachingService.updateLocation(buildDriverLocation(driverId, lng, lat));
+    }
+
+    private void setupOnlineDriverWithLocation(Long driverId, String lng, String lat, VehicleClass vehicleClass) {
+        driverCachingService.updateStatus(driverId, DriverStatus.ONLINE);
+        driverCachingService.updateLocation(buildDriverLocation(driverId, lng, lat, vehicleClass));
+    }
+
     @Nested
     @DisplayName("updateLocation()")
     class UpdateLocation {
@@ -103,6 +110,7 @@ class DriverCacheIntegrationTest {
         @Test
         @DisplayName("Сохраняет локацию по корректному ключу")
         void shouldSaveLocationByCorrectKey() {
+            driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
             driverCachingService.updateLocation(buildDriverLocation(DRIVER_ID_1, "37.61", "55.75"));
 
             DriverLocationDto stored = redisLocationTemplate
@@ -117,6 +125,7 @@ class DriverCacheIntegrationTest {
         @Test
         @DisplayName("Установлен положительный TTL")
         void shouldSetPositiveTtl() {
+            driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
             driverCachingService.updateLocation(buildDriverLocation(DRIVER_ID_1, "37.61", "55.75"));
 
             Long ttl = redisLocationTemplate.getExpire(KEY_LOCATION_PREFIX + DRIVER_ID_1);
@@ -126,6 +135,7 @@ class DriverCacheIntegrationTest {
         @Test
         @DisplayName("Добавляет водителя в GEO-индекс")
         void shouldAddDriverToGeoIndex() {
+            driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
             driverCachingService.updateLocation(buildDriverLocation(DRIVER_ID_1, "37.61", "55.75"));
 
             List<Point> positions = redisStatusTemplate.opsForGeo()
@@ -187,16 +197,10 @@ class DriverCacheIntegrationTest {
         }
 
         @Test
-        @DisplayName("При статусе BUSY водитель удаляется из drivers:online")
-        void shouldRemoveDriverFromOnlineSetWhenStatusIsBusy() {
+        @DisplayName("При статусе BUSY водитель остаётся в drivers:online (используется для логирования в БД)")
+        void shouldKeepDriverInOnlineSetWhenStatusIsBusy() {
             driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
             driverCachingService.updateStatus(DRIVER_ID_2, DriverStatus.ONLINE);
-
-            Set<String> onlineIdsBefore = redisStatusTemplate.opsForSet().members(ONLINE_DRIVERS_KEY);
-            assertThat(onlineIdsBefore)
-                    .isNotNull()
-                    .isNotEmpty()
-                    .contains(String.valueOf(DRIVER_ID_1), String.valueOf(DRIVER_ID_2));
 
             driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.BUSY);
 
@@ -204,8 +208,7 @@ class DriverCacheIntegrationTest {
             assertThat(onlineIdsAfter)
                     .isNotNull()
                     .isNotEmpty()
-                    .doesNotContain(String.valueOf(DRIVER_ID_1))
-                    .contains(String.valueOf(DRIVER_ID_2));
+                    .contains(String.valueOf(DRIVER_ID_1), String.valueOf(DRIVER_ID_2));
         }
     }
 
@@ -216,7 +219,7 @@ class DriverCacheIntegrationTest {
         @Test
         @DisplayName("Удаляет локацию из Redis")
         void shouldDeleteLocation() {
-            driverCachingService.updateLocation(buildDriverLocation(DRIVER_ID_1, NEAR_LNG_1, NEAR_LAT_1));
+            setupOnlineDriverWithLocation(DRIVER_ID_1, NEAR_LNG_1, NEAR_LAT_1);
 
             driverCachingService.deleteDriver(DRIVER_ID_1);
 
@@ -264,7 +267,7 @@ class DriverCacheIntegrationTest {
         @Test
         @DisplayName("Удаляет водителя из GEO-индекса")
         void shouldRemoveDriverFromGeoIndex() {
-            driverCachingService.updateLocation(buildDriverLocation(DRIVER_ID_1, NEAR_LNG_1, NEAR_LAT_1));
+            setupOnlineDriverWithLocation(DRIVER_ID_1, NEAR_LNG_1, NEAR_LAT_1);
 
             List<Point> positionsBefore = redisStatusTemplate.opsForGeo()
                     .position(GEO_KEY, String.valueOf(DRIVER_ID_1));
@@ -298,10 +301,8 @@ class DriverCacheIntegrationTest {
         @Test
         @DisplayName("Возвращает локации онлайн-водителей в радиусе")
         void shouldReturnOnlineDriversWithinRadius() {
-            driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
-            driverCachingService.updateStatus(DRIVER_ID_2, DriverStatus.ONLINE);
-            driverCachingService.updateLocation(buildDriverLocation(DRIVER_ID_1, NEAR_LNG_1, NEAR_LAT_1));
-            driverCachingService.updateLocation(buildDriverLocation(DRIVER_ID_2, NEAR_LNG_2, NEAR_LAT_2));
+            setupOnlineDriverWithLocation(DRIVER_ID_1, NEAR_LNG_1, NEAR_LAT_1);
+            setupOnlineDriverWithLocation(DRIVER_ID_2, NEAR_LNG_2, NEAR_LAT_2);
 
             List<DriverLocationDto> result = driverCachingService
                     .getNearbyOnlineDrivers(CENTER_LNG, CENTER_LAT, SEARCH_RADIUS_KM);
@@ -319,10 +320,8 @@ class DriverCacheIntegrationTest {
         @Test
         @DisplayName("Не включает водителей за пределами радиуса")
         void shouldExcludeDriversOutsideRadius() {
-            driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
-            driverCachingService.updateStatus(DRIVER_ID_3, DriverStatus.ONLINE);
-            driverCachingService.updateLocation(buildDriverLocation(DRIVER_ID_1, NEAR_LNG_1, NEAR_LAT_1));
-            driverCachingService.updateLocation(buildDriverLocation(DRIVER_ID_3, FAR_LNG_3, FAR_LAT_3));
+            setupOnlineDriverWithLocation(DRIVER_ID_1, NEAR_LNG_1, NEAR_LAT_1);
+            setupOnlineDriverWithLocation(DRIVER_ID_3, FAR_LNG_3, FAR_LAT_3);
 
             List<DriverLocationDto> result = driverCachingService
                     .getNearbyOnlineDrivers(CENTER_LNG, CENTER_LAT, SEARCH_RADIUS_KM);
@@ -335,12 +334,17 @@ class DriverCacheIntegrationTest {
         @Test
         @DisplayName("Не включает OFFLINE/BUSY водителей, даже если они в радиусе")
         void shouldExcludeOfflineAndBusyDriversWithinRadius() {
-            driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
+            setupOnlineDriverWithLocation(DRIVER_ID_1, NEAR_LNG_1, NEAR_LAT_1);
+
             driverCachingService.updateStatus(DRIVER_ID_2, DriverStatus.OFFLINE);
+            redisStatusTemplate.opsForGeo().add(
+                    GEO_KEY,
+                    new Point(Double.parseDouble(NEAR_LNG_2), Double.parseDouble(NEAR_LAT_2)),
+                    String.valueOf(DRIVER_ID_2)
+            );
+
+            setupOnlineDriverWithLocation(DRIVER_ID_3, "37.615", "55.755");
             driverCachingService.updateStatus(DRIVER_ID_3, DriverStatus.BUSY);
-            driverCachingService.updateLocation(buildDriverLocation(DRIVER_ID_1, NEAR_LNG_1, NEAR_LAT_1));
-            driverCachingService.updateLocation(buildDriverLocation(DRIVER_ID_2, NEAR_LNG_2, NEAR_LAT_2));
-            driverCachingService.updateLocation(buildDriverLocation(DRIVER_ID_3, "37.615", "55.755"));
 
             List<DriverLocationDto> result = driverCachingService
                     .getNearbyOnlineDrivers(CENTER_LNG, CENTER_LAT, SEARCH_RADIUS_KM);
@@ -353,14 +357,13 @@ class DriverCacheIntegrationTest {
         @DisplayName("Фильтрует null: водитель в GEO и онлайн, но локация не задана")
         void shouldFilterNullLocations() {
             driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
-            driverCachingService.updateStatus(DRIVER_ID_2, DriverStatus.ONLINE);
-            driverCachingService.updateLocation(buildDriverLocation(DRIVER_ID_2, NEAR_LNG_2, NEAR_LAT_2));
-
             redisStatusTemplate.opsForGeo().add(
                     GEO_KEY,
                     new Point(Double.parseDouble(NEAR_LNG_1), Double.parseDouble(NEAR_LAT_1)),
                     String.valueOf(DRIVER_ID_1)
             );
+
+            setupOnlineDriverWithLocation(DRIVER_ID_2, NEAR_LNG_2, NEAR_LAT_2);
 
             List<DriverLocationDto> result = driverCachingService
                     .getNearbyOnlineDrivers(CENTER_LNG, CENTER_LAT, SEARCH_RADIUS_KM);
@@ -373,12 +376,8 @@ class DriverCacheIntegrationTest {
         @Test
         @DisplayName("Фильтрует водителей по VehicleClass")
         void shouldFilterByVehicleClass() {
-            driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
-            driverCachingService.updateStatus(DRIVER_ID_2, DriverStatus.ONLINE);
-            driverCachingService.updateLocation(
-                    buildDriverLocation(DRIVER_ID_1, NEAR_LNG_1, NEAR_LAT_1, VehicleClass.ECONOMY));
-            driverCachingService.updateLocation(
-                    buildDriverLocation(DRIVER_ID_2, NEAR_LNG_2, NEAR_LAT_2, VehicleClass.BUSINESS));
+            setupOnlineDriverWithLocation(DRIVER_ID_1, NEAR_LNG_1, NEAR_LAT_1, VehicleClass.ECONOMY);
+            setupOnlineDriverWithLocation(DRIVER_ID_2, NEAR_LNG_2, NEAR_LAT_2, VehicleClass.BUSINESS);
 
             List<DriverLocationDto> result = driverCachingService
                     .getNearbyOnlineDrivers(CENTER_LNG, CENTER_LAT, SEARCH_RADIUS_KM, VehicleClass.ECONOMY);

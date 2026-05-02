@@ -1,5 +1,6 @@
 package com.example.userservice.entity;
 
+import com.example.shared.dto.enums.VehicleClass;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -37,6 +38,10 @@ public class DriverLocation {
 
     @Column(name = "longitude", nullable = false, precision = 10, scale = 7)
     private BigDecimal longitude;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "vehicle_class", nullable = false)
+    private VehicleClass vehicleClass;
 
     @Column(name = "recorded_at", nullable = false)
     private Instant recordedAt;

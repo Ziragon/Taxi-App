@@ -63,6 +63,7 @@ public class DriverLocationService {
                         .driver(driverProfileRepository.getReferenceById(dto.driverId()))
                         .latitude(dto.location().latitude())
                         .longitude(dto.location().longitude())
+                        .vehicleClass(dto.vehicleClass())
                         .recordedAt(recordedAt)
                         .build())
                 .toList();
