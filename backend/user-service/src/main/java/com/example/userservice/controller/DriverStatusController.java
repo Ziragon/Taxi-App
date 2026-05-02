@@ -58,6 +58,13 @@ public class DriverStatusController {
     }
 
     @GetMapping("/status")
+    @Operation(
+            summary = "Текущий статус водителя",
+            description = "Выдает статус ONLINE, OFFLINE и BUSY",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Статус выдан")
+            }
+    )
     public ResponseEntity<DriverStatusResponse> getStatus(
             @AuthenticationPrincipal UserPrincipal principal
     ) {
