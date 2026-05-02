@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -113,16 +112,6 @@ public class DriverProfileService {
                 log.info("Driver status set to OFFLINE on logout: accountId={}", accountId);
             }
         });
-    }
-
-    @Transactional(readOnly = true)
-    public List<DriverProfile> getOnlineDrivers() {
-        return driverProfileRepository.findAllByStatus(DriverStatus.ONLINE);
-    }
-
-    @Transactional(readOnly = true)
-    public List<DriverProfile> getVerifiedDrivers() {
-        return driverProfileRepository.findAllByVerifiedTrue();
     }
 
     @Transactional

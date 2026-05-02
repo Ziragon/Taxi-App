@@ -2,7 +2,6 @@ package com.example.userservice.controller;
 
 import com.example.shared.dto.enums.DriverStatus;
 import com.example.userservice.repository.PassengerProfileRepository;
-import com.example.userservice.service.DriverCachingService;
 import com.example.userservice.service.DriverProfileService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
