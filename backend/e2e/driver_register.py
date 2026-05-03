@@ -111,28 +111,42 @@ class TestDriverRegistrationFlow:
         assert response.status_code in [200, 204], f"Ошибка активации авто: {response.text}"
 
     def test_05_save_state(self):
-        """Добавляем данные нового водителя в список в state.json"""
+        """Добавляем данные нового водителя в структурированный state.json"""
         state_file = "state.json"
+
+        # 1. Загружаем данные или инициализируем новую структуру
+        if os.path.exists(state_file):
+            with open(state_file, "r") as f:
+                try:
+                    state = json.load(f)
+                    # Если внутри старый формат (просто список), конвертируем в новый
+                    if isinstance(state, list):
+                        state = {"drivers": state, "passengers": []}
+                except:
+                    state = {"drivers": [], "passengers": []}
+        else:
+            state = {"drivers": [], "passengers": []}
+
+        # 2. Гарантируем наличие нужных ключей в словаре
+        if "drivers" not in state:
+            state["drivers"] = []
+        if "passengers" not in state:
+            state["passengers"] = []
+
+        # 3. Подготавливаем данные нового водителя
         new_driver = {
             "driver_id": self.account_id,
             "vehicle_id": self.vehicle_id,
-            "driver_email": self.current_email, # Сохраняй реально использованный email
+            "driver_email": self.current_email,
             "driver_password": "SecurePass123",
             "vehicle_class": "COMFORT"
         }
 
-        # Загружаем существующий список или создаем новый
-        if os.path.exists(state_file):
-            with open(state_file, "r") as f:
-                try:
-                    drivers_list = json.load(f)
-                    if not isinstance(drivers_list, list): drivers_list = []
-                except: drivers_list = []
-        else:
-            drivers_list = []
+        # 4. Добавляем в список внутри ключа "drivers"
+        state["drivers"].append(new_driver)
 
-        drivers_list.append(new_driver)
-
+        # 5. Сохраняем ВЕСЬ словарь state обратно в файл
         with open(state_file, "w") as f:
-            json.dump(drivers_list, f, indent=4)
-        print(f"\n[+] Водитель {new_driver['driver_email']} добавлен в базу.")
+            json.dump(state, f, indent=4)
+
+        print(f"\n[+] Водитель {new_driver['driver_email']} добавлен в базу (drivers).")
