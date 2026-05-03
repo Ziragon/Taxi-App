@@ -3,6 +3,7 @@ package com.example.tripservice.controller;
 import com.example.shared.security.UserPrincipal;
 import com.example.tripservice.dto.data.RouteDto;
 import com.example.tripservice.dto.response.DriverCoordinatesRequest;
+import com.example.tripservice.dto.response.RouteResponse;
 import com.example.tripservice.service.DriverSearchService;
 import com.example.tripservice.service.TripService;
 import com.example.tripservice.service.TripStatusService;
@@ -31,7 +32,7 @@ public class TripDriverController {
                     @ApiResponse(responseCode = "403", description = "Пользователь не является водителем или предложение для водителя не существует")
             }
     )
-    public ResponseEntity<RouteDto> acceptTrip(
+    public ResponseEntity<RouteResponse> acceptTrip(
             @PathVariable Long tripId,
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody DriverCoordinatesRequest request
@@ -40,7 +41,7 @@ public class TripDriverController {
         RouteDto route = tripService.getRouteToPassenger(
                 tripId, request.longitude(), request.latitude()
         );
-        return ResponseEntity.ok(route);
+        return ResponseEntity.ok(RouteResponse.from(route));
     }
 
     @PostMapping("/{tripId}/reject")

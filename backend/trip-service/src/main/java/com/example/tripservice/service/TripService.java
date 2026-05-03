@@ -86,7 +86,7 @@ public class TripService {
         List<Tariff> tariffs = tariffsFuture.join();
 
         updatedTrip.setDistanceKm(BigDecimal.valueOf(route.distance()).divide(new BigDecimal("1000"), 3, RoundingMode.HALF_UP));
-        updatedTrip.setDurationMin(BigDecimal.valueOf(route.duration()).divide(new BigDecimal("60"), 10, RoundingMode.HALF_UP));
+        updatedTrip.setDurationMin(BigDecimal.valueOf(route.duration()).divide(new BigDecimal("60"), 2, RoundingMode.HALF_UP));
         updatedTrip.setWeatherCoef(weather.weatherCoef());
         updatedTrip.setSurgeCoef(priceService.getSurgeCoef(weather.localtime()));
 
