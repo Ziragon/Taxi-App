@@ -172,4 +172,11 @@ public class TripService {
                 ))
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    public TripDto getTripById(Long userId, Long tripId) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new TripNotFoundException(tripId));
+        return TripDto.from(trip, null, null);
+    }
 }

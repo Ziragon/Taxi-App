@@ -7,6 +7,7 @@ import com.example.tripservice.dto.client.PaymentMethodResponse;
 import com.example.tripservice.entity.Trip;
 import com.example.tripservice.entity.enums.TripStatus;
 import com.example.tripservice.exception.TripNotFoundException;
+import com.example.tripservice.messaging.NotificationPublisher;
 import com.example.tripservice.messaging.TripEventPublisher;
 import com.example.tripservice.repository.TripRepository;
 import feign.FeignException;
@@ -25,6 +26,7 @@ public class TripStatusService {
     private final TripRepository tripRepository;
     private final TripEventPublisher tripEventPublisher;
     private final PaymentServiceClient paymentServiceClient;
+    private final NotificationPublisher notificationPublisher;
 
     @Transactional
     public void assignDriver(Long tripId, Long driverId) {
@@ -41,7 +43,11 @@ public class TripStatusService {
                     trip.getPassengerId(), tripId);
             trip.setStatus(TripStatus.CANCELLED);
             tripRepository.save(trip);
-            // TODO: уведомить пассажира
+            notificationPublisher.publishTripCancelled(
+                    trip.getPassengerId(),
+                    tripId,
+                    "Отсутствует платёжный метод"
+            );
             return;
         }
 
@@ -50,7 +56,7 @@ public class TripStatusService {
         tripRepository.save(trip);
 
         log.info("Driver {} assigned to trip {}", driverId, tripId);
-        // TODO: WebSocket уведомление пассажиру
+        notificationPublisher.publishDriverAssigned(trip.getPassengerId(), tripId, driverId);
     }
 
     @Transactional
@@ -61,7 +67,7 @@ public class TripStatusService {
         tripRepository.save(trip);
 
         log.info("Trip {} started by driver {}", tripId, driverId);
-        // TODO: WebSocket уведомление пассажиру
+        notificationPublisher.publishTripStarted(trip.getPassengerId(), tripId);
     }
 
     @Transactional
@@ -78,9 +84,10 @@ public class TripStatusService {
                 trip.getPassengerId(),
                 trip.getDriverId(),
                 trip.getPrice(),
-                "usd",
+                "rub",
                 Instant.now()
         ));
+        notificationPublisher.publishTripCompleted(trip.getPassengerId(), tripId, trip.getPrice());
     }
 
     @Transactional
@@ -107,8 +114,9 @@ public class TripStatusService {
                     "Trip cancelled by passenger"
             ));
         }
-
-        // TODO: WebSocket уведомление водителю если IN_PROGRESS
+        if (trip.getDriverId() != null) {
+            notificationPublisher.publishTripCancelled(trip.getDriverId(), tripId, "Отменено пассажиром");
+        }
     }
 
     @Transactional
@@ -120,7 +128,6 @@ public class TripStatusService {
         tripRepository.save(trip);
 
         log.info("Search cancelled for trip {} — no drivers found", tripId);
-        // TODO: WebSocket уведомление пассажиру
     }
 
     private Trip getTripForDriver(Long tripId, Long driverId) {

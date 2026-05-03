@@ -22,6 +22,7 @@ public class RabbitMQConfig {
     public static final String PAYMENT_FAILED_QUEUE     = "payment.failed";
     public static final String REFUND_REQUESTED_QUEUE   = "payment.refund.requested";
     public static final String REFUND_SUCCEEDED_QUEUE   = "payment.refund.succeeded";
+    public static final String PAYOUT_SUCCEEDED_QUEUE   = "payment.payout.succeeded";
 
     // Routing Keys
     public static final String TRIP_COMPLETED_ROUTING_KEY    = "trip.completed";
@@ -29,6 +30,7 @@ public class RabbitMQConfig {
     public static final String PAYMENT_FAILED_ROUTING_KEY    = "payment.failed";
     public static final String REFUND_REQUESTED_ROUTING_KEY  = "refund.requested";
     public static final String REFUND_SUCCEEDED_ROUTING_KEY  = "refund.succeeded";
+    public static final String PAYOUT_SUCCEEDED_ROUTING_KEY = "payout.succeeded";
 
     // Exchanges
 
@@ -69,6 +71,11 @@ public class RabbitMQConfig {
         return QueueBuilder.durable(REFUND_SUCCEEDED_QUEUE).build();
     }
 
+    @Bean
+    public Queue payoutSucceededQueue() {
+        return QueueBuilder.durable(PAYOUT_SUCCEEDED_QUEUE).build();
+    }
+
     // Bindings
 
     @Bean
@@ -99,6 +106,12 @@ public class RabbitMQConfig {
     public Binding refundSucceededBinding() {
         return BindingBuilder.bind(refundSucceededQueue())
                 .to(paymentExchange()).with(REFUND_SUCCEEDED_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding payoutSucceededBinding() {
+        return BindingBuilder.bind(payoutSucceededQueue())
+                .to(paymentExchange()).with(PAYOUT_SUCCEEDED_ROUTING_KEY);
     }
 
     // Converter & Template

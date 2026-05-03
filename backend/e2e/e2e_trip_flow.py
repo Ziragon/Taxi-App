@@ -5,25 +5,27 @@ e2e_trip_flow.py — полный E2E сценарий поездки
   1. Загружает пассажира из state.json (или регистрирует нового)
   2. Привязывает карту пассажиру через Stripe
   3. Загружает случайного водителя из state.json
-  4. Водитель логинится, подключается по WS, уходит в ONLINE
-  5. Пассажир создаёт поездку
-  6. Пассажир запускает поиск
-  7. Водитель получает уведомление по WS и автоматически принимает оффер
-  8. Водитель стартует поездку
-  9. Водитель завершает поездку
-  10. Итоговый отчёт
+  4. Привязывает payout account водителю (если --no-payout не указан)
+  5. Водитель логинится, подключается по WS, уходит в ONLINE
+  6. Пассажир создаёт поездку
+  7. Пассажир запускает поиск
+  8. Водитель получает уведомление по WS и автоматически принимает оффер
+  9. Водитель стартует поездку
+  10. Водитель завершает поездку
+  11. Ожидание подтверждения оплаты (COMPLETED)
+  12. Итоговый отчёт
 
 Запуск:
-    python e2e_trip_flow.py
+    python e2e_trip_flow.py (если зарегистрированы driver и passenger)
     python e2e_trip_flow.py --driver-email driver_abc@example.com
     python e2e_trip_flow.py --passenger-email passenger_abc@example.com
-    python e2e_trip_flow.py --no-card   # не привязывать карту (уже привязана)
+    python e2e_trip_flow.py --no-card
+    python e2e_trip_flow.py --no-payout
 """
 
 import argparse
 import json
 import os
-import re
 import threading
 import time
 import redis as redis_lib
@@ -198,6 +200,21 @@ def driver_complete_trip(driver: DriverService, trip_id: int) -> bool:
     info(f"complete вернул {res.status_code}: {res.text}")
     return False
 
+def get_trip_status(passenger: PassengerService, trip_id: int) -> Optional[str]:
+    """Получить статус поездки через GET /trips/{id}"""
+    try:
+        res = requests.get(
+            f"{API_URL}/trips/{trip_id}",
+            headers=passenger._auth_headers(),
+            timeout=5,
+        )
+        if res.status_code == 200:
+            return res.json().get("status")
+        return None
+    except Exception as e:
+        info(f"GET /trips/{trip_id} error: {e}")
+        return None
+
 # ---------------------------------------------------------------------------
 # Основной флоу
 # ---------------------------------------------------------------------------
@@ -248,6 +265,18 @@ def run(args):
         fail("Водитель не смог авторизоваться")
     ok(f"Водитель авторизован: {driver.email}")
 
+    # ------------------------------------------------------------------
+    # Шаг 3.5: Привязка payout account водителю
+    # ------------------------------------------------------------------
+    step("3.5", "Привязка payout account водителю")
+
+    if args.no_payout:
+        info("Пропуск привязки payout account (--no-payout)")
+    else:
+        if driver.attach_payout_account():
+            ok("Payout account готов")
+        else:
+            info("WARNING: Payout account не привязан — водитель не получит выплату")
     # ------------------------------------------------------------------
     # Шаг 4: WS-подключение водителя
     # ------------------------------------------------------------------
@@ -361,6 +390,34 @@ def run(args):
         fail("Не удалось завершить поездку")
 
     # ------------------------------------------------------------------
+    # Шаг 12: Ожидание подтверждения оплаты
+    # ------------------------------------------------------------------
+    step(12, "Ожидание подтверждения оплаты")
+
+    max_wait = 15
+    start = time.time()
+    completed = False
+
+    while time.time() - start < max_wait:
+        trip_status = get_trip_status(passenger, trip_id)
+
+        if trip_status == "COMPLETED":
+            ok("Поездка завершена (status=COMPLETED)")
+            completed = True
+            break
+        elif trip_status == "PAYMENT_PENDING":
+            info(f"Ожидание оплаты... (status={trip_status})")
+        elif trip_status:
+            info(f"Статус: {trip_status}")
+        else:
+            info("Не удалось получить статус поездки")
+
+        time.sleep(2)
+
+    if not completed:
+        fail("Поездка не перешла в COMPLETED за 15с")
+
+    # ------------------------------------------------------------------
     # Итог
     # ------------------------------------------------------------------
     print("\n" + "█" * 60)
@@ -390,6 +447,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--no-card", action="store_true",
         help="Не привязывать карту (если уже привязана)"
+    )
+    parser.add_argument(
+        "--no-payout", action="store_true",
+        help="Не привязывать payout account водителю (если уже привязан)"
     )
     args = parser.parse_args()
     run(args)

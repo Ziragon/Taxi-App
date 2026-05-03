@@ -156,6 +156,53 @@ public class UniversalNotificationConsumer {
                     .build();
         }
 
+
+        if ("notification.payment.succeeded".equals(routingKey)
+                || "notification.payout.succeeded".equals(routingKey)) {
+            return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.PAYMENT_SUCCEEDED);
+        }
+
+        if ("notification.payment.failed".equals(routingKey)) {
+            return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.PAYMENT_FAILED);
+        }
+
+        if ("notification.refund.succeeded".equals(routingKey)) {
+            return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.REFUND_SUCCEEDED);
+        }
+
+
+        if ("notification.trip.driver_assigned".equals(routingKey)) {
+            return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.DRIVER_ASSIGNED);
+        }
+
+        if ("notification.trip.started".equals(routingKey)) {
+            return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.TRIP_STARTED);
+        }
+
+        if ("notification.trip.completed".equals(routingKey)) {
+            return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.TRIP_COMPLETED);
+        }
+
+        if ("notification.trip.cancelled".equals(routingKey)) {
+            return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.TRIP_CANCELLED);
+        }
+
         return null;
+    }
+
+    private NotificationEventDto buildNotificationFromMap(Map<String, Object> event, EventType eventType) {
+        return NotificationEventDto.builder()
+                .tripId(getLong(event, "tripId"))
+                .eventType(eventType)
+                .recipientType(RecipientType.valueOf((String) event.get("recipientType")))
+                .recipientId(getLong(event, "recipientId"))
+                .channel(Channel.PUSH)
+                .message((String) event.get("message"))
+                .build();
+    }
+
+    private Long getLong(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        return value instanceof Number n ? n.longValue() : Long.parseLong(value.toString());
     }
 }

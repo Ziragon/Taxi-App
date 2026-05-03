@@ -11,6 +11,7 @@ import com.example.paymentservice.messaging.PaymentEventPublisher;
 import com.example.paymentservice.repository.TransactionRepository;
 import com.example.shared.dto.event.PaymentFailedEvent;
 import com.example.shared.dto.event.PaymentSucceededEvent;
+import com.example.shared.dto.event.PayoutSucceededEvent;
 import com.example.shared.dto.event.RefundSucceededEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -167,6 +168,7 @@ public class TransactionService {
         return saved;
     }
 
+
     @Transactional
     public Transaction createPayout(Long tripId,
                                     Long passengerId,
@@ -195,7 +197,21 @@ public class TransactionService {
 
         Transaction saved = transactionRepository.save(payout);
 
-        log.info("Payout created for driver {} trip {}", driverId, tripId);
+        log.info("Payout created for driver {} trip {} amount {}", driverId, tripId, amount);
+
+        // Публикуем событие — Trip Service или другие сервисы могут реагировать
+        paymentEventPublisher.publishPayoutSucceeded(
+                new PayoutSucceededEvent(
+                        saved.getId(),
+                        tripId,
+                        passengerId,
+                        driverId,
+                        amount,
+                        currency,
+                        transfer.id(),
+                        Instant.now()
+                )
+        );
 
         return saved;
     }
