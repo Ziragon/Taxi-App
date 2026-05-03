@@ -1,4 +1,4 @@
-package com.example.tripservice.service;
+package com.example.tripservice.service.search;
 
 import com.example.shared.exception.common.AccessDeniedException;
 import lombok.RequiredArgsConstructor;

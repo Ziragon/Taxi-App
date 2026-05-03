@@ -1,4 +1,4 @@
-package com.example.tripservice.service;
+package com.example.tripservice.service.trip;
 
 import com.example.shared.dto.event.PaymentFailedEvent;
 import com.example.shared.dto.event.PaymentSucceededEvent;
@@ -40,7 +40,6 @@ public class TripPaymentService {
         );
     }
 
-    @Transactional
     public void handlePaymentFailed(PaymentFailedEvent event) {
         Trip trip = tripRepository.findById(event.tripId())
                 .orElseThrow(() -> new TripNotFoundException(event.tripId()));
@@ -54,7 +53,6 @@ public class TripPaymentService {
         );
     }
 
-    @Transactional
     public void handleRefundSucceeded(RefundSucceededEvent event) {
         Trip trip = tripRepository.findById(event.tripId())
                 .orElseThrow(() -> new TripNotFoundException(event.tripId()));

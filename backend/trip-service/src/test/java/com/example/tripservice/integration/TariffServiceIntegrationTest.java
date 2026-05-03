@@ -2,20 +2,16 @@ package com.example.tripservice.integration;
 
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.tripservice.BaseIntegrationTest;
-import com.example.tripservice.config.TestContainersConfig;
 import com.example.tripservice.entity.Tariff;
 import com.example.tripservice.exception.TariffNotActiveException;
 import com.example.tripservice.exception.TariffNotFoundException;
 import com.example.tripservice.repository.TariffRepository;
-import com.example.tripservice.service.TariffService;
+import com.example.tripservice.service.pricing.TariffService;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;

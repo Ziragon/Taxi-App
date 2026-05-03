@@ -5,7 +5,7 @@ import com.example.tripservice.client.OsrmClient;
 import com.example.tripservice.dto.data.RouteDto;
 import com.example.tripservice.dto.response.OsrmResponse;
 import com.example.tripservice.exception.RouteNotFoundException;
-import com.example.tripservice.service.NavigationService;
+import com.example.tripservice.service.external.NavigationService;
 import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

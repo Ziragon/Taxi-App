@@ -1,13 +1,12 @@
 package com.example.tripservice.unit.service;
 
-import com.example.tripservice.service.DriverResponseSubscriber;
+import com.example.tripservice.service.search.DriverResponseSubscriber;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.*;

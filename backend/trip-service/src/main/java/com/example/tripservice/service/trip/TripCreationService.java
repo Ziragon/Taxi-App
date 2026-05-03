@@ -1,4 +1,4 @@
-package com.example.tripservice.service;
+package com.example.tripservice.service.trip;
 
 import com.example.shared.dto.data.DriverLocationDto;
 import com.example.shared.dto.enums.VehicleClass;
@@ -9,6 +9,12 @@ import com.example.tripservice.entity.enums.TripStatus;
 import com.example.tripservice.exception.TripAlreadyExistsException;
 import com.example.tripservice.exception.TripBookingException;
 import com.example.tripservice.repository.TripRepository;
+import com.example.tripservice.service.external.NavigationService;
+import com.example.tripservice.service.external.ProfileStatusService;
+import com.example.tripservice.service.external.WeatherService;
+import com.example.tripservice.service.pricing.PriceService;
+import com.example.tripservice.service.pricing.TariffService;
+import com.example.tripservice.service.search.DriverSearchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;

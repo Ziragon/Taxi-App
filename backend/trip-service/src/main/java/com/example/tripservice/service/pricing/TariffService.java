@@ -1,4 +1,4 @@
-package com.example.tripservice.service;
+package com.example.tripservice.service.pricing;
 
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.tripservice.dto.data.CalculatePriceDto;

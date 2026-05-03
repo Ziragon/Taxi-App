@@ -1,4 +1,4 @@
-package com.example.tripservice.service;
+package com.example.tripservice.service.search;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

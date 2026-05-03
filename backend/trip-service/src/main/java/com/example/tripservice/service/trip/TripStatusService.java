@@ -1,4 +1,4 @@
-package com.example.tripservice.service;
+package com.example.tripservice.service.trip;
 
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.dto.event.RefundRequestedEvent;
@@ -16,6 +16,7 @@ import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.messaging.NotificationPublisher;
 import com.example.tripservice.messaging.TripEventPublisher;
 import com.example.tripservice.repository.TripRepository;
+import com.example.tripservice.service.pricing.TariffService;
 import com.example.tripservice.util.StatusValidationUtil;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;

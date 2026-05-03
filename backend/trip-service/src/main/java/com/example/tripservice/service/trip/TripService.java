@@ -1,4 +1,4 @@
-package com.example.tripservice.service;
+package com.example.tripservice.service.trip;
 
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.exception.common.AccessDeniedException;
@@ -10,6 +10,8 @@ import com.example.tripservice.exception.PaymentMethodNotFoundException;
 import com.example.tripservice.exception.TripBookingException;
 import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.repository.TripRepository;
+import com.example.tripservice.service.external.NavigationService;
+import com.example.tripservice.service.search.DriverSearchService;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

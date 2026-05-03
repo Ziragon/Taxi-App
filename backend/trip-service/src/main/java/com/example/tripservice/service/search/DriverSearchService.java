@@ -1,4 +1,4 @@
-package com.example.tripservice.service;
+package com.example.tripservice.service.search;
 
 import com.example.shared.dto.data.DriverLocationDto;
 import com.example.shared.dto.enums.VehicleClass;
@@ -6,6 +6,8 @@ import com.example.shared.exception.common.ServiceUnavailableException;
 import com.example.tripservice.client.UserServiceClient;
 import com.example.tripservice.entity.Trip;
 import com.example.tripservice.messaging.TripOfferPublisher;
+import com.example.tripservice.service.external.ProfileStatusService;
+import com.example.tripservice.service.trip.TripStatusService;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

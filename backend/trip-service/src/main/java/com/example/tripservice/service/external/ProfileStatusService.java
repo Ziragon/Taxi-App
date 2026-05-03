@@ -1,4 +1,4 @@
-package com.example.tripservice.service;
+package com.example.tripservice.service.external;
 
 import com.example.shared.exception.common.AccessDeniedException;
 import com.example.shared.dto.enums.DriverStatus;
