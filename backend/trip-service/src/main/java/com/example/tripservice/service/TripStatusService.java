@@ -1,16 +1,22 @@
 package com.example.tripservice.service;
 
+import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.dto.event.RefundRequestedEvent;
 import com.example.shared.dto.event.TripCompletedEvent;
 import com.example.shared.exception.common.AccessDeniedException;
 import com.example.tripservice.client.PaymentServiceClient;
 import com.example.tripservice.dto.client.PaymentMethodResponse;
+import com.example.tripservice.dto.data.PriceBreakdown;
+import com.example.tripservice.dto.data.TariffDto;
+import com.example.tripservice.dto.data.TripDto;
+import com.example.tripservice.entity.Tariff;
 import com.example.tripservice.entity.Trip;
 import com.example.tripservice.entity.enums.TripStatus;
 import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.messaging.NotificationPublisher;
 import com.example.tripservice.messaging.TripEventPublisher;
 import com.example.tripservice.repository.TripRepository;
+import com.example.tripservice.util.StatusValidationUtil;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,10 +31,33 @@ import java.time.Instant;
 public class TripStatusService {
 
     private final TripRepository tripRepository;
+    private final TariffService tariffService;
     private final TripEventPublisher tripEventPublisher;
     private final PaymentServiceClient paymentServiceClient;
     private final ActiveTripCacheService activeTripCacheService;
     private final NotificationPublisher notificationPublisher;
+
+    @Transactional
+    public Trip setSearching(Long tripId, Long passengerId, VehicleClass vehicleClass) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new TripNotFoundException(tripId));
+
+        StatusValidationUtil.assertTripNotActive(trip);
+
+        if (!trip.getPassengerId().equals(passengerId)) {
+            throw new AccessDeniedException("You are not owner of this trip");
+        }
+
+        Tariff tariff = tariffService.getByVehicleClass(vehicleClass);
+        TariffDto tariffDto = tariffService.calculatePrice(tariff, TripDto.from(trip, null, null));
+
+        trip.setTripClass(vehicleClass);
+        trip.setPrice(tariffDto.prices().price());
+        trip.setDetails(PriceBreakdown.from(trip, tariffDto));
+        trip.setStatus(TripStatus.SEARCHING);
+
+        return tripRepository.save(trip);
+    }
 
     @Transactional
     public void assignDriver(Long tripId, Long driverId) {
@@ -65,6 +94,7 @@ public class TripStatusService {
     @Transactional
     public void startTrip(Long tripId, Long driverId) {
         Trip trip = getTripForDriver(tripId, driverId);
+        StatusValidationUtil.assertTripHasStatus(trip, TripStatus.DRIVER_ASSIGNED);
 
         trip.setStatus(TripStatus.IN_PROGRESS);
         tripRepository.save(trip);
@@ -76,6 +106,7 @@ public class TripStatusService {
     @Transactional
     public void completeTrip(Long tripId, Long driverId) {
         Trip trip = getTripForDriver(tripId, driverId);
+        StatusValidationUtil.assertTripHasStatus(trip, TripStatus.IN_PROGRESS);
 
         trip.setStatus(TripStatus.COMPLETED);
         tripRepository.save(trip);
@@ -100,6 +131,8 @@ public class TripStatusService {
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new TripNotFoundException(tripId));
 
+        StatusValidationUtil.assertTripHasNotStatus(trip, TripStatus.COMPLETED);
+
         if (!trip.getPassengerId().equals(passengerId)) {
             throw new AccessDeniedException("You're not owner of this trip");
         }
@@ -121,9 +154,8 @@ public class TripStatusService {
 
         if (trip.getDriverId() != null) {
             notificationPublisher.publishTripCancelled(trip.getDriverId(), tripId, "Отменено пассажиром");
+            activeTripCacheService.remove(trip.getDriverId());
         }
-
-        activeTripCacheService.remove(trip.getDriverId());
     }
 
     @Transactional
@@ -136,6 +168,15 @@ public class TripStatusService {
 
         log.info("Search cancelled for trip {} — no drivers found", tripId);
         // TODO: WebSocket уведомление пассажиру
+    }
+
+    @Transactional
+    public void cancelTripInternal(Long tripId, String message) {
+        log.warn("{} for trip {}", message, tripId);
+        tripRepository.findById(tripId).ifPresent(trip -> {
+            trip.setStatus(TripStatus.CANCELLED);
+            tripRepository.save(trip);
+        });
     }
 
     private Trip getTripForDriver(Long tripId, Long driverId) {

@@ -1,33 +1,23 @@
 package com.example.tripservice.service;
 
-import com.example.shared.dto.data.DriverLocationDto;
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.exception.common.AccessDeniedException;
 import com.example.tripservice.client.PaymentServiceClient;
 import com.example.tripservice.dto.data.*;
 import com.example.shared.dto.request.CreateHoldRequest;
-import com.example.tripservice.entity.Tariff;
 import com.example.tripservice.entity.Trip;
-import com.example.tripservice.entity.enums.TripStatus;
 import com.example.tripservice.exception.PaymentMethodNotFoundException;
-import com.example.tripservice.exception.TripAlreadyExistsException;
+import com.example.tripservice.exception.TripBookingException;
 import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.repository.TripRepository;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,112 +25,36 @@ import java.util.stream.Collectors;
 public class TripService {
 
     private final TripRepository tripRepository;
-    private final WeatherService weatherService;
     private final NavigationService navigationService;
-    private final PriceService priceService;
-    private final TariffService tariffService;
     private final DriverSearchService driverSearchService;
-    private final ProfileStatusService profileStatusService;
     private final PaymentServiceClient paymentServiceClient;
-    @Qualifier("applicationTaskExecutor")
-    private final AsyncTaskExecutor executor;
-
-    @Transactional
-    public TripDto createTrip(Long userId, TripCreateDto dto) {
-
-        profileStatusService.verifyPassengerCanOrder(userId);
-
-        boolean hasActive = tripRepository.existsByPassengerIdAndStatusIn(userId,
-                List.of(TripStatus.SEARCHING, TripStatus.DRIVER_ASSIGNED, TripStatus.IN_PROGRESS));
-
-        if (hasActive) {
-            throw new TripAlreadyExistsException();
-        }
-
-        Trip trip = tripRepository.findFirstByPassengerIdAndStatusOrderByCreatedAtDesc(userId, TripStatus.CREATED)
-                .orElseGet(() -> buildTrip(userId, dto));
-
-        Trip updatedTrip = updateTripCoordinates(trip, dto);
-
-        var routeFuture = CompletableFuture.supplyAsync(() ->
-                navigationService.getRouteInfo(dto.originLng(), dto.originLat(), dto.destLng(), dto.destLat()),
-                executor);
-
-        var weatherFuture = CompletableFuture.supplyAsync(() ->
-                weatherService.getWeatherCoef(dto.originLng(), dto.originLat()),
-                executor);
-
-        var driversFuture = CompletableFuture.supplyAsync(() ->
-                driverSearchService.getNearbyDrivers(dto.originLng(), dto.originLat(), new BigDecimal("30")),
-                executor);
-
-        var tariffsFuture = CompletableFuture.supplyAsync(
-                tariffService::getActiveTariffs,
-                executor
-        );
-
-        CompletableFuture.allOf(routeFuture, weatherFuture, driversFuture, tariffsFuture).join();
-
-        RouteDto route = routeFuture.join();
-        WeatherDto weather = weatherFuture.join();
-        List<DriverLocationDto> drivers = driversFuture.join();
-        List<Tariff> tariffs = tariffsFuture.join();
-
-        updatedTrip.setDistanceKm(BigDecimal.valueOf(route.distance()).divide(new BigDecimal("1000"), 3, RoundingMode.HALF_UP));
-        updatedTrip.setDurationMin(BigDecimal.valueOf(route.duration()).divide(new BigDecimal("60"), 2, RoundingMode.HALF_UP));
-        updatedTrip.setWeatherCoef(weather.weatherCoef());
-        updatedTrip.setSurgeCoef(priceService.getSurgeCoef(weather.localtime()));
-
-        List<TariffDto> tariffDtos = buildFilteredTariffs(tariffs, drivers, TripDto.from(updatedTrip, null, null));
-
-        Trip saved = tripRepository.save(updatedTrip);
-
-        return TripDto.from(saved, tariffDtos, route.geometry());
-    }
+    private final TripStatusService tripStatusService;
 
     // Метод просто меняет статус поездки и заполняет его данными, сам поиск происходит в DriverService
-    @Transactional
     public AddressDto startSearching(Long userId, Long tripId, VehicleClass vehicleClass) {
 
-        Trip trip = tripRepository.findById(tripId)
-                .orElseThrow(() -> new TripNotFoundException(tripId));
+        Trip trip = tripStatusService.setSearching(userId, tripId, vehicleClass);
 
-        if (!trip.getPassengerId().equals(userId)) {
-            throw new AccessDeniedException();
-        }
-
-        if (List.of(TripStatus.SEARCHING, TripStatus.DRIVER_ASSIGNED, TripStatus.IN_PROGRESS)
-                .contains(trip.getStatus())) {
-            throw new TripAlreadyExistsException();
-        }
-
-        Tariff tariff = tariffService.getByVehicleClass(vehicleClass);
-        TariffDto tariffDto = tariffService.calculatePrice(tariff, TripDto.from(trip, null, null));
-
-        trip.setTripClass(vehicleClass);
-        trip.setPrice(tariffDto.prices().price());
-        trip.setDetails(PriceBreakdown.from(trip, tariffDto));
-        trip.setStatus(TripStatus.SEARCHING);
-        tripRepository.save(trip);
-
-        // Заморозка средств
         try {
             paymentServiceClient.createHold(new CreateHoldRequest(
                     tripId,
                     userId,
                     null,
                     null,
-                    tariffDto.prices().price(),
+                    trip.getPrice(),
                     "rub"
             ));
-            log.info("Hold created for trip {} amount {}", tripId, tariffDto.prices().price());
-        } catch (FeignException.NotFound _) {
-            trip.setStatus(TripStatus.CANCELLED);
-            tripRepository.save(trip);
-            throw new PaymentMethodNotFoundException(userId);
-        } catch (Exception e) {
+            log.info("Hold created for trip {}", tripId);
 
-            log.error("Failed to create hold for trip {}: {}", tripId, e.getMessage());
+        } catch (FeignException.NotFound _) {
+            log.warn("Payment method not found for user {}", userId);
+            tripStatusService.cancelTripInternal(tripId, "Payment failed");
+            throw new PaymentMethodNotFoundException(userId);
+
+        } catch (Exception e) {
+            log.error("Payment failed for trip {}: {}", tripId, e.getMessage());
+            tripStatusService.cancelTripInternal(tripId, "Payment failed");
+            throw new TripBookingException("Payment failed, trip cancelled");
         }
 
         return new AddressDto(
@@ -166,50 +80,6 @@ public class TripService {
                 driverLng, driverLat,
                 trip.getOriginLng(), trip.getOriginLat()
         );
-    }
-
-    private Trip updateTripCoordinates(Trip trip, TripCreateDto dto) {
-        trip.setOriginAddress(dto.originAddress());
-        trip.setOriginLat(dto.originLat());
-        trip.setOriginLng(dto.originLng());
-        trip.setDestinationAddress(dto.destAddress());
-        trip.setDestinationLat(dto.destLat());
-        trip.setDestinationLng(dto.destLng());
-        return trip;
-    }
-
-    private Trip buildTrip(Long userId, TripCreateDto dto) {
-        return Trip.builder()
-                .passengerId(userId)
-                .status(TripStatus.CREATED)
-                .originAddress(dto.originAddress())
-                .originLat(dto.originLat())
-                .originLng(dto.originLng())
-                .destinationAddress(dto.destAddress())
-                .destinationLat(dto.destLat())
-                .destinationLng(dto.destLng())
-                .build();
-    }
-
-    private List<TariffDto> buildFilteredTariffs(List<Tariff> tariffs,
-                                                 List<DriverLocationDto> drivers,
-                                                 TripDto tripDto) {
-        Map<VehicleClass, Long> driverCountByClass = drivers.stream()
-                .collect(Collectors.groupingBy(DriverLocationDto::vehicleClass, Collectors.counting()));
-
-        return tariffs.stream()
-                .filter(t -> driverCountByClass.containsKey(t.getTripClass()))
-                .map(t -> tariffService.calculatePrice(t, tripDto))
-                .map(t -> new TariffDto(
-                        t.id(),
-                        t.tripClass(),
-                        t.baseFare(),
-                        t.pricePerKm(),
-                        t.pricePerMin(),
-                        t.prices(),
-                        driverCountByClass.get(t.tripClass()).intValue()
-                ))
-                .toList();
     }
 
     @Transactional(readOnly = true)

@@ -7,6 +7,7 @@ import com.example.tripservice.dto.data.TripCreateDto;
 import com.example.tripservice.dto.data.TripDto;
 import com.example.tripservice.dto.request.TripCreateRequest;
 import com.example.tripservice.dto.response.TripResponse;
+import com.example.tripservice.service.TripCreationService;
 import com.example.tripservice.service.TripService;
 import com.example.tripservice.service.TripStatusService;
 import jakarta.validation.Valid;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 public class TripPassengerController {
 
     private final TripService tripService;
+    private final TripCreationService tripCreationService;
     private final TripStatusService tripStatusService;
 
     @PostMapping
@@ -28,7 +30,7 @@ public class TripPassengerController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody TripCreateRequest request
     ) {
-        TripDto result = tripService.createTrip(principal.userId(), TripCreateDto.from(request));
+        TripDto result = tripCreationService.createTrip(principal.userId(), TripCreateDto.from(request));
 
         return ResponseEntity.ok(TripResponse.from(result));
     }
