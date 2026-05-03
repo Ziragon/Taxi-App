@@ -25,7 +25,7 @@ public class OfferCacheService {
         longRedisTemplate.opsForValue().set(
                 ACTIVE_OFFER_KEY + tripId,
                 driverId,
-                Duration.ofSeconds(searchDuration + 5)
+                Duration.ofSeconds(searchDuration + 5L)
         );
     }
 
