@@ -36,6 +36,7 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       timeout: 2000ms
+      database: 0
       lettuce:
         pool:
           max-active: 8
