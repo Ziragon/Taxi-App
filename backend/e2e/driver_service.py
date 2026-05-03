@@ -249,20 +249,24 @@ class DriverService:
 
         driver_id = self.state.get("driver_id")
         payload = {
-            "stripeAccountId": f"acct_fake_{driver_id}"
+            "stripeAccountId": f"acct_fake_{driver_id}",
+            "lastFour": "1234"
         }
 
         try:
             res = requests.post(
                 f"{API_URL}/payout-accounts",
-                headers={"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"},
+                headers={
+                    "Authorization": f"Bearer {self.token}",
+                    "Content-Type": "application/json"
+                },
                 json=payload,
                 timeout=10,
             )
 
             if res.status_code in [200, 201]:
                 data = res.json()
-                print(f"[✔] Payout account привязан: {data.get('stripeAccountId')}")
+                print(f"[✔] Payout account привязан: **** {data.get('lastFour', '1234')}")
                 return True
 
             if res.status_code == 409:

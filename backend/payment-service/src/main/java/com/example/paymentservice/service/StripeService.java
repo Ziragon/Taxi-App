@@ -65,6 +65,28 @@ public class StripeService {
         return true;
     }
 
+    public FakePaymentIntent createPaymentIntentWithHold(
+            BigDecimal amount,
+            String currency,
+            String customerId,
+            String paymentMethodId,
+            Long tripId
+    ) {
+        String fakeId = "pi_hold_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        log.info("[STUB] createPaymentIntentWithHold (capture_method=manual): trip={}, amount={} {}, pi={}",
+                tripId, amount, currency, fakeId);
+        return new FakePaymentIntent(fakeId, "requires_capture");
+    }
+
+    public FakePaymentIntent capturePaymentIntent(String paymentIntentId) {
+        log.info("[STUB] capturePaymentIntent: pi={}", paymentIntentId);
+        return new FakePaymentIntent(paymentIntentId, "succeeded");
+    }
+
+    public void cancelPaymentIntent(String paymentIntentId) {
+        log.info("[STUB] cancelPaymentIntent: pi={}", paymentIntentId);
+    }
+
     public FakeTransfer createTransfer(
             BigDecimal amount,
             String currency,

@@ -29,21 +29,30 @@ public class TripEventListener {
 
         Transaction charge;
         try {
-            charge = transactionService.createCharge(
-                    event.tripId(),
-                    event.passengerId(),
-                    event.driverId(),
-                    null,
-                    event.amount(),
-                    event.currency()
-            );
+            charge = transactionService.captureHold(event.tripId());
+            log.info("Hold captured for trip {}: transactionId={}", event.tripId(), charge.getId());
         } catch (Exception e) {
-            log.error("Failed to create charge for trip {}: {}", event.tripId(), e.getMessage());
-            return;
+            log.error("Failed to capture hold for trip {}, fallback to charge: {}",
+                    event.tripId(), e.getMessage());
+
+            try {
+                charge = transactionService.createCharge(
+                        event.tripId(),
+                        event.passengerId(),
+                        event.driverId(),
+                        null,
+                        event.amount(),
+                        event.currency()
+                );
+            } catch (Exception ex) {
+                log.error("Fallback charge also failed for trip {}: {}", event.tripId(), ex.getMessage());
+                return;
+            }
         }
 
         if (charge.getStatus() != TransactionStatus.SUCCEEDED) {
-            log.warn("Charge failed for trip {}, status={}", event.tripId(), charge.getStatus());
+            log.warn("Charge/capture not succeeded for trip {}, status={}",
+                    event.tripId(), charge.getStatus());
             return;
         }
 
@@ -59,9 +68,8 @@ public class TripEventListener {
                     driverAmount,
                     event.currency()
             );
-            log.info("Payout created for trip {}, amount={}", event.tripId(), driverAmount);
         } catch (Exception e) {
-            log.error("CRITICAL: Charge succeeded but payout failed for trip {}: {}",
+            log.error("CRITICAL: Capture succeeded but payout failed for trip {}: {}",
                     event.tripId(), e.getMessage());
         }
     }

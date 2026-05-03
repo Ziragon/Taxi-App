@@ -41,7 +41,7 @@ public class Transaction {
     @Column(name = "passenger_id", nullable = false)
     private Long passengerId;
 
-    @Column(name = "driver_id", nullable = false)
+    @Column(name = "driver_id")
     private Long driverId;
 
     @Enumerated(EnumType.STRING)

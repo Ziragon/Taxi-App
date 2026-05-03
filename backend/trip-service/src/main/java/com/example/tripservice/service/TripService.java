@@ -3,13 +3,17 @@ package com.example.tripservice.service;
 import com.example.shared.dto.data.DriverLocationDto;
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.exception.common.AccessDeniedException;
+import com.example.tripservice.client.PaymentServiceClient;
 import com.example.tripservice.dto.data.*;
+import com.example.shared.dto.request.CreateHoldRequest;
 import com.example.tripservice.entity.Tariff;
 import com.example.tripservice.entity.Trip;
 import com.example.tripservice.entity.enums.TripStatus;
+import com.example.tripservice.exception.PaymentMethodNotFoundException;
 import com.example.tripservice.exception.TripAlreadyExistsException;
 import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.repository.TripRepository;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -36,6 +40,7 @@ public class TripService {
     private final TariffService tariffService;
     private final DriverSearchService driverSearchService;
     private final ProfileStatusService profileStatusService;
+    private final PaymentServiceClient paymentServiceClient;
     @Qualifier("applicationTaskExecutor")
     private final AsyncTaskExecutor executor;
 
@@ -103,11 +108,10 @@ public class TripService {
             throw new AccessDeniedException();
         }
 
-        if (List.of(TripStatus.SEARCHING, TripStatus.DRIVER_ASSIGNED, TripStatus.IN_PROGRESS).contains(trip.getStatus())) {
+        if (List.of(TripStatus.SEARCHING, TripStatus.DRIVER_ASSIGNED, TripStatus.IN_PROGRESS)
+                .contains(trip.getStatus())) {
             throw new TripAlreadyExistsException();
         }
-
-        // TODO - Заморозка средств с карты пассажира
 
         Tariff tariff = tariffService.getByVehicleClass(vehicleClass);
         TariffDto tariffDto = tariffService.calculatePrice(tariff, TripDto.from(trip, null, null));
@@ -116,8 +120,28 @@ public class TripService {
         trip.setPrice(tariffDto.prices().price());
         trip.setDetails(PriceBreakdown.from(trip, tariffDto));
         trip.setStatus(TripStatus.SEARCHING);
-
         tripRepository.save(trip);
+
+        // Заморозка средств
+        try {
+            paymentServiceClient.createHold(new CreateHoldRequest(
+                    tripId,
+                    userId,
+                    null,
+                    null,
+                    tariffDto.prices().price(),
+                    "rub"
+            ));
+            log.info("Hold created for trip {} amount {}", tripId, tariffDto.prices().price());
+        } catch (FeignException.NotFound e) {
+            trip.setStatus(TripStatus.CANCELLED);
+            tripRepository.save(trip);
+            throw new PaymentMethodNotFoundException(userId);
+        } catch (Exception e) {
+
+            log.error("Failed to create hold for trip {}: {}", tripId, e.getMessage());
+        }
+
         return new AddressDto(
                 trip.getOriginAddress(),
                 trip.getOriginLat(),
