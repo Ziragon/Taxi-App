@@ -17,6 +17,7 @@ class PassengerService:
         self.full_state = None
         self.state = self.load_state()
         self.token = None
+        self.current_trip_id = None
 
     def load_state(self):
         if not os.path.exists(self.state_file):
