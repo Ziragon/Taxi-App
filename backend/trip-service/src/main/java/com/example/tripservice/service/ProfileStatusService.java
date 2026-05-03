@@ -24,7 +24,7 @@ public class ProfileStatusService {
     public void verifyDriverCanDrive(Long accountId) {
         DriverStatus status = userClient.getDriverStatus(accountId);
         if (!DriverStatus.ONLINE.equals(status)) {
-            throw new AccessDeniedException("Driver profile not found");
+            throw new AccessDeniedException("Driver is not ONLINE");
         }
     }
 

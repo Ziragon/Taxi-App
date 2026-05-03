@@ -29,9 +29,9 @@ public class TripDriverController {
     )
     public ResponseEntity<Void> acceptTrip(
             @PathVariable Long tripId,
-            @AuthenticationPrincipal Long driverId
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        driverSearchService.handleDriverAccept(tripId, driverId);
+        driverSearchService.handleDriverAccept(tripId, principal.userId());
 
         return ResponseEntity.ok().build();
     }
@@ -47,9 +47,9 @@ public class TripDriverController {
     )
     public ResponseEntity<Void> rejectTrip(
             @PathVariable Long tripId,
-            @AuthenticationPrincipal Long driverId
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        driverSearchService.handleDriverReject(tripId, driverId);
+        driverSearchService.handleDriverReject(tripId, principal.userId());
 
         return ResponseEntity.noContent().build();
     }
