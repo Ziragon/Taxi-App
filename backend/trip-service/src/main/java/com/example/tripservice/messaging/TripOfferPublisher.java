@@ -1,6 +1,7 @@
 package com.example.tripservice.messaging;
 
 import com.example.shared.dto.event.TripOfferEvent;
+import com.example.tripservice.dto.event.OfferExpiredEvent;
 import com.example.tripservice.entity.Trip;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,13 +46,12 @@ public class TripOfferPublisher {
         // Можно расширить если нужно больше данных
         log.info("Publishing OfferExpired: tripId={}, driverId={}", tripId, driverId);
 
+        OfferExpiredEvent event = new OfferExpiredEvent(tripId, driverId);
+
         rabbitTemplate.convertAndSend(
                 NOTIFICATION_EXCHANGE,
                 TRIP_OFFER_EXPIRED_ROUTING_KEY,
-                new java.util.HashMap<String, Object>() {{
-                    put("tripId", tripId);
-                    put("driverId", driverId);
-                }}
+                event
         );
     }
 }
