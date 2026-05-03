@@ -157,6 +157,16 @@ public class TripService {
         driverSearchService.searchDrivers(trip, longitude, latitude, vehicleClass);
     }
 
+    public RouteDto getRouteToPassenger(Long tripId, BigDecimal driverLng, BigDecimal driverLat) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new TripNotFoundException(tripId));
+
+        return navigationService.getRouteInfo(
+                driverLng, driverLat,
+                trip.getOriginLng(), trip.getOriginLat()
+        );
+    }
+
     private Trip updateTripCoordinates(Trip trip, TripCreateDto dto) {
         trip.setOriginAddress(dto.originAddress());
         trip.setOriginLat(dto.originLat());

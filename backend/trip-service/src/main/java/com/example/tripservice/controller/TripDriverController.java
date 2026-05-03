@@ -1,7 +1,10 @@
 package com.example.tripservice.controller;
 
 import com.example.shared.security.UserPrincipal;
+import com.example.tripservice.dto.data.RouteDto;
+import com.example.tripservice.dto.response.DriverCoordinatesRequest;
 import com.example.tripservice.service.DriverSearchService;
+import com.example.tripservice.service.TripService;
 import com.example.tripservice.service.TripStatusService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -17,6 +20,7 @@ public class TripDriverController {
 
     private final TripStatusService tripStatusService;
     private final DriverSearchService driverSearchService;
+    private final TripService tripService;
 
     @PostMapping("/{tripId}/accept")
     @Operation(
@@ -27,13 +31,16 @@ public class TripDriverController {
                     @ApiResponse(responseCode = "403", description = "Пользователь не является водителем или предложение для водителя не существует")
             }
     )
-    public ResponseEntity<Void> acceptTrip(
+    public ResponseEntity<RouteDto> acceptTrip(
             @PathVariable Long tripId,
-            @AuthenticationPrincipal UserPrincipal principal
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody DriverCoordinatesRequest request
     ) {
         driverSearchService.handleDriverAccept(tripId, principal.userId());
-
-        return ResponseEntity.ok().build();
+        RouteDto route = tripService.getRouteToPassenger(
+                tripId, request.longitude(), request.latitude()
+        );
+        return ResponseEntity.ok(route);
     }
 
     @PostMapping("/{tripId}/reject")
