@@ -115,7 +115,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=postgres
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
-      - WEATHER_API_KEY=${WEATHER_API_KEY} # Из .env
+      - WEATHER_API_KEY=${WEATHER_API_KEY}
       - USER_SERVICE=http://user-service:8080
       - PAYMENT_SERVICE_URL=http://payment-service:8082
       - OSRM_BASE_URL=${OSRM_BASE_URL:-http://osrm:5000}
@@ -129,14 +129,14 @@ services:
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
       - RABBITMQ_HOST=rabbitmq
-      - STRIPE_API_KEY=${STRIPE_API_KEY} # Из .env
+      - STRIPE_API_KEY=${STRIPE_API_KEY}
       - TRIP_SERVICE_URL=http://trip-service:8081
     depends_on:
       - postgres
       - rabbitmq
 
   notification-service:
-    image: ghcr.io/ziragon/taxi-app/notification-service:dev # Исправлено имя образа
+    image: ghcr.io/ziragon/taxi-app/notification-service:dev
     ports:
       - "8083:8083"
     environment:
