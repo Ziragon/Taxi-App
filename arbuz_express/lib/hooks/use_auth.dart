@@ -3,6 +3,14 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../services/token_storage.dart';
 
+class AuthResult {
+  final bool success;
+  final String? error;
+  final bool hasProfile;
+
+  AuthResult({required this.success, this.error, this.hasProfile = false});
+}
+
 class UseAuth {
   Future<AuthResult> register({
     required String email,
@@ -57,9 +65,16 @@ class UseAuth {
           TokenStorage.accessToken = responseData['accessTokenDto']['token'];
         }
 
-        final bool hasProfile = responseData['passengerProfile'] != null;
+        if (responseData['driverProfile'] != null) {
+          TokenStorage.userRole = 'driver';
+        } else if (responseData['passengerProfile'] != null) {
+          TokenStorage.userRole = 'passenger';
+        }
 
-        return AuthResult(success: true, hasProfile: hasProfile);
+        return AuthResult(
+          success: true,
+          hasProfile: TokenStorage.userRole != null,
+        );
       } else {
         return AuthResult(
           success: false,
@@ -70,12 +85,26 @@ class UseAuth {
       return AuthResult(success: false, error: 'Ошибка сети: $e');
     }
   }
-}
 
-class AuthResult {
-  final bool success;
-  final String? error;
-  final bool hasProfile;
+  Future<AuthResult> logout() async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConfig.authLogout),
+        headers: TokenStorage.getAuthHeaders(),
+      );
 
-  AuthResult({required this.success, this.error, this.hasProfile = false});
+      if (response.statusCode == 204 || response.statusCode == 200) {
+        TokenStorage.accessToken = null;
+        TokenStorage.userRole = null;
+        return AuthResult(success: true);
+      } else {
+        return AuthResult(
+          success: false,
+          error: 'Ошибка выхода: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      return AuthResult(success: false, error: 'Ошибка сети: $e');
+    }
+  }
 }
