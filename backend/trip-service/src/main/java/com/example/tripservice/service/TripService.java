@@ -150,7 +150,11 @@ public class TripService {
     }
 
     public void beginDriverSearch(Long tripId, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {
-        driverSearchService.searchDrivers(tripId, longitude, latitude, vehicleClass);
+
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new TripNotFoundException(tripId));
+
+        driverSearchService.searchDrivers(trip, longitude, latitude, vehicleClass);
     }
 
     private Trip updateTripCoordinates(Trip trip, TripCreateDto dto) {

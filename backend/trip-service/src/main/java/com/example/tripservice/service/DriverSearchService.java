@@ -5,9 +5,7 @@ import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.exception.common.ServiceUnavailableException;
 import com.example.tripservice.client.UserServiceClient;
 import com.example.tripservice.entity.Trip;
-import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.messaging.TripOfferPublisher;
-import com.example.tripservice.repository.TripRepository;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +30,6 @@ public class DriverSearchService {
     private final DriverResponseSubscriber responseSubscriber;
     private final DriverResponsePublisher responsePublisher;
     private final TripOfferPublisher tripOfferPublisher;
-    private final TripRepository tripRepository;
 
     @Value("${searching.duration}")
     private int searchDuration;
@@ -58,14 +55,11 @@ public class DriverSearchService {
     }
 
     @Async
-    public void searchDrivers(Long tripId, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {
-
-        Trip trip = tripRepository.findById(tripId)
-                .orElseThrow(() -> new TripNotFoundException(tripId));
+    public void searchDrivers(Trip trip, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {
 
         Set<Long> alreadyOffered = new HashSet<>();
         CompletableFuture<Long> future = new CompletableFuture<>();
-        responseSubscriber.registerFuture(tripId, future);
+        responseSubscriber.registerFuture(trip.getId(), future);
 
         try {
             for (int radius : radiuses) {
@@ -82,31 +76,31 @@ public class DriverSearchService {
 
                     if (future.isCompletedExceptionally()) {
                         future = new CompletableFuture<>();
-                        responseSubscriber.registerFuture(tripId, future);
+                        responseSubscriber.registerFuture(trip.getId(), future);
                     }
 
-                    offerCacheService.setActiveOffer(tripId, driver.driverId());
+                    offerCacheService.setActiveOffer(trip.getId(), driver.driverId());
 
                     tripOfferPublisher.publishOffer(trip, driver.driverId());
 
                     boolean accepted = waitForAccept(future);
-                    offerCacheService.removeActiveOffer(tripId);
+                    offerCacheService.removeActiveOffer(trip.getId());
 
                     if (accepted) {
                         Long driverId = future.getNow(null);
-                        tripStatusService.assignDriver(tripId, driverId);
+                        tripStatusService.assignDriver(trip.getId(), driverId);
                         return;
                     }
 
-                    tripOfferPublisher.publishOfferExpired(tripId, driver.driverId());
+                    tripOfferPublisher.publishOfferExpired(trip.getId(), driver.driverId());
                 }
             }
 
-            log.info("Drivers for trip {} not found", tripId);
-            tripStatusService.cancelSearch(tripId);
+            log.info("Drivers for trip {} not found", trip.getId());
+            tripStatusService.cancelSearch(trip.getId());
 
         } finally {
-            responseSubscriber.removeFuture(tripId);
+            responseSubscriber.removeFuture(trip.getId());
         }
     }
 
@@ -115,6 +109,8 @@ public class DriverSearchService {
         offerCacheService.validateActiveOffer(tripId, driverId);
         responsePublisher.publish(tripId, "ACCEPT", driverId);
         profileStatusService.setDriverStatusBusy(driverId);
+
+
     }
 
     // В будущем желательно сделать какой-либо штраф и тд.

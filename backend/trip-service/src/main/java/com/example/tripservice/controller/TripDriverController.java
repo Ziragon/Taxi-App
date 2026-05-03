@@ -54,7 +54,16 @@ public class TripDriverController {
         return ResponseEntity.noContent().build();
     }
 
+
     @PostMapping("/{tripId}/start")
+    @Operation(
+            summary = "Начать поездку",
+            description = "Водитель подбирает пассажира и начинает поездку",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Поездка начата"),
+                    @ApiResponse(responseCode = "403", description = "Пользователь не является водителем")
+            }
+    )
     public ResponseEntity<Void> startTrip(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long tripId

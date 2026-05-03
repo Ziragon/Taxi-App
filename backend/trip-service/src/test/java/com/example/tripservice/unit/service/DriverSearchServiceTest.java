@@ -19,7 +19,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
@@ -101,10 +100,9 @@ class DriverSearchServiceTest {
                 .destinationLng(BigDecimal.ZERO)
                 .build();
 
-        when(tripRepository.findById(tripId)).thenReturn(Optional.of(mockTrip));
         when(locationClient.getNearbyDrivers(any(), any(), any(), any())).thenReturn(List.of());
 
-        driverSearchService.searchDrivers(tripId, BigDecimal.ZERO, BigDecimal.ZERO, VehicleClass.ECONOMY);
+        driverSearchService.searchDrivers(mockTrip, BigDecimal.ZERO, BigDecimal.ZERO, VehicleClass.ECONOMY);
 
         verify(responseSubscriber).registerFuture(eq(tripId), any());
         verify(tripStatusService).cancelSearch(tripId);
