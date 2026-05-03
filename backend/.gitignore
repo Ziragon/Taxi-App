@@ -57,3 +57,4 @@ __pycache__/
 *.py[cod]
 *$py.class
 state.json
+passenger_state.json
