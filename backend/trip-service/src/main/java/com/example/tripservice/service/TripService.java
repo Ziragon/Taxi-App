@@ -25,6 +25,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -133,7 +134,7 @@ public class TripService {
                     "rub"
             ));
             log.info("Hold created for trip {} amount {}", tripId, tariffDto.prices().price());
-        } catch (FeignException.NotFound e) {
+        } catch (FeignException.NotFound _) {
             trip.setStatus(TripStatus.CANCELLED);
             tripRepository.save(trip);
             throw new PaymentMethodNotFoundException(userId);
@@ -215,6 +216,11 @@ public class TripService {
     public TripDto getTripById(Long userId, Long tripId) {
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new TripNotFoundException(tripId));
+
+        if (!Objects.equals(userId, trip.getPassengerId())) {
+            throw new AccessDeniedException("You are not owner of this trip");
+        }
+
         return TripDto.from(trip, null, null);
     }
 }
