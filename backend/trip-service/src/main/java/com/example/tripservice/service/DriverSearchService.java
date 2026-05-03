@@ -4,6 +4,10 @@ import com.example.shared.dto.data.DriverLocationDto;
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.exception.common.ServiceUnavailableException;
 import com.example.tripservice.client.UserServiceClient;
+import com.example.tripservice.entity.Trip;
+import com.example.tripservice.exception.TripNotFoundException;
+import com.example.tripservice.messaging.TripOfferPublisher;
+import com.example.tripservice.repository.TripRepository;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +31,8 @@ public class DriverSearchService {
 
     private final DriverResponseSubscriber responseSubscriber;
     private final DriverResponsePublisher responsePublisher;
+    private final TripOfferPublisher tripOfferPublisher;
+    private final TripRepository tripRepository;
 
     @Value("${searching.duration}")
     private int searchDuration;
@@ -54,6 +60,9 @@ public class DriverSearchService {
     @Async
     public void searchDrivers(Long tripId, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {
 
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new TripNotFoundException(tripId));
+
         Set<Long> alreadyOffered = new HashSet<>();
         CompletableFuture<Long> future = new CompletableFuture<>();
         responseSubscriber.registerFuture(tripId, future);
@@ -78,7 +87,7 @@ public class DriverSearchService {
 
                     offerCacheService.setActiveOffer(tripId, driver.driverId());
 
-                    // TODO: Отправка оффера водителю
+                    tripOfferPublisher.publishOffer(trip, driver.driverId());
 
                     boolean accepted = waitForAccept(future);
                     offerCacheService.removeActiveOffer(tripId);
@@ -89,7 +98,7 @@ public class DriverSearchService {
                         return;
                     }
 
-                    // TODO: Уведомление, что предложение истекло
+                    tripOfferPublisher.publishOfferExpired(tripId, driver.driverId());
                 }
             }
 

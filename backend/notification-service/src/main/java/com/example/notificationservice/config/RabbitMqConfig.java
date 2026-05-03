@@ -14,6 +14,8 @@ public class RabbitMqConfig {
 
     public static final String NOTIFICATION_EXCHANGE     = "notification.exchange";
     public static final String NOTIFICATION_ROUTING_KEY  = "notification.#";
+    public static final String TRIP_OFFER_ROUTING_KEY         = "notification.trip.offer";
+    public static final String TRIP_OFFER_EXPIRED_ROUTING_KEY = "notification.trip.offer.expired";
 
     public static final String USER_EVENTS_EXCHANGE      = "user.events";
 
@@ -91,6 +93,22 @@ public class RabbitMqConfig {
                 .bind(notificationDeadLetterQueue())
                 .to(notificationDeadLetterExchange())
                 .with(NOTIFICATION_DLQ_ROUTING);
+    }
+
+    @Bean
+    public Binding tripOfferBinding() {
+        return BindingBuilder
+                .bind(notificationQueue())
+                .to(notificationExchange())
+                .with(TRIP_OFFER_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding tripOfferExpiredBinding() {
+        return BindingBuilder
+                .bind(notificationQueue())
+                .to(notificationExchange())
+                .with(TRIP_OFFER_EXPIRED_ROUTING_KEY);
     }
 
     // Converter and Template
