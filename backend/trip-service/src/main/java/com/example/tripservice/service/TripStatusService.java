@@ -59,6 +59,7 @@ public class TripStatusService {
 
         log.info("Driver {} assigned to trip {}", driverId, tripId);
         notificationPublisher.publishDriverAssigned(trip.getPassengerId(), tripId, driverId);
+        activeTripCacheService.save(driverId, tripId);
     }
 
     @Transactional
@@ -117,9 +118,12 @@ public class TripStatusService {
                     "Trip cancelled by passenger"
             ));
         }
+
         if (trip.getDriverId() != null) {
             notificationPublisher.publishTripCancelled(trip.getDriverId(), tripId, "Отменено пассажиром");
         }
+
+        activeTripCacheService.remove(trip.getDriverId());
     }
 
     @Transactional

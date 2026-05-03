@@ -109,8 +109,6 @@ public class DriverSearchService {
         offerCacheService.validateActiveOffer(tripId, driverId);
         responsePublisher.publish(tripId, "ACCEPT", driverId);
         profileStatusService.setDriverStatusBusy(driverId);
-
-
     }
 
     // В будущем желательно сделать какой-либо штраф и тд.
