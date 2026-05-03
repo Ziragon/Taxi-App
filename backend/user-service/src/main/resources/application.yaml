@@ -74,6 +74,9 @@ internal-auth:
   header: ${INTERNAL_HEADER:X-Internal-Header}
   header-key: ${HEADER_KEY:dev-secret-internal-key-for-microservices}
 
+internal:
+  trip-service: ${TRIP_SERVICE:http://localhost:8081}
+
 app:
   driver:
     location:

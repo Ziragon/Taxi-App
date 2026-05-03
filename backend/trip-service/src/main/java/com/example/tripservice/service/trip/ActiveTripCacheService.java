@@ -17,7 +17,7 @@ public class ActiveTripCacheService {
 
     private static final String DRIVER_ACTIVE_TRIP_KEY = "driver:%d:active_trip";
 
-    private static final Duration TTL = Duration.ofHours(6);
+    private static final Duration TTL = Duration.ofHours(1);
 
     public void save(Long driverId, Long tripId) {
         longRedisTemplate.opsForValue().set(

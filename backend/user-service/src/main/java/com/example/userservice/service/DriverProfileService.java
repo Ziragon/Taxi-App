@@ -25,6 +25,8 @@ public class DriverProfileService {
     private final DriverCachingService driverCachingService;
     private final VehicleRepository vehicleRepository;
     private final AccountService accountService;
+    private final TripStatusService tripStatusService;
+
     private static final String DRIVER_PROFILE = "Driver profile";
 
     @Transactional
@@ -87,9 +89,11 @@ public class DriverProfileService {
         if (status == DriverStatus.ONLINE) {
             DriverProfile profile = driverProfileRepository.findByIdWithAccount(accountId)
                     .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
+            tripStatusService.validateDriverStatus(accountId);
             validateOnlineRequirements(accountId, profile);
             driverCachingService.updateStatus(accountId, DriverStatus.ONLINE);
         } else if (status == DriverStatus.OFFLINE) {
+            tripStatusService.validateDriverStatus(accountId);
             driverCachingService.deleteDriver(accountId);
         } else if (status == DriverStatus.BUSY) {
             driverCachingService.updateStatus(accountId, DriverStatus.BUSY);
