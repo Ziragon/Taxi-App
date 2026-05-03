@@ -1,11 +1,12 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:arbuz_express/screens/menuScreens/ride_history_screen.dart';
 import 'package:arbuz_express/screens/menuScreens/payment_methods_screen.dart';
 import 'package:arbuz_express/screens/menuScreens/support_screen.dart';
 import 'package:arbuz_express/screens/auth_screen.dart';
+import 'package:arbuz_express/hooks/use_profile.dart';
+import 'package:arbuz_express/hooks/use_auth.dart';
+import 'package:arbuz_express/services/token_storage.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,34 +16,282 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  String? _imagePath;
-  final ImagePicker _picker = ImagePicker();
+  final UseProfile _useProfile = UseProfile();
+  final UseAuth _useAuth = UseAuth();
+  UserProfileData? _profile;
+  bool _isLoading = true;
 
-  Future<void> _pickImage() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 75,
-      );
-      if (image != null) {
-        setState(() {
-          _imagePath = image.path;
-        });
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await _useProfile.getCurrentProfile();
+    if (mounted) {
+      setState(() {
+        _profile = profile;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    final result = await _useAuth.logout();
+
+    if (mounted) {
+      if (result.success) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const AuthScreen()),
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.error ?? 'Ошибка при выходе'),
+            backgroundColor: const Color(0xFFFF5722),
+          ),
+        );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ошибка при выборе изображения')),
-      );
+    }
+  }
+
+  Future<void> _showEditProfileDialog() async {
+    final firstNameController = TextEditingController(
+      text: _profile?.firstName ?? '',
+    );
+    final lastNameController = TextEditingController(
+      text: _profile?.lastName ?? '',
+    );
+    final licenseController = TextEditingController(
+      text: _profile?.licenseNumber ?? '',
+    );
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF151518),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          title: const Text(
+            'Редактировать профиль',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: firstNameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Имя',
+                    labelStyle: TextStyle(color: Colors.white70),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white24),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Color(0xFFFFC107)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: lastNameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Фамилия',
+                    labelStyle: TextStyle(color: Colors.white70),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white24),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Color(0xFFFFC107)),
+                    ),
+                  ),
+                ),
+                if (TokenStorage.userRole == 'driver') ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: licenseController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Номер лицензии',
+                      labelStyle: TextStyle(color: Colors.white70),
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white24),
+                      ),
+                      focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Color(0xFFFFC107)),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text(
+                'Сохранить',
+                style: TextStyle(color: Color(0xFFFFC107)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      ProfileResult updateResult;
+      if (TokenStorage.userRole == 'driver') {
+        updateResult = await _useProfile.updateDriverProfile(
+          firstName: firstNameController.text.trim(),
+          lastName: lastNameController.text.trim(),
+          licenseNumber: licenseController.text.trim(),
+          photoUrl: _profile?.photoUrl ?? 'https://cdn.example.com/driver.jpg',
+        );
+      } else {
+        updateResult = await _useProfile.updatePassengerProfile(
+          firstName: firstNameController.text.trim(),
+          lastName: lastNameController.text.trim(),
+          photoUrl: _profile?.photoUrl ?? 'https://cdn.example.com/avatar.jpg',
+        );
+      }
+
+      if (mounted) {
+        if (updateResult.success && updateResult.data != null) {
+          setState(() {
+            _profile = updateResult.data;
+          });
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Профиль обновлён')));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(updateResult.error ?? 'Ошибка обновления профиля'),
+              backgroundColor: const Color(0xFFFF5722),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showAvatarUrlDialog() async {
+    final urlController = TextEditingController(text: _profile?.photoUrl ?? '');
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF151518),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          title: const Text(
+            'Сменить аватар',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: TextField(
+            controller: urlController,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              labelText: 'Ссылка на изображение',
+              labelStyle: TextStyle(color: Colors.white70),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white24),
+              ),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Color(0xFFFFC107)),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text(
+                'Сохранить',
+                style: TextStyle(color: Color(0xFFFFC107)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      final newUrl = urlController.text.trim();
+      if (newUrl.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ссылка не может быть пустой')),
+        );
+        return;
+      }
+
+      ProfileResult updateResult;
+      if (TokenStorage.userRole == 'driver') {
+        updateResult = await _useProfile.updateDriverProfile(
+          firstName: _profile?.firstName ?? '',
+          lastName: _profile?.lastName ?? '',
+          licenseNumber: _profile?.licenseNumber ?? '',
+          photoUrl: newUrl,
+        );
+      } else {
+        updateResult = await _useProfile.updatePassengerProfile(
+          firstName: _profile?.firstName ?? '',
+          lastName: _profile?.lastName ?? '',
+          photoUrl: newUrl,
+        );
+      }
+
+      if (mounted) {
+        if (updateResult.success && updateResult.data != null) {
+          setState(() {
+            _profile = updateResult.data;
+          });
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Аватар обновлён')));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(updateResult.error ?? 'Ошибка обновления аватара'),
+              backgroundColor: const Color(0xFFFF5722),
+            ),
+          );
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0A0A0C),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFFFFC107)),
+        ),
+      );
+    }
+
     ImageProvider avatarImage;
-    if (_imagePath != null) {
-      avatarImage = FileImage(File(_imagePath!));
+    if (_profile?.photoUrl != null && _profile!.photoUrl.isNotEmpty) {
+      avatarImage = NetworkImage(_profile!.photoUrl);
     } else {
       avatarImage = const NetworkImage(
         'https://i.pinimg.com/736x/bd/e4/37/bde4375cab1bde7b846588f068adc681.jpg',
@@ -87,195 +336,208 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(width: 44),
+                      CircleIconButton(
+                        icon: Icons.edit_rounded,
+                        size: 44,
+                        onTap: _showEditProfileDialog,
+                      ),
                     ],
                   ),
                 ),
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        Center(
-                          child: Stack(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: const Color(
-                                      0xFFFFC107,
-                                    ).withOpacity(0.2),
-                                    width: 2,
+                  child: RefreshIndicator(
+                    onRefresh: _loadProfile,
+                    color: const Color(0xFFFFC107),
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          Center(
+                            child: Stack(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFFFFC107,
+                                      ).withOpacity(0.2),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: CircleAvatar(
+                                    radius: 65,
+                                    backgroundColor: const Color(0xFF151518),
+                                    backgroundImage: avatarImage,
                                   ),
                                 ),
-                                child: CircleAvatar(
-                                  radius: 65,
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: GestureDetector(
+                                    onTap: _showAvatarUrlDialog,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFFC107),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: const Color(0xFF0A0A0C),
+                                          width: 3,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(
+                                              0xFFFFC107,
+                                            ).withOpacity(0.3),
+                                            blurRadius: 15,
+                                            spreadRadius: 2,
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Icon(
+                                        Icons.photo_library_rounded,
+                                        size: 20,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            '${_profile?.firstName ?? ''} ${_profile?.lastName ?? ''}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          if (_profile?.licenseNumber != null)
+                            Text(
+                              'Лицензия: ${_profile!.licenseNumber}',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.4),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          const SizedBox(height: 32),
+                          GlassCard(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: _buildStatItem(
+                                    'Поездок',
+                                    '${_profile?.totalTrips ?? 0}',
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 40,
+                                  color: Colors.white.withOpacity(0.05),
+                                ),
+                                Expanded(
+                                  child: _buildStatItem(
+                                    'Рейтинг',
+                                    '${_profile?.averageRating ?? 0.0} 🍉',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          _buildMenuSection([
+                            _MenuItem(
+                              Icons.history_rounded,
+                              'История поездок',
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const RideHistoryScreen(),
+                                ),
+                              ),
+                            ),
+                            _MenuItem(
+                              Icons.payment_rounded,
+                              'Способы оплаты',
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const PaymentMethodsScreen(),
+                                ),
+                              ),
+                            ),
+                            _MenuItem(
+                              Icons.support_agent_rounded,
+                              'Поддержка',
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SupportScreen(),
+                                ),
+                              ),
+                            ),
+                          ]),
+                          const SizedBox(height: 32),
+                          TextButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
                                   backgroundColor: const Color(0xFF151518),
-                                  backgroundImage: avatarImage,
-                                ),
-                              ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: GestureDetector(
-                                  onTap: _pickImage,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFFC107),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: const Color(0xFF0A0A0C),
-                                        width: 3,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(
-                                            0xFFFFC107,
-                                          ).withOpacity(0.3),
-                                          blurRadius: 15,
-                                          spreadRadius: 2,
-                                        ),
-                                      ],
-                                    ),
-                                    child: const Icon(
-                                      Icons.photo_library_rounded,
-                                      size: 20,
-                                      color: Colors.black,
-                                    ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(28),
                                   ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Лев Гунзенов',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '+7 (999) 000-00-00',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.4),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        GlassCard(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          child: Row(
-                            children: [
-                              Expanded(child: _buildStatItem('Поездок', '142')),
-                              Container(
-                                width: 1,
-                                height: 40,
-                                color: Colors.white.withOpacity(0.05),
-                              ),
-                              Expanded(
-                                child: _buildStatItem('Рейтинг', '4.98 🍉'),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        _buildMenuSection([
-                          _MenuItem(
-                            Icons.history_rounded,
-                            'История поездок',
-                            () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const RideHistoryScreen(),
-                              ),
-                            ),
-                          ),
-                          _MenuItem(
-                            Icons.payment_rounded,
-                            'Способы оплаты',
-                            () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const PaymentMethodsScreen(),
-                              ),
-                            ),
-                          ),
-                          _MenuItem(
-                            Icons.support_agent_rounded,
-                            'Поддержка',
-                            () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SupportScreen(),
-                              ),
-                            ),
-                          ),
-                        ]),
-                        const SizedBox(height: 32),
-                        TextButton(
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                backgroundColor: const Color(0xFF151518),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(28),
-                                ),
-                                title: const Text(
-                                  'Выход',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                                content: const Text(
-                                  'Вы уверены, что хотите выйти?',
-                                  style: TextStyle(color: Colors.white70),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Отмена'),
+                                  title: const Text(
+                                    'Выход',
+                                    style: TextStyle(color: Colors.white),
                                   ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pushAndRemoveUntil(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const AuthScreen(),
+                                  content: const Text(
+                                    'Вы уверены, что хотите выйти?',
+                                    style: TextStyle(color: Colors.white70),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Отмена'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        _handleLogout();
+                                      },
+                                      child: const Text(
+                                        'Выйти',
+                                        style: TextStyle(
+                                          color: Color(0xFFFF5722),
                                         ),
-                                        (route) => false,
-                                      );
-                                    },
-                                    child: const Text(
-                                      'Выйти',
-                                      style: TextStyle(
-                                        color: Color(0xFFFF5722),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Выйти из аккаунта',
+                              style: TextStyle(
+                                color: Color(0xFFFF5722),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
                               ),
-                            );
-                          },
-                          child: const Text(
-                            'Выйти из аккаунта',
-                            style: TextStyle(
-                              color: Color(0xFFFF5722),
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
