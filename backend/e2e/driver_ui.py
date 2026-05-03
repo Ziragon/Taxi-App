@@ -18,6 +18,8 @@ HELP_TEXT = """
 ║  on      - перейти в ONLINE          ║
 ║  off     - перейти в OFFLINE         ║
 ║  status  - показать текущий профиль  ║
+║  accept  - принять поездку по ID     ║
+║  reject  - отклонить поездку по ID   ║
 ║  card    - привязать тестовую карту  ║
 ║  help    - эта справка               ║
 ║  exit    - выход                     ║
@@ -79,6 +81,20 @@ def main():
 
         elif cmd == "card":
             service.attach_card()
+
+        elif cmd == "accept":
+            trip_id = input("  Введите ID поездки для принятия: ").strip()
+            if trip_id.isdigit():
+                service.accept_trip(trip_id)
+            else:
+                print("  [!] Некорректный ID поездки.")
+
+        elif cmd == "reject":
+            trip_id = input("  Введите ID поездки для отклонения: ").strip()
+            if trip_id.isdigit():
+                service.reject_trip(trip_id)
+            else:
+                print("  [!] Некорректный ID поездки.")
 
         elif cmd == "help":
             print(HELP_TEXT)
