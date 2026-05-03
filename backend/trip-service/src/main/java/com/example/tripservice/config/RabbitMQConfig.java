@@ -15,6 +15,7 @@ public class RabbitMQConfig {
     // Exchanges
     public static final String PAYMENT_EXCHANGE = "payment.exchange";
     public static final String TRIP_EXCHANGE    = "trip.exchange";
+    public static final String NOTIFICATION_EXCHANGE        = "notification.exchange";
 
     // Queues — trip-service слушает
     public static final String PAYMENT_SUCCEEDED_QUEUE = "trip.payment.succeeded";
@@ -27,6 +28,8 @@ public class RabbitMQConfig {
     public static final String PAYMENT_FAILED_ROUTING_KEY    = "payment.failed";
     public static final String REFUND_REQUESTED_ROUTING_KEY  = "refund.requested";
     public static final String REFUND_SUCCEEDED_ROUTING_KEY  = "refund.succeeded";
+    public static final String TRIP_OFFER_ROUTING_KEY        = "notification.trip.offer";
+    public static final String TRIP_OFFER_EXPIRED_ROUTING_KEY = "notification.trip.offer.expired";
 
     @Bean
     public TopicExchange paymentExchange() {
@@ -36,6 +39,12 @@ public class RabbitMQConfig {
     @Bean
     public TopicExchange tripExchange() {
         return ExchangeBuilder.topicExchange(TRIP_EXCHANGE).durable(true).build();
+    }
+
+
+    @Bean
+    public TopicExchange notificationExchange() {
+        return ExchangeBuilder.topicExchange(NOTIFICATION_EXCHANGE).durable(true).build();
     }
 
     // Queues
