@@ -116,3 +116,76 @@ class PassengerService:
         except Exception as e:
             print(f"[!] Ошибка HTTP: {e}")
             return False
+
+    def create_trip(self, origin_addr, origin_lat, origin_lng, dest_addr, dest_lat, dest_lng):
+        """POST /api/v1/trips - Создает предварительный расчет поездки"""
+        url = f"{API_URL}/trips"
+        payload = {
+            "originAddress": origin_addr,
+            "originLat": origin_lat,
+            "originLng": origin_lng,
+            "destAddress": dest_addr,
+            "destLat": dest_lat,
+            "destLng": dest_lng
+        }
+
+        print(f"[*] Запрос на создание поездки: {origin_addr} -> {dest_addr}")
+        try:
+            res = requests.post(url, headers=self._auth_headers(), json=payload)
+            if res.status_code in [200, 201]:
+                data = res.json()
+                self.current_trip_id = data.get("id")
+                print(f"[+] Поездка #{self.current_trip_id} успешно создана.")
+                print(f"    Дистанция: {data.get('distanceKm')} км, Время: {data.get('durationMin')} мин")
+                return True
+            else:
+                print(f"[!] Ошибка создания поездки ({res.status_code}): {res.text}")
+                return False
+        except Exception as e:
+            print(f"[!] Ошибка соединения: {e}")
+            return False
+
+    def start_search(self, vehicle_class="COMFORT"):
+        """POST /api/v1/trips/{id}/start-search - Запуск поиска водителя"""
+        if not self.current_trip_id:
+            print("[!] Сначала нужно создать поездку (команда: create_trip).")
+            return False
+
+        url = f"{API_URL}/trips/{self.current_trip_id}/start-search?vehicleClass={vehicle_class}"
+        print(f"[*] Запуск поиска водителя (класс: {vehicle_class}) для поездки #{self.current_trip_id}...")
+
+        try:
+            # Отправляем пустой json или data, т.к. бэкенд ожидает POST
+            res = requests.post(url, headers=self._auth_headers(), json={})
+            if res.status_code == 204:
+                print("[✔] Поиск успешно запущен (в фоновом режиме).")
+                return True
+            else:
+                print(f"[!] Ошибка запуска поиска ({res.status_code}): {res.text}")
+                return False
+        except Exception as e:
+            print(f"[!] Ошибка соединения: {e}")
+            return False
+
+    def cancel_trip(self):
+        """POST /api/v1/trips/{id}/cancel - Отмена поездки"""
+        if not self.current_trip_id:
+            print("[!] Нет активной поездки для отмены.")
+            return False
+
+        url = f"{API_URL}/trips/{self.current_trip_id}/cancel"
+        print(f"[*] Отмена поездки #{self.current_trip_id}...")
+
+        try:
+            res = requests.post(url, headers=self._auth_headers(), json={})
+            # Ожидаем 200 или 204 в зависимости от реализации бэкенда
+            if res.status_code in [200, 204]:
+                print("[✔] Поездка отменена.")
+                self.current_trip_id = None
+                return True
+            else:
+                print(f"[!] Ошибка отмены поездки ({res.status_code}): {res.text}")
+                return False
+        except Exception as e:
+            print(f"[!] Ошибка соединения: {e}")
+            return False
