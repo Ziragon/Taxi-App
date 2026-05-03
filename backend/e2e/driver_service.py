@@ -281,15 +281,27 @@ class DriverService:
             return False
 
     def accept_trip(self, trip_id):
-        """POST /api/v1/trips/{id}/accept - Принятие поездки водителем"""
+        """POST /api/v1/trips/{id}/accept - Принятие поездки с отправкой локации"""
         url = f"{API_URL}/trips/{trip_id}/accept"
-        print(f"[*] Принятие поездки #{trip_id}...")
+
+        # Теперь отправляем текущие координаты водителя в Body
+        payload = {
+            "latitude": self.start_lat,
+            "longitude": self.start_lng
+        }
+
+        print(f"[*] Принятие поездки #{trip_id} (Локация: {self.start_lat}, {self.start_lng})...")
 
         try:
-            # Отправляем пустой json, так как бэкенд ожидает POST запрос
-            res = requests.post(url, headers=self._auth_headers(), json={})
-            if res.status_code in [200, 204]:
-                print(f"[✔] Поездка #{trip_id} успешно принята!")
+            res = requests.post(url, headers=self._auth_headers(), json=payload)
+            if res.status_code == 200:
+                data = res.json()
+                print(f"[✔] Поездка #{trip_id} принята!")
+                print(f"    Маршрут до пассажира: {data.get('distanceKm')} км, ~{data.get('durationMin')} мин")
+                print(f"    String: {data.get('geometry')}")
+                return data
+            elif res.status_code == 204:
+                print(f"[✔] Поездка #{trip_id} принята (без данных о маршруте).")
                 return True
             else:
                 print(f"[!] Ошибка принятия поездки ({res.status_code}): {res.text}")

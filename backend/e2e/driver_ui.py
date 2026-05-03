@@ -85,7 +85,12 @@ def main():
         elif cmd == "accept":
             trip_id = input("  Введите ID поездки для принятия: ").strip()
             if trip_id.isdigit():
-                service.accept_trip(trip_id)
+                route_data = service.accept_trip(trip_id)
+                if isinstance(route_data, dict):
+                    dist = route_data.get('distanceKm', 0)
+                    dur = route_data.get('durationMin', 0)
+                    print(f"  [ℹ] Дистанция до подачи: {dist} км")
+                    print(f"  [ℹ] Примерное время: {dur:.2f} мин")
             else:
                 print("  [!] Некорректный ID поездки.")
 
