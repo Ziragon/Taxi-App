@@ -3,6 +3,9 @@ package com.example.tripservice.unit.service;
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.exception.common.ServiceUnavailableException;
 import com.example.tripservice.client.UserServiceClient;
+import com.example.tripservice.entity.Trip;
+import com.example.tripservice.entity.enums.TripStatus;
+import com.example.tripservice.repository.TripRepository;
 import com.example.tripservice.service.*;
 import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +19,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
@@ -36,6 +40,8 @@ class DriverSearchServiceTest {
     private DriverResponseSubscriber responseSubscriber;
     @Mock
     private DriverResponsePublisher responsePublisher;
+    @Mock
+    private TripRepository tripRepository;
 
     @InjectMocks
     private DriverSearchService driverSearchService;
@@ -85,6 +91,17 @@ class DriverSearchServiceTest {
     @DisplayName("searchDrivers: должен отменить поиск, если водители не найдены")
     void searchDrivers_ShouldCancelSearch_WhenNoDriversFound() {
         Long tripId = 1L;
+        Trip mockTrip = Trip.builder()
+                .id(tripId)
+                .passengerId(10L)
+                .status(TripStatus.SEARCHING)
+                .originLat(BigDecimal.ZERO)
+                .originLng(BigDecimal.ZERO)
+                .destinationLat(BigDecimal.ZERO)
+                .destinationLng(BigDecimal.ZERO)
+                .build();
+
+        when(tripRepository.findById(tripId)).thenReturn(Optional.of(mockTrip));
         when(locationClient.getNearbyDrivers(any(), any(), any(), any())).thenReturn(List.of());
 
         driverSearchService.searchDrivers(tripId, BigDecimal.ZERO, BigDecimal.ZERO, VehicleClass.ECONOMY);
