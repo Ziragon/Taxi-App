@@ -2,6 +2,7 @@ package com.example.tripservice.service;
 
 import com.example.shared.dto.event.RefundRequestedEvent;
 import com.example.shared.dto.event.TripCompletedEvent;
+import com.example.shared.exception.common.AccessDeniedException;
 import com.example.tripservice.client.PaymentServiceClient;
 import com.example.tripservice.dto.client.PaymentMethodResponse;
 import com.example.tripservice.entity.Trip;
@@ -26,6 +27,7 @@ public class TripStatusService {
     private final TripRepository tripRepository;
     private final TripEventPublisher tripEventPublisher;
     private final PaymentServiceClient paymentServiceClient;
+    private final ActiveTripCacheService activeTripCacheService;
     private final NotificationPublisher notificationPublisher;
 
     @Transactional
@@ -38,7 +40,7 @@ public class TripStatusService {
                     .getDefaultPaymentMethod(trip.getPassengerId());
             log.info("Payment method verified for passenger {}: {} ****{}",
                     trip.getPassengerId(), paymentMethod.cardBrand(), paymentMethod.lastFour());
-        } catch (FeignException.NotFound e) {
+        } catch (FeignException.NotFound _) {
             log.warn("No payment method for passenger {}, cancelling trip {}",
                     trip.getPassengerId(), tripId);
             trip.setStatus(TripStatus.CANCELLED);
@@ -87,7 +89,9 @@ public class TripStatusService {
                 "rub",
                 Instant.now()
         ));
+
         notificationPublisher.publishTripCompleted(trip.getPassengerId(), tripId, trip.getPrice());
+        activeTripCacheService.remove(driverId);
     }
 
     @Transactional
@@ -96,10 +100,9 @@ public class TripStatusService {
                 .orElseThrow(() -> new TripNotFoundException(tripId));
 
         if (!trip.getPassengerId().equals(passengerId)) {
-            throw new com.example.shared.exception.common.AccessDeniedException();
+            throw new AccessDeniedException("You're not owner of this trip");
         }
 
-        TripStatus currentStatus = trip.getStatus();
         trip.setStatus(TripStatus.CANCELLED);
         tripRepository.save(trip);
 
@@ -128,6 +131,7 @@ public class TripStatusService {
         tripRepository.save(trip);
 
         log.info("Search cancelled for trip {} — no drivers found", tripId);
+        // TODO: WebSocket уведомление пассажиру
     }
 
     private Trip getTripForDriver(Long tripId, Long driverId) {
@@ -135,7 +139,7 @@ public class TripStatusService {
                 .orElseThrow(() -> new TripNotFoundException(tripId));
 
         if (!driverId.equals(trip.getDriverId())) {
-            throw new com.example.shared.exception.common.AccessDeniedException();
+            throw new AccessDeniedException("You are not assigned as a driver for this trip");
         }
 
         return trip;
