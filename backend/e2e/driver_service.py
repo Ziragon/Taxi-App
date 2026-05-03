@@ -154,7 +154,6 @@ class DriverService:
                 )
                 self.ws.send(frame)
                 print(f"[📍 {self.email}] {payload['latitude']:.6f}, {payload['longitude']:.6f}")
-                payload["latitude"] += 0.00001
             except Exception as e:
                 print(f"[!] Ошибка отправки локации: {e}")
             time.sleep(5)
@@ -241,4 +240,39 @@ class DriverService:
 
         except Exception as e:
             print(f"[!] Ошибка: {e}")
+            return False
+
+    def accept_trip(self, trip_id):
+        """POST /api/v1/trips/{id}/accept - Принятие поездки водителем"""
+        url = f"{API_URL}/trips/{trip_id}/accept"
+        print(f"[*] Принятие поездки #{trip_id}...")
+
+        try:
+            # Отправляем пустой json, так как бэкенд ожидает POST запрос
+            res = requests.post(url, headers=self._auth_headers(), json={})
+            if res.status_code in [200, 204]:
+                print(f"[✔] Поездка #{trip_id} успешно принята!")
+                return True
+            else:
+                print(f"[!] Ошибка принятия поездки ({res.status_code}): {res.text}")
+                return False
+        except Exception as e:
+            print(f"[!] Ошибка соединения: {e}")
+            return False
+
+    def reject_trip(self, trip_id):
+        """POST /api/v1/trips/{id}/reject - Отклонение поездки водителем"""
+        url = f"{API_URL}/trips/{trip_id}/reject"
+        print(f"[*] Отклонение поездки #{trip_id}...")
+
+        try:
+            res = requests.post(url, headers=self._auth_headers(), json={})
+            if res.status_code in [200, 204]:
+                print(f"[✔] Поездка #{trip_id} отклонена.")
+                return True
+            else:
+                print(f"[!] Ошибка отклонения поездки ({res.status_code}): {res.text}")
+                return False
+        except Exception as e:
+            print(f"[!] Ошибка соединения: {e}")
             return False

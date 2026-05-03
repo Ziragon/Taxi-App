@@ -66,6 +66,9 @@ gateway:
     - /webjars/**
     - /v3/api-docs/**
 
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+
 springdoc:
   api-docs:
     enabled: true
@@ -80,9 +83,6 @@ springdoc:
         url: /trip-service/v3/api-docs
       - name: payment-service
         url: /payment-service/v3/api-docs
-
-cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
 
 logging:
   level:
