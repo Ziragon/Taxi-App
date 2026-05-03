@@ -2,6 +2,7 @@ package com.example.paymentservice.messaging;
 
 import com.example.shared.dto.event.PaymentFailedEvent;
 import com.example.shared.dto.event.PaymentSucceededEvent;
+import com.example.shared.dto.event.PayoutSucceededEvent;
 import com.example.shared.dto.event.RefundSucceededEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,4 +47,11 @@ public class PaymentEventPublisher {
                 event
         );
     }
+
+    public void publishPayoutSucceeded(PayoutSucceededEvent event) {
+        log.info("Publishing PayoutSucceededEvent: tripId={}, driverId={}, amount={}",
+                event.tripId(), event.driverId(), event.amount());
+        rabbitTemplate.convertAndSend(PAYMENT_EXCHANGE, PAYOUT_SUCCEEDED_ROUTING_KEY, event);
+    }
+
 }

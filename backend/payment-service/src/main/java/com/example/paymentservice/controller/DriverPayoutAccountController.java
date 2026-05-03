@@ -52,7 +52,7 @@ public class DriverPayoutAccountController {
     ) {
         DriverPayoutAccount account = payoutAccountService.addPayoutAccount(
                 principal.userId(),
-                request.stripeAccountId()
+                request.lastFour()
         );
 
         return ResponseEntity.ok(DriverPayoutAccountResponse.from(account));

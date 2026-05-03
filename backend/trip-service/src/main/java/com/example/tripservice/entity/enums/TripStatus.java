@@ -5,6 +5,7 @@ public enum TripStatus {
     SEARCHING,
     DRIVER_ASSIGNED,
     IN_PROGRESS,
+    PAYMENT_PENDING,
     COMPLETED,
     CANCELLED
 }

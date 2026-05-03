@@ -11,6 +11,7 @@ import com.example.paymentservice.messaging.PaymentEventPublisher;
 import com.example.paymentservice.repository.TransactionRepository;
 import com.example.shared.dto.event.PaymentFailedEvent;
 import com.example.shared.dto.event.PaymentSucceededEvent;
+import com.example.shared.dto.event.PayoutSucceededEvent;
 import com.example.shared.dto.event.RefundSucceededEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -167,6 +168,7 @@ public class TransactionService {
         return saved;
     }
 
+
     @Transactional
     public Transaction createPayout(Long tripId,
                                     Long passengerId,
@@ -195,9 +197,122 @@ public class TransactionService {
 
         Transaction saved = transactionRepository.save(payout);
 
-        log.info("Payout created for driver {} trip {}", driverId, tripId);
+        log.info("Payout created for driver {} trip {} amount {}", driverId, tripId, amount);
+
+        paymentEventPublisher.publishPayoutSucceeded(
+                new PayoutSucceededEvent(
+                        saved.getId(),
+                        tripId,
+                        passengerId,
+                        driverId,
+                        amount,
+                        currency,
+                        transfer.id(),
+                        Instant.now()
+                )
+        );
 
         return saved;
+    }
+
+    @Transactional
+    public Transaction createHold(Long tripId,
+                                  Long passengerId,
+                                  Long driverId,
+                                  Long paymentMethodId,
+                                  BigDecimal amount,
+                                  String currency) {
+        PaymentMethod paymentMethod = paymentMethodId != null
+                ? paymentMethodService.getById(paymentMethodId)
+                : paymentMethodService.getDefaultForPassenger(passengerId);
+
+        if (!paymentMethod.isActive()) {
+            throw new PaymentProcessingException("Payment method is not active");
+        }
+
+        StripeService.FakePaymentIntent paymentIntent = stripeService.createPaymentIntentWithHold(
+                amount,
+                currency,
+                paymentMethod.getStripeCustomerId(),
+                paymentMethod.getStripePaymentMethodId(),
+                tripId
+        );
+
+        Transaction hold = Transaction.builder()
+                .tripId(tripId)
+                .passengerId(passengerId)
+                .driverId(driverId)
+                .paymentMethod(paymentMethod)
+                .type(TransactionType.HOLD)
+                .amount(amount)
+                .currency(currency)
+                .status(TransactionStatus.PENDING)
+                .stripePaymentIntentId(paymentIntent.id())
+                .build();
+
+        Transaction saved = transactionRepository.save(hold);
+
+        log.info("Hold created for trip {} amount {} pi={}", tripId, amount, paymentIntent.id());
+
+        return saved;
+    }
+
+    @Transactional
+    public Transaction captureHold(Long tripId) {
+
+        Transaction hold = transactionRepository
+                .findByTripIdAndType(tripId, TransactionType.HOLD)
+                .orElseThrow(() -> new TransactionNotFoundException("tripId+HOLD", tripId));
+
+        if (hold.getStatus() != TransactionStatus.PENDING) {
+            throw new InvalidPaymentOperationException(
+                    "Hold", "only PENDING holds can be captured"
+            );
+        }
+
+        StripeService.FakePaymentIntent captured = stripeService.capturePaymentIntent(
+                hold.getStripePaymentIntentId()
+        );
+
+        hold.setStatus(TransactionStatus.SUCCEEDED);
+        hold.setType(TransactionType.CHARGE);
+        transactionRepository.save(hold);
+
+        log.info("Hold captured for trip {} pi={}", tripId, hold.getStripePaymentIntentId());
+
+        paymentEventPublisher.publishPaymentSucceeded(
+                new PaymentSucceededEvent(
+                        hold.getId(),
+                        tripId,
+                        hold.getPassengerId(),
+                        hold.getDriverId(),
+                        hold.getAmount(),
+                        hold.getCurrency(),
+                        hold.getStripePaymentIntentId(),
+                        Instant.now()
+                )
+        );
+
+        return hold;
+    }
+
+    @Transactional
+    public void releaseHold(Long tripId) {
+        Transaction hold = transactionRepository
+                .findByTripIdAndType(tripId, TransactionType.HOLD)
+                .orElseThrow(() -> new TransactionNotFoundException("tripId+HOLD", tripId));
+
+        if (hold.getStatus() != TransactionStatus.PENDING) {
+            log.warn("Hold for trip {} is not PENDING, skipping release", tripId);
+            return;
+        }
+
+        stripeService.cancelPaymentIntent(hold.getStripePaymentIntentId());
+
+        hold.setStatus(TransactionStatus.CANCELLED);
+        transactionRepository.save(hold);
+
+        log.info("Hold released for trip {} pi={}", tripId, hold.getStripePaymentIntentId());
     }
 
     @Transactional

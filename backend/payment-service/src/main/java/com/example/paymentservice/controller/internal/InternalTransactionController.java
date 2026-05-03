@@ -6,6 +6,7 @@ import com.example.paymentservice.dto.request.CreateRefundRequest;
 import com.example.paymentservice.dto.response.TransactionResponse;
 import com.example.paymentservice.entity.Transaction;
 import com.example.paymentservice.service.TransactionService;
+import com.example.shared.dto.request.CreateHoldRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -134,6 +135,22 @@ public class InternalTransactionController {
         );
 
         return ResponseEntity.ok(TransactionResponse.from(payout));
+    }
+
+    @PostMapping("/hold")
+    @Operation(summary = "Заморозить средства (внутренний)")
+    public ResponseEntity<TransactionResponse> createHold(
+            @Valid @RequestBody CreateHoldRequest request
+    ) {
+        Transaction hold = transactionService.createHold(
+                request.tripId(),
+                request.passengerId(),
+                request.driverId(),
+                request.paymentMethodId(),
+                request.amount(),
+                request.currency()
+        );
+        return ResponseEntity.ok(TransactionResponse.from(hold));
     }
 
     @GetMapping("/trip/{tripId}")

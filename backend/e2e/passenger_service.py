@@ -89,13 +89,12 @@ class PassengerService:
         try:
             res = requests.post(stripe_url, headers=headers, data=data)
             if res.status_code != 200:
-                print(f"[!] Ошибка Stripe API: {res.text}")
+                print(f"[!] Ошибка Stripe API ({res.status_code}): {res.text}")
                 return False
 
             pm_id = res.json()["id"]
             print(f"[+] PaymentMethod создан в Stripe: {pm_id}")
 
-            # Исправлено: рут и payload как в test-payment.html
             backend_url = f"{API_URL}/payment-methods"
             payload = {
                 "stripePaymentMethodId": pm_id,
@@ -108,6 +107,10 @@ class PassengerService:
             if b_res.status_code in [200, 201]:
                 data = b_res.json()
                 print(f"[✔] Карта привязана: {data.get('cardBrand', 'card')} **** {data.get('lastFour', '****')}")
+                return True
+            elif b_res.status_code == 409:
+                # Карта уже привязана
+                print(f"[·] Карта уже привязана (409 Conflict)")
                 return True
             else:
                 print(f"[!] Ошибка бэкенда ({b_res.status_code}): {b_res.text}")
