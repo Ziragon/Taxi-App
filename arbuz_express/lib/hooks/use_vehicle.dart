@@ -3,6 +3,13 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../services/token_storage.dart';
 
+class VehicleResult {
+  final bool success;
+  final String? error;
+
+  VehicleResult({required this.success, this.error});
+}
+
 class UseVehicle {
   Future<VehicleResult> addVehicle({
     required String brand,
@@ -38,11 +45,4 @@ class UseVehicle {
       return VehicleResult(success: false, error: 'Ошибка сети: $e');
     }
   }
-}
-
-class VehicleResult {
-  final bool success;
-  final String? error;
-
-  VehicleResult({required this.success, this.error});
 }
