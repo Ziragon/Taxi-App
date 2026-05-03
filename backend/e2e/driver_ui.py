@@ -18,6 +18,7 @@ HELP_TEXT = """
 ║  on      - перейти в ONLINE          ║
 ║  off     - перейти в OFFLINE         ║
 ║  status  - показать текущий профиль  ║
+║  card    - привязать тестовую карту  ║
 ║  help    - эта справка               ║
 ║  exit    - выход                     ║
 ╚══════════════════════════════════════╝
@@ -75,6 +76,9 @@ def main():
             icons = {"ONLINE": "🟢", "OFFLINE": "🔴", "BUSY": "🟡"}
             icon = icons.get(current, "❓")
             print(f"  Статус: {icon} {current if current else 'нет ответа'}")
+
+        elif cmd == "card":
+            service.attach_card()
 
         elif cmd == "help":
             print(HELP_TEXT)

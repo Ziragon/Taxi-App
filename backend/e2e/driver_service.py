@@ -5,16 +5,20 @@ import threading
 import requests
 import websocket
 import random
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
 
 API_URL = os.getenv("TAXI_API_URL", "http://localhost:8000/api/v1")
 WS_URL  = os.getenv("TAXI_WS_URL",  "ws://localhost:8083/ws/notifications/websocket")
+STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
 DEFAULT_STATE_FILE = "state.json"
-
 
 class DriverService:
     def __init__(self, state_file=DEFAULT_STATE_FILE, lat=55.755864, lng=37.617617, email_override=None):
         self.state_file     = state_file
         self.email_override = email_override
+        self.full_state     = None
         self.state          = self.load_state()
         self.start_lat      = lat
         self.start_lng      = lng
@@ -33,20 +37,33 @@ class DriverService:
             raise FileNotFoundError(f"Файл состояния не найден: {self.state_file}")
         with open(self.state_file, "r") as f:
             data = json.load(f)
-        if isinstance(data, list):
+
+        self.full_state = data          # ← запоминаем полный объект
+
+        if isinstance(data, dict) and "drivers" in data:
+            drivers = data["drivers"]
             if self.email_override:
-                profile = next((d for d in data if d["driver_email"] == self.email_override), None)
+                profile = next((d for d in drivers if d["driver_email"] == self.email_override), None)
                 if not profile:
                     raise ValueError(f"Водитель {self.email_override} не найден в state.json")
                 return profile
             print("[*] Email не указан, выбираю случайного водителя...")
-            return random.choice(data)
+            return random.choice(drivers)
         return data
 
     def save_token(self, token):
         self.state["driver_token"] = token
-        with open(self.state_file, "w") as f:
-            json.dump(self.state, f, indent=4)
+
+        if isinstance(self.full_state, dict) and "drivers" in self.full_state:
+            for d in self.full_state["drivers"]:
+                if d.get("driver_email") == self.state.get("driver_email"):
+                    d["driver_token"] = token
+                    break
+            with open(self.state_file, "w") as f:
+                json.dump(self.full_state, f, indent=4)
+        else:
+            with open(self.state_file, "w") as f:
+                json.dump(self.state, f, indent=4)
 
     @property
     def email(self):
@@ -181,3 +198,47 @@ class DriverService:
     def disconnect_ws(self):
         if self.ws:
             self.ws.close()
+
+    def attach_card(self, set_as_default=False):
+        """Создает тестовый PaymentMethod в Stripe и привязывает к водителю"""
+        if not STRIPE_API_KEY:
+            print("[!] STRIPE_API_KEY не установлен.")
+            return False
+
+        print("[*] Создаем тестовую карту (tok_visa) в Stripe...")
+        stripe_url = "https://api.stripe.com/v1/payment_methods"
+        headers = {
+            "Authorization": f"Bearer {STRIPE_API_KEY}",
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        data = "type=card&card[token]=tok_visa"
+
+        try:
+            res = requests.post(stripe_url, headers=headers, data=data)
+            if res.status_code != 200:
+                print(f"[!] Ошибка Stripe API: {res.text}")
+                return False
+
+            pm_id = res.json()["id"]
+            print(f"[+] PaymentMethod создан: {pm_id}")
+
+            # Исправлено: рут и payload как в test-payment.html
+            backend_url = f"{API_URL}/payment-methods"
+            payload = {
+                "stripePaymentMethodId": pm_id,
+                "setAsDefault": set_as_default
+            }
+
+            b_res = requests.post(backend_url, headers=self._auth_headers(), json=payload)
+
+            if b_res.status_code in [200, 201]:
+                data = b_res.json()
+                print(f"[✔] Карта привязана: {data.get('cardBrand', 'card')} **** {data.get('lastFour', '****')}")
+                return True
+            else:
+                print(f"[!] Ошибка бэкенда ({b_res.status_code}): {b_res.text}")
+                return False
+
+        except Exception as e:
+            print(f"[!] Ошибка: {e}")
+            return False

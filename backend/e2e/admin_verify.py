@@ -16,11 +16,17 @@ def load_state():
         exit(1)
     with open(STATE_FILE, "r") as f:
         data = json.load(f)
-        # Если в файле один объект, оборачиваем его в список для единообразия
-        return data if isinstance(data, list) else [data]
+        if isinstance(data, dict):
+            return data
+        return {"drivers": data, "passengers": []}
 
 def admin_flow():
-    drivers_list = load_state()
+    state_data = load_state()
+    drivers_list = state_data.get("drivers", [])
+
+    if not drivers_list:
+        print("[!] Список водителей пуст.")
+        return
 
     print(f"[*] Авторизация админа...")
     login_res = requests.post(f"{BASE_URL}/auth/login", json=ADMIN_CREDENTIALS)
