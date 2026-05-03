@@ -101,6 +101,7 @@ public class DriverSearchService {
 
         } finally {
             responseSubscriber.removeFuture(trip.getId());
+            offerCacheService.removeActiveOffer(trip.getId());
         }
     }
 
