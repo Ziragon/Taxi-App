@@ -1,182 +1,124 @@
 """
+e2e_trip_flow.py — полный E2E сценарий поездки
+
 Что делает:
-  1. Регистрирует пассажира (или берёт существующего из passenger_state.json)
-  2. Загружает случайного водителя из state.json
-  3. Водитель логинится, подключается по WS, уходит в ONLINE
-  4. Пассажир создаёт поездку
-  5. Пассажир запускает поиск
-  6. Водитель получает уведомление по WS и автоматически принимает оффер
-  7. Водитель стартует поездку
-  8. Водитель завершает поездку
-  9. Итоговый отчёт
+  1. Загружает пассажира из state.json (или регистрирует нового)
+  2. Привязывает карту пассажиру через Stripe
+  3. Загружает случайного водителя из state.json
+  4. Водитель логинится, подключается по WS, уходит в ONLINE
+  5. Пассажир создаёт поездку
+  6. Пассажир запускает поиск
+  7. Водитель получает уведомление по WS и автоматически принимает оффер
+  8. Водитель стартует поездку
+  9. Водитель завершает поездку
+  10. Итоговый отчёт
 
 Запуск:
     python e2e_trip_flow.py
     python e2e_trip_flow.py --driver-email driver_abc@example.com
-    python e2e_trip_flow.py --no-register   # взять пассажира из passenger_state.json
+    python e2e_trip_flow.py --passenger-email passenger_abc@example.com
+    python e2e_trip_flow.py --no-card   # не привязывать карту (уже привязана)
 """
 
 import argparse
 import json
 import os
-import random
 import re
 import threading
 import time
-import redis
-import uuid
-from dataclasses import dataclass, field
+import redis as redis_lib
 from typing import Optional
 
 import requests
+from dotenv import load_dotenv, find_dotenv
 
-from driver_service import DriverService
+from driver_service import DriverService, DEFAULT_STATE_FILE
+from passenger_service import PassengerService
+
+load_dotenv(find_dotenv())
 
 # ---------------------------------------------------------------------------
 # Конфигурация
 # ---------------------------------------------------------------------------
 
-API_URL            = os.getenv("TAXI_API_URL", "http://localhost:8000/api/v1")
-STATE_FILE         = "state.json"
-PASSENGER_STATE    = "passenger_state.json"
-REDIS_URL          = os.getenv("TAXI_REDIS_URL", "redis://localhost:6379")
+API_URL        = os.getenv("TAXI_API_URL", "http://localhost:8000/api/v1")
+REDIS_URL      = os.getenv("TAXI_REDIS_URL", "redis://localhost:6379")
+STATE_FILE     = DEFAULT_STATE_FILE
 
 # Координаты — Москва, центр
-ORIGIN_LAT, ORIGIN_LNG   = 55.755864, 37.617617
-DEST_LAT,   DEST_LNG     = 55.730000, 37.650000
+ORIGIN_LAT, ORIGIN_LNG = 55.755864, 37.617617
+DEST_LAT,   DEST_LNG   = 55.730000, 37.650000
 
 ORIGIN_ADDRESS = "Красная площадь, Москва"
 DEST_ADDRESS   = "Парк Горького, Москва"
 
-VEHICLE_CLASS  = "COMFORT"
-
-# Сколько секунд ждём уведомления от WS после start-search
-WS_OFFER_TIMEOUT = 40
+VEHICLE_CLASS    = "COMFORT"
+WS_OFFER_TIMEOUT = 40  # секунд ждём оффер
 
 # ---------------------------------------------------------------------------
-# Утилиты
+# Утилиты вывода
 # ---------------------------------------------------------------------------
 
+def step(n, text: str):
+    print(f"\n{'=' * 60}")
+    print(f"  Шаг {n}: {text}")
+    print(f"{'=' * 60}")
 
-def check_redis_status(driver_id: int):
-    """Проверить статус водителя в Redis"""
+def ok(text: str):   print(f"  [✔] {text}")
+def fail(text: str):
+    print(f"  [✗] {text}")
+    raise SystemExit(1)
+def info(text: str): print(f"  [·] {text}")
+
+# ---------------------------------------------------------------------------
+# Redis утилита
+# ---------------------------------------------------------------------------
+
+def check_redis_driver_status(driver_id: int) -> Optional[str]:
     try:
-        r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
-        status_key = f"driver:status:{driver_id}"
-        status = r.get(status_key)
-        ttl = r.ttl(status_key)
-        info(f"Redis driver:status:{driver_id} = {status} (TTL: {ttl}s)")
+        r = redis_lib.Redis.from_url(REDIS_URL, decode_responses=True)
+        key = f"driver:status:{driver_id}"
+        status = r.get(key)
+        ttl = r.ttl(key)
+        info(f"Redis {key} = {status} (TTL: {ttl}s)")
         return status
     except Exception as e:
         info(f"Redis check failed: {e}")
         return None
 
-
-def step(n: int, text: str):
-    print(f"\n{'='*60}")
-    print(f"  Шаг {n}: {text}")
-    print(f"{'='*60}")
-
-
-def ok(text: str):
-    print(f"  [✔] {text}")
-
-
-def fail(text: str):
-    print(f"  [✗] {text}")
-    raise SystemExit(1)
-
-
-def info(text: str):
-    print(f"  [·] {text}")
-
-
 # ---------------------------------------------------------------------------
-# Пассажир
+# Парсинг WS-сообщений
 # ---------------------------------------------------------------------------
 
-@dataclass
-class PassengerSession:
-    email: str
-    password: str
-    token: str
-    account_id: int
-
-    def headers(self):
-        return {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
-
-
-def load_passenger() -> Optional[PassengerSession]:
-    """Загрузить пассажира из passenger_state.json"""
-    if not os.path.exists(PASSENGER_STATE):
+def extract_body(message: str) -> Optional[dict]:
+    """Извлечь JSON тело из STOMP MESSAGE фрейма"""
+    parts = message.split('\n\n', 1)
+    if len(parts) < 2:
         return None
-    with open(PASSENGER_STATE) as f:
-        data = json.load(f)
-    token_res = requests.post(
-        f"{API_URL}/auth/login",
-        json={"email": data["email"], "password": data["password"]},
-        timeout=10,
-    )
-    if token_res.status_code != 200:
+    body = parts[1].rstrip('\x00').strip()
+    try:
+        return json.loads(body)
+    except (json.JSONDecodeError, ValueError):
         return None
-    token = token_res.json()["accessTokenDto"]["token"]
-    return PassengerSession(
-        email=data["email"],
-        password=data["password"],
-        token=token,
-        account_id=data["account_id"],
-    )
 
+def extract_event_type(message: str) -> Optional[str]:
+    payload = extract_body(message)
+    if not payload:
+        return None
+    return payload.get("eventType")
 
-def register_passenger() -> PassengerSession:
-    """Зарегистрировать нового пассажира и создать профиль"""
-    email    = f"passenger_{uuid.uuid4().hex[:8]}@example.com"
-    phone    = f"+7{random.randint(9000000000, 9999999999)}"
-    password = "SecurePass123"
-
-    info(f"Регистрация пассажира: {email}")
-
-    res = requests.post(
-        f"{API_URL}/auth/register",
-        json={"email": email, "phone": phone, "password": password},
-        timeout=10,
-    )
-    if res.status_code not in [200, 201]:
-        fail(f"Регистрация пассажира: {res.status_code} {res.text}")
-
-    data       = res.json()
-    account_id = data["id"]
-    token      = data["accessTokenDto"]["token"]
-
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
-    # Создаём пассажирский профиль
-    profile_res = requests.post(
-        f"{API_URL}/profiles/passenger",
-        headers=headers,
-        json={
-            "firstName": "Тест",
-            "lastName":  "Пассажир",
-            "photoUrl":  "https://cdn.example.com/passenger.jpg",
-        },
-        timeout=10,
-    )
-    if profile_res.status_code not in [200, 201]:
-        fail(f"Создание профиля пассажира: {profile_res.status_code} {profile_res.text}")
-
-    # Сохраняем
-    with open(PASSENGER_STATE, "w") as f:
-        json.dump({"email": email, "password": password, "account_id": account_id}, f, indent=4)
-    ok(f"Пассажир зарегистрирован: {email} (id={account_id})")
-
-    return PassengerSession(email=email, password=password, token=token, account_id=account_id)
-
+def extract_trip_id(message: str) -> Optional[int]:
+    payload = extract_body(message)
+    if not payload:
+        return None
+    trip_id = payload.get("tripId")
+    return int(trip_id) if trip_id is not None else None
 
 # ---------------------------------------------------------------------------
-# Создание и запуск поездки
+# HTTP — действия с поездкой
 # ---------------------------------------------------------------------------
 
-def create_trip(passenger: PassengerSession) -> dict:
+def create_trip(passenger: PassengerService) -> dict:
     payload = {
         "originAddress": ORIGIN_ADDRESS,
         "originLat":     ORIGIN_LAT,
@@ -185,18 +127,31 @@ def create_trip(passenger: PassengerSession) -> dict:
         "destLat":       DEST_LAT,
         "destLng":       DEST_LNG,
     }
-    res = requests.post(f"{API_URL}/trips", headers=passenger.headers(), json=payload, timeout=30)
+    res = requests.post(
+        f"{API_URL}/trips",
+        headers=passenger._auth_headers(),
+        json=payload,
+        timeout=30,
+    )
     if res.status_code not in [200, 201]:
         fail(f"Создание поездки: {res.status_code} {res.text}")
     data = res.json()
     ok(f"Поездка создана: id={data['id']}, статус={data.get('status')}")
+
+    tariffs = data.get("tariffs", [])
+    if tariffs:
+        info("Доступные тарифы:")
+        for t in tariffs:
+            info(f"  {t.get('tripClass')} — "
+                 f"{t.get('prices', {}).get('price')} $ "
+                 f"({t.get('driversNearby', 0)} водителей рядом)")
     return data
 
 
-def start_search(passenger: PassengerSession, trip_id: int) -> None:
+def start_search(passenger: PassengerService, trip_id: int) -> None:
     res = requests.post(
         f"{API_URL}/trips/{trip_id}/start-search",
-        headers=passenger.headers(),
+        headers=passenger._auth_headers(),
         params={"vehicleClass": VEHICLE_CLASS},
         timeout=15,
     )
@@ -204,10 +159,6 @@ def start_search(passenger: PassengerSession, trip_id: int) -> None:
         fail(f"start-search: {res.status_code} {res.text}")
     ok(f"Поиск водителя запущен для trip={trip_id}")
 
-
-# ---------------------------------------------------------------------------
-# Водитель — HTTP действия
-# ---------------------------------------------------------------------------
 
 def driver_accept_trip(driver: DriverService, trip_id: int) -> bool:
     res = requests.post(
@@ -247,44 +198,6 @@ def driver_complete_trip(driver: DriverService, trip_id: int) -> bool:
     info(f"complete вернул {res.status_code}: {res.text}")
     return False
 
-
-# ---------------------------------------------------------------------------
-# Парсинг WS-уведомления
-# ---------------------------------------------------------------------------
-
-def extract_trip_id_from_ws(message: str) -> Optional[int]:
-    """
-    Ищем tripId в STOMP MESSAGE body.
-    Body — JSON вида {"notificationId":...,"tripId":123,...}
-    """
-    # Тело STOMP-фрейма идёт после двойного \n
-    body_match = re.search(r"\n\n(.+)\x00?$", message, re.DOTALL)
-    if not body_match:
-        return None
-    try:
-        payload = json.loads(body_match.group(1).strip())
-        trip_id = payload.get("tripId")
-        return int(trip_id) if trip_id is not None else None
-    except (json.JSONDecodeError, ValueError):
-        return None
-
-
-def extract_event_type(message: str) -> Optional[str]:
-    """Извлечь eventType из STOMP MESSAGE"""
-    parts = message.split('\n\n', 1)
-    if len(parts) < 2:
-        return None
-
-    body = parts[1].rstrip('\x00')
-    try:
-        payload = json.loads(body)
-        event_type = payload.get("eventType")
-        return str(event_type) if event_type else None
-    except (json.JSONDecodeError, ValueError) as e:
-        print(f"[DEBUG] Failed to parse eventType: {e}")
-        return None
-
-
 # ---------------------------------------------------------------------------
 # Основной флоу
 # ---------------------------------------------------------------------------
@@ -299,18 +212,31 @@ def run(args):
     # ------------------------------------------------------------------
     step(1, "Подготовка пассажира")
 
-    if args.no_register:
-        passenger = load_passenger()
-        if passenger is None:
-            fail(f"passenger_state.json не найден или логин не прошёл. Убери --no-register")
-        ok(f"Загружен существующий пассажир: {passenger.email}")
-    else:
-        passenger = register_passenger()
+    passenger = PassengerService(
+        state_file=STATE_FILE,
+        email_override=args.passenger_email,
+    )
+    if not passenger.login():
+        fail("Пассажир не смог авторизоваться")
+    ok(f"Пассажир авторизован: {passenger.email}")
 
     # ------------------------------------------------------------------
-    # Шаг 2: Водитель
+    # Шаг 2: Привязка карты пассажиру
     # ------------------------------------------------------------------
-    step(2, "Подготовка водителя")
+    step(2, "Привязка карты пассажиру")
+
+    if args.no_card:
+        info("Пропуск привязки карты (--no-card)")
+    else:
+        if passenger.attach_card(set_as_default=True):
+            ok("Карта привязана")
+        else:
+            info("WARNING: Карта не привязана — поездка может отмениться при assignDriver")
+
+    # ------------------------------------------------------------------
+    # Шаг 3: Водитель
+    # ------------------------------------------------------------------
+    step(3, "Подготовка водителя")
 
     driver = DriverService(
         state_file=STATE_FILE,
@@ -318,140 +244,121 @@ def run(args):
         lng=ORIGIN_LNG,
         email_override=args.driver_email,
     )
-
     if not driver.login():
         fail("Водитель не смог авторизоваться")
     ok(f"Водитель авторизован: {driver.email}")
 
     # ------------------------------------------------------------------
-    # Шаг 3: WS-подключение водителя
+    # Шаг 4: WS-подключение водителя
     # ------------------------------------------------------------------
-    step(3, "WebSocket подключение водителя")
+    step(4, "WebSocket подключение водителя")
 
-    # Событие — сигнал что пришёл оффер
-    offer_event     = threading.Event()
-    received_trip_id: list[Optional[int]] = [None]   # list для мутации из closure
+    offer_event = threading.Event()
+    received_trip_id: list[Optional[int]] = [None]
 
     def on_driver_message(message: str):
         event_type = extract_event_type(message)
         info(f"WS водителя: eventType={event_type}")
 
         if event_type == "TRIP_OFFER":
-            trip_id = extract_trip_id_from_ws(message)
+            trip_id = extract_trip_id(message)
             info(f"Получен оффер: tripId={trip_id}")
             received_trip_id[0] = trip_id
             offer_event.set()
 
     driver.on_ws_message = on_driver_message
     driver.connect_ws(block=False)
-
-    time.sleep(2)  # ждём STOMP CONNECTED + SUBSCRIBE
+    time.sleep(2)
     ok("WS водителя подключён")
 
     # ------------------------------------------------------------------
-    # Шаг 4: Водитель → ONLINE
+    # Шаг 5: Водитель → ONLINE
     # ------------------------------------------------------------------
-    step(4, "Водитель переходит в ONLINE")
+    step(5, "Водитель переходит в ONLINE")
 
     if not driver.go_online():
         fail("Не удалось перевести водителя в ONLINE")
     ok("Водитель ONLINE")
 
-    # ВАЖНО: Локация отправляется каждые 5с через WS, ждём первой отправки
     info("Ожидание обновления локации в Redis (10с)...")
     time.sleep(10)
 
-    # Логи
-    redis_status = check_redis_status(driver.state.get('driver_id'))
+    driver_id = driver.state.get("driver_id")
+    redis_status = check_redis_driver_status(driver_id)
     if redis_status is None:
-        fail(f"Статус водителя НЕ в Redis после go_online! Проверь user-service.")
+        fail("Статус водителя НЕ в Redis! Проверь user-service и WebSocket.")
     if redis_status != "ONLINE":
         fail(f"Статус в Redis = {redis_status}, ожидалось ONLINE")
-    ok(f"Redis статус: {redis_status}")
+    ok(f"Redis статус подтверждён: {redis_status}")
 
     # ------------------------------------------------------------------
-    # Шаг 5: Пассажир создаёт поездку
+    # Шаг 6: Пассажир создаёт поездку
     # ------------------------------------------------------------------
-    step(5, "Пассажир создаёт поездку")
+    step(6, "Пассажир создаёт поездку")
 
     trip_data = create_trip(passenger)
     trip_id   = trip_data["id"]
 
-    # Если сервер вернул тарифы — показываем
-    tariffs = trip_data.get("tariffs", [])
-    if tariffs:
-        info(f"Доступные тарифы:")
-        for t in tariffs:
-            info(f"  {t.get('tripClass')} — {t.get('prices', {}).get('price')} $ "
-                 f"({t.get('driversNearby', 0)} водителей рядом)")
-
     # ------------------------------------------------------------------
-    # Шаг 6: Пассажир запускает поиск
+    # Шаг 7: Пассажир запускает поиск
     # ------------------------------------------------------------------
-    step(6, "Пассажир запускает поиск водителя")
+    step(7, "Пассажир запускает поиск водителя")
 
     start_search(passenger, trip_id)
 
     # ------------------------------------------------------------------
-    # Шаг 7: Ждём оффер на WS водителя
+    # Шаг 8: Ждём оффер на WS водителя
     # ------------------------------------------------------------------
-    step(7, f"Ожидание оффера водителю (до {WS_OFFER_TIMEOUT}с)")
+    step(8, f"Ожидание оффера водителю (до {WS_OFFER_TIMEOUT}с)")
 
     offer_arrived = offer_event.wait(timeout=WS_OFFER_TIMEOUT)
 
     if not offer_arrived:
         fail(
-            f"Водитель не получил оффер за {WS_OFFER_TIMEOUT}с. "
-            "Проверь: водитель ONLINE, координаты в радиусе поиска, "
-            "notification-service запущен, RabbitMQ работает."
+            f"Водитель не получил оффер за {WS_OFFER_TIMEOUT}с.\n"
+            "  Проверь: водитель ONLINE, координаты в радиусе поиска,\n"
+            "  notification-service запущен, RabbitMQ работает."
         )
 
     ws_trip_id = received_trip_id[0]
     if ws_trip_id is not None and ws_trip_id != trip_id:
-        info(f"WARN: tripId в уведомлении ({ws_trip_id}) ≠ созданному ({trip_id}), используем {trip_id}")
-
+        info(f"WARN: tripId в уведомлении ({ws_trip_id}) ≠ созданному ({trip_id})")
     ok(f"Оффер получен! tripId={trip_id}")
 
-
     # ------------------------------------------------------------------
-    # Шаг 7.5: Водитель автоматически принимает оффер
+    # Шаг 9: Водитель принимает оффер
     # ------------------------------------------------------------------
-    step(7.5, "Водитель автоматически принимает оффер")
+    step(9, "Водитель принимает оффер")
 
-    info(f"Отправка Accept для trip={trip_id}...")
-    redis_status_before = check_redis_status(driver.state.get('driver_id'))
-    if redis_status_before != "ONLINE":
-        fail(f"Статус перед Accept = {redis_status_before}, ожидается ONLINE")
+    status_before = check_redis_driver_status(driver_id)
+    if status_before != "ONLINE":
+        fail(f"Статус перед Accept = {status_before}, ожидается ONLINE")
 
     time.sleep(1)
 
     if not driver_accept_trip(driver, trip_id):
         fail("Водитель не смог принять поездку")
 
-    redis_status_after = check_redis_status(driver.state.get('driver_id'))
-    info(f"Статус после Accept = {redis_status_after}")
-
+    status_after = check_redis_driver_status(driver_id)
+    info(f"Статус после Accept = {status_after}")
     time.sleep(2)
 
     # ------------------------------------------------------------------
-    # Шаг 8: Водитель стартует поездку
+    # Шаг 10: Водитель стартует поездку
     # ------------------------------------------------------------------
-    step(8, "Водитель стартует поездку")
+    step(10, "Водитель стартует поездку")
 
     if not driver_start_trip(driver, trip_id):
         fail("Не удалось стартовать поездку")
-
     time.sleep(2)
 
     # ------------------------------------------------------------------
-    # Шаг 9: Водитель завершает поездку
+    # Шаг 11: Водитель завершает поездку
     # ------------------------------------------------------------------
-    step(9, "Водитель завершает поездку")
+    step(11, "Водитель завершает поездку")
 
     if not driver_complete_trip(driver, trip_id):
         fail("Не удалось завершить поездку")
-
-
 
     # ------------------------------------------------------------------
     # Итог
@@ -477,8 +384,12 @@ if __name__ == "__main__":
         help="Email конкретного водителя из state.json (по умолчанию — случайный)"
     )
     parser.add_argument(
-        "--no-register", action="store_true",
-        help="Не регистрировать пассажира, взять из passenger_state.json"
+        "--passenger-email", type=str, default=None,
+        help="Email конкретного пассажира из state.json (по умолчанию — случайный)"
+    )
+    parser.add_argument(
+        "--no-card", action="store_true",
+        help="Не привязывать карту (если уже привязана)"
     )
     args = parser.parse_args()
     run(args)
