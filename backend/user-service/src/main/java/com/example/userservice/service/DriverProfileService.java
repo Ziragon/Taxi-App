@@ -72,6 +72,11 @@ public class DriverProfileService {
         DriverProfile profile = driverProfileRepository.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
 
+        if (!profile.getLicenseNumber().equals(licenseNumber) &&
+                driverProfileRepository.existsByLicenseNumber(licenseNumber)) {
+            throw new ProfileAlreadyExistsException("Driver profile with this license number");
+        }
+
         profile.setFirstName(firstName);
         profile.setLastName(lastName);
         profile.setLicenseNumber(licenseNumber);
@@ -85,19 +90,23 @@ public class DriverProfileService {
         return driverCachingService.getStatus(driverId);
     }
 
-    public void updateStatus(Long accountId, DriverStatus status) {
-        if (status == DriverStatus.ONLINE) {
-            DriverProfile profile = driverProfileRepository.findByIdWithAccount(accountId)
-                    .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
-            tripStatusService.validateDriverStatus(accountId);
-            validateOnlineRequirements(accountId, profile);
-            driverCachingService.updateStatus(accountId, DriverStatus.ONLINE);
-        } else if (status == DriverStatus.OFFLINE) {
-            tripStatusService.validateDriverStatus(accountId);
-            driverCachingService.deleteDriver(accountId);
-        } else if (status == DriverStatus.BUSY) {
-            driverCachingService.updateStatus(accountId, DriverStatus.BUSY);
-        }
+    @Transactional
+    public void goOnline(Long accountId) {
+        DriverProfile profile = driverProfileRepository.findByIdWithAccount(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException(DRIVER_PROFILE, accountId));
+        tripStatusService.validateDriverStatus(accountId);
+        validateOnlineRequirements(accountId, profile);
+        driverCachingService.updateStatus(accountId, DriverStatus.ONLINE);
+    }
+
+    @Transactional
+    public void goOffline(Long accountId) {
+        tripStatusService.validateDriverStatus(accountId);
+        driverCachingService.deleteDriver(accountId);
+    }
+
+    public void markBusy(Long accountId) {
+        driverCachingService.updateStatus(accountId, DriverStatus.BUSY);
     }
 
     @Transactional

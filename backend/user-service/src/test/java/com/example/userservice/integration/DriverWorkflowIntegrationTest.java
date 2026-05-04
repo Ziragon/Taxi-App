@@ -126,7 +126,7 @@ class DriverWorkflowIntegrationTest {
         DriverProfileDto verifiedProfile = driverProfileService.getProfile(driverId);
         assertThat(verifiedProfile.verified()).isTrue();
 
-        driverProfileService.updateStatus(driverId, DriverStatus.ONLINE);
+        driverProfileService.goOnline(driverId);
 
         assertThat(driverProfileService.getStatus(driverId)).isEqualTo(DriverStatus.ONLINE);
     }
