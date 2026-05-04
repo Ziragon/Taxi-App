@@ -4,7 +4,6 @@ import com.example.shared.dto.event.PaymentFailedEvent;
 import com.example.shared.dto.event.PaymentSucceededEvent;
 import com.example.shared.dto.event.RefundSucceededEvent;
 import com.example.tripservice.entity.Trip;
-import com.example.tripservice.entity.enums.TripStatus;
 import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.messaging.NotificationPublisher;
 import com.example.tripservice.repository.TripRepository;
@@ -27,10 +26,9 @@ public class TripPaymentService {
                 .orElseThrow(() -> new TripNotFoundException(event.tripId()));
 
         trip.setPaymentId(event.transactionId());
-        trip.setStatus(TripStatus.COMPLETED);
         tripRepository.save(trip);
 
-        log.info("Trip {} COMPLETED after payment {}", event.tripId(), event.transactionId());
+        log.info("Trip {} payed after payment {}", event.tripId(), event.transactionId());
 
         notificationPublisher.publishPaymentSucceeded(
                 trip.getPassengerId(),
