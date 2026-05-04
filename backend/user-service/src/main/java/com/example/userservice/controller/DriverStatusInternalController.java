@@ -22,7 +22,7 @@ public class DriverStatusInternalController {
     public ResponseEntity<Void> setOfflineStatus(
             @PathVariable Long driverId
     ) {
-        driverProfileService.updateStatus(driverId, DriverStatus.ONLINE);
+        driverProfileService.updateStatus(driverId, DriverStatus.OFFLINE);
 
         return ResponseEntity.noContent().build();
     }
