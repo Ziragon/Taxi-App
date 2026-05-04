@@ -92,9 +92,6 @@ public class DriverCachingService {
             log.warn("Evicting stale driver: {}", driverId);
             deleteDriver(driverId); // чистит geo, location, status
         }
-
-        redisStringTemplate.opsForZSet()
-                .removeRangeByScore(ONLINE_DRIVERS_ZSET_KEY, 0, cutoff);
     }
 
     public void deleteDriver(Long driverId) {
@@ -131,12 +128,27 @@ public class DriverCachingService {
 
         if (locations == null) return Collections.emptyList();
 
-        return locations.stream()
+        List<String> statusKeys = locations.stream()
                 .filter(Objects::nonNull)
-                .filter(dto -> DriverStatus.ONLINE.name().equals(
-                        redisStringTemplate.opsForValue().get(KEY_STATUS_PREFIX + dto.driverId())))
-                .filter(dto -> vehicleClass == null || vehicleClass.equals(dto.vehicleClass()))
+                .map(dto -> KEY_STATUS_PREFIX + dto.driverId())
                 .toList();
+
+        List<String> statuses = redisStringTemplate.opsForValue().multiGet(statusKeys);
+
+        List<DriverLocationDto> filtered = new ArrayList<>();
+        List<DriverLocationDto> nonNull = locations.stream()
+                .filter(Objects::nonNull).toList();
+
+        for (int i = 0; i < nonNull.size(); i++) {
+            DriverLocationDto dto = nonNull.get(i);
+            String status = statuses != null ? statuses.get(i) : null;
+            if (DriverStatus.ONLINE.name().equals(status)
+                    && (vehicleClass == null || vehicleClass.equals(dto.vehicleClass()))) {
+                filtered.add(dto);
+            }
+        }
+
+        return filtered;
     }
 
     public DriverStatus getStatus(Long driverId) {
