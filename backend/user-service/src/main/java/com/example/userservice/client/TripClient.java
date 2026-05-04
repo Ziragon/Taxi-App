@@ -12,6 +12,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 )
 public interface TripClient {
 
-    @GetMapping("/api/v1/internal/driver/{driverId}/exists")
+    @GetMapping("/api/v1/internal/driver/{driverId}/trip-status")
     Boolean hasActiveTrip(@PathVariable Long driverId);
 }

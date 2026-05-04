@@ -14,7 +14,7 @@ public class TripInternalController {
 
     private final ActiveTripCacheService cacheService;
 
-    @GetMapping("/driver/{driverId}/status")
+    @GetMapping("/driver/{driverId}/trip-status")
     public ResponseEntity<Boolean> hasActiveTrip(
             @PathVariable Long driverId
     ) {
