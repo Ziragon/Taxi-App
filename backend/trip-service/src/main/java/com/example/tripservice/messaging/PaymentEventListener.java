@@ -3,7 +3,7 @@ package com.example.tripservice.messaging;
 import com.example.shared.dto.event.PaymentFailedEvent;
 import com.example.shared.dto.event.PaymentSucceededEvent;
 import com.example.shared.dto.event.RefundSucceededEvent;
-import com.example.tripservice.service.TripPaymentService;
+import com.example.tripservice.service.trip.TripPaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;

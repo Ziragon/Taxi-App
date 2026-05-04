@@ -1,10 +1,10 @@
 package com.example.notificationservice.controller;
 
 import com.example.notificationservice.dto.NotificationPayload;
+import com.example.notificationservice.dto.UserPrincipal;
 import com.example.notificationservice.entity.Notification;
 import com.example.notificationservice.entity.enums.NotificationStatus;
 import com.example.notificationservice.repository.NotificationRepository;
-import com.example.shared.security.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;

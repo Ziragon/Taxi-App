@@ -1,7 +1,7 @@
 package com.example.tripservice.messaging;
 
-import com.example.shared.dto.event.TripCompletedEvent;
 import com.example.shared.dto.event.RefundRequestedEvent;
+import com.example.shared.dto.event.TripInProgressEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -16,12 +16,12 @@ public class TripEventPublisher {
 
     private final RabbitTemplate rabbitTemplate;
 
-    public void publishTripCompleted(TripCompletedEvent event) {
-        log.info("Publishing TripCompletedEvent: tripId={}, amount={}",
+    public void publishTripInProgress(TripInProgressEvent event) {
+        log.info("Publishing TripInProgressEvent: tripId={}, amount={}",
                 event.tripId(), event.amount());
         rabbitTemplate.convertAndSend(
                 TRIP_EXCHANGE,
-                TRIP_COMPLETED_ROUTING_KEY,
+                TRIP_IN_PROGRESS_ROUTING_KEY,
                 event
         );
     }

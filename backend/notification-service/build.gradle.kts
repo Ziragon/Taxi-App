@@ -12,5 +12,4 @@ plugins {
 dependencies {
     implementation(project(":shared-libs:shared-exceptions"))
     implementation(project(":shared-libs:shared-dto"))
-    implementation(project(":shared-libs:shared-security"))
 }

@@ -1,9 +1,8 @@
 package com.example.tripservice.integration;
 
 import com.example.tripservice.BaseIntegrationTest;
-import com.example.tripservice.service.DriverResponsePublisher;
-import com.example.tripservice.service.DriverResponseSubscriber;
-import org.junit.jupiter.api.BeforeEach;
+import com.example.tripservice.service.search.DriverResponsePublisher;
+import com.example.tripservice.service.search.DriverResponseSubscriber;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

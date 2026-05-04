@@ -6,7 +6,12 @@ import com.example.tripservice.client.UserServiceClient;
 import com.example.tripservice.entity.Trip;
 import com.example.tripservice.entity.enums.TripStatus;
 import com.example.tripservice.repository.TripRepository;
-import com.example.tripservice.service.*;
+import com.example.tripservice.service.external.ProfileStatusService;
+import com.example.tripservice.service.search.DriverResponsePublisher;
+import com.example.tripservice.service.search.DriverResponseSubscriber;
+import com.example.tripservice.service.search.DriverSearchService;
+import com.example.tripservice.service.search.OfferCacheService;
+import com.example.tripservice.service.trip.TripStatusService;
 import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,7 +24,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
@@ -101,10 +105,9 @@ class DriverSearchServiceTest {
                 .destinationLng(BigDecimal.ZERO)
                 .build();
 
-        when(tripRepository.findById(tripId)).thenReturn(Optional.of(mockTrip));
         when(locationClient.getNearbyDrivers(any(), any(), any(), any())).thenReturn(List.of());
 
-        driverSearchService.searchDrivers(tripId, BigDecimal.ZERO, BigDecimal.ZERO, VehicleClass.ECONOMY);
+        driverSearchService.searchDrivers(mockTrip, BigDecimal.ZERO, BigDecimal.ZERO, VehicleClass.ECONOMY);
 
         verify(responseSubscriber).registerFuture(eq(tripId), any());
         verify(tripStatusService).cancelSearch(tripId);

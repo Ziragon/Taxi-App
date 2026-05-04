@@ -1,4 +1,4 @@
-package com.example.tripservice.service;
+package com.example.tripservice.service.external;
 
 import com.example.shared.exception.common.ServiceUnavailableException;
 import com.example.tripservice.client.OsrmClient;

@@ -51,7 +51,7 @@ public class NotificationPublisher {
                 "tripId", tripId,
                 "eventType", "TRIP_COMPLETED",
                 "channel", "PUSH",
-                "message", "Поездка завершена. Списываем %.2f ₽...".formatted(amount)
+                "message", "Поездка завершена. Списано %.2f ₽".formatted(amount)
         );
         rabbitTemplate.convertAndSend(NOTIFICATION_EXCHANGE, "notification.trip.completed", payload);
         log.info("Published TRIP_COMPLETED: tripId={}", tripId);

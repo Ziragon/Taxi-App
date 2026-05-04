@@ -2,7 +2,7 @@ package com.example.tripservice.integration;
 
 import com.example.shared.exception.common.AccessDeniedException;
 import com.example.tripservice.BaseIntegrationTest;
-import com.example.tripservice.service.OfferCacheService;
+import com.example.tripservice.service.search.OfferCacheService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

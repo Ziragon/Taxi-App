@@ -36,6 +36,7 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       timeout: 2000ms
+      database: 0
       lettuce:
         pool:
           max-active: 8
@@ -72,6 +73,9 @@ gateway-auth:
 internal-auth:
   header: ${INTERNAL_HEADER:X-Internal-Header}
   header-key: ${HEADER_KEY:dev-secret-internal-key-for-microservices}
+
+internal:
+  trip-service: ${TRIP_SERVICE:http://localhost:8081}
 
 app:
   driver:

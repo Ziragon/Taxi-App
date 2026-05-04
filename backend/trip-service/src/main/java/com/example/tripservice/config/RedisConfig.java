@@ -1,8 +1,9 @@
 package com.example.tripservice.config;
 
 import com.example.tripservice.dto.data.RouteDto;
+import com.example.tripservice.dto.data.TripDraftDto;
 import com.example.tripservice.dto.data.WeatherDto;
-import com.example.tripservice.service.DriverResponseSubscriber;
+import com.example.tripservice.service.search.DriverResponseSubscriber;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -51,6 +52,18 @@ public class RedisConfig {
         container.setConnectionFactory(connectionFactory);
         container.addMessageListener(driverResponseListenerAdapter, new PatternTopic("driver:response:*"));
         return container;
+    }
+
+    @Bean
+    public RedisTemplate<String, TripDraftDto> draftRedisTemplate(
+            RedisConnectionFactory connectionFactory,
+            ObjectMapper objectMapper) {
+
+        RedisTemplate<String, TripDraftDto> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new JacksonJsonRedisSerializer<>(objectMapper, TripDraftDto.class));
+        return template;
     }
 
     @Bean

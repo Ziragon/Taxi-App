@@ -1,7 +1,7 @@
 package com.example.paymentservice.messaging;
 
 import com.example.shared.dto.event.RefundRequestedEvent;
-import com.example.shared.dto.event.TripCompletedEvent;
+import com.example.shared.dto.event.TripInProgressEvent;
 import com.example.paymentservice.entity.Transaction;
 import com.example.paymentservice.entity.enums.TransactionStatus;
 import com.example.paymentservice.service.TransactionService;
@@ -23,8 +23,8 @@ public class TripEventListener {
     private final TransactionService transactionService;
     private static final BigDecimal DRIVER_SHARE = new BigDecimal("0.80");
 
-    @RabbitListener(queues = TRIP_COMPLETED_QUEUE)
-    public void onTripCompleted(TripCompletedEvent event) {
+    @RabbitListener(queues = TRIP_IN_PROGRESS_QUEUE)
+    public void onTripTransact(TripInProgressEvent event) {
         log.info("Received TripCompletedEvent: tripId={}, amount={}", event.tripId(), event.amount());
 
         Transaction charge;

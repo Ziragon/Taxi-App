@@ -1,6 +1,5 @@
 package com.example.userservice.controller;
 
-import com.example.shared.dto.enums.DriverStatus;
 import com.example.userservice.service.DriverProfileService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,7 @@ public class DriverStatusInternalController {
     public ResponseEntity<Void> setOfflineStatus(
             @PathVariable Long driverId
     ) {
-        driverProfileService.updateStatus(driverId, DriverStatus.OFFLINE);
+        driverProfileService.goOffline(driverId);
 
         return ResponseEntity.noContent().build();
     }
@@ -31,7 +30,7 @@ public class DriverStatusInternalController {
     public ResponseEntity<Void> setBusyStatus(
             @PathVariable Long driverId
     ) {
-        driverProfileService.updateStatus(driverId, DriverStatus.BUSY);
+        driverProfileService.markBusy(driverId);
 
         return ResponseEntity.noContent().build();
     }

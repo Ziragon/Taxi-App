@@ -57,4 +57,24 @@ public record TripDto(
                 route
         );
     }
+
+    public static TripDto fromDraft(TripDraftDto draft, List<TariffDto> dtos, String route) {
+        return new TripDto(
+                null,
+                draft.passengerId(),
+                null,
+                draft.originAddress(),
+                draft.originLat(),
+                draft.originLng(),
+                draft.destinationAddress(),
+                draft.destinationLat(),
+                draft.destinationLng(),
+                draft.distanceKm(),
+                draft.durationMin(),
+                draft.weatherCoef(),
+                draft.surgeCoef(),
+                dtos,
+                route
+        );
+    }
 }
