@@ -2,14 +2,11 @@ package com.example.tripservice.controller;
 
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.security.UserPrincipal;
-import com.example.tripservice.dto.data.AddressDto;
 import com.example.tripservice.dto.data.TripCreateDto;
 import com.example.tripservice.dto.data.TripDto;
 import com.example.tripservice.dto.request.TripCreateRequest;
 import com.example.tripservice.dto.response.TripResponse;
-import com.example.tripservice.service.trip.TripCreationService;
-import com.example.tripservice.service.trip.TripService;
-import com.example.tripservice.service.trip.TripStatusService;
+import com.example.tripservice.service.trip.TripPassengerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,29 +18,25 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class TripPassengerController {
 
-    private final TripService tripService;
-    private final TripCreationService tripCreationService;
-    private final TripStatusService tripStatusService;
+    private final TripPassengerService tripPassengerService;
 
     @PostMapping
     public ResponseEntity<TripResponse> createTrip(
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody TripCreateRequest request
     ) {
-        TripDto result = tripCreationService.createTrip(principal.userId(), TripCreateDto.from(request));
-
+        TripDto result = tripPassengerService.createTrip(
+                principal.userId(), TripCreateDto.from(request));
         return ResponseEntity.ok(TripResponse.from(result));
     }
 
     @PostMapping("/{tripId}/start-search")
-    public ResponseEntity<TripResponse> startSearching(
+    public ResponseEntity<Void> startSearching(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long tripId,
             @RequestParam VehicleClass vehicleClass
     ) {
-        AddressDto dto = tripService.startSearching(principal.userId(), tripId, vehicleClass);
-        tripService.beginDriverSearch(tripId, dto.longitude(), dto.latitude(), vehicleClass);
-
+        tripPassengerService.startSearching(principal.userId(), tripId, vehicleClass);
         return ResponseEntity.noContent().build();
     }
 
@@ -52,8 +45,7 @@ public class TripPassengerController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long tripId
     ) {
-        tripStatusService.cancelTrip(tripId, principal.userId());
-
+        tripPassengerService.cancelTrip(tripId, principal.userId());
         return ResponseEntity.noContent().build();
     }
 
@@ -62,8 +54,8 @@ public class TripPassengerController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long tripId
     ) {
-        TripDto trip = tripService.getTripById(principal.userId(), tripId);
-        return ResponseEntity.ok(TripResponse.from(trip));
+        return ResponseEntity.ok(
+                TripResponse.from(tripPassengerService.getTrip(principal.userId(), tripId)));
     }
 
     @GetMapping("/active")

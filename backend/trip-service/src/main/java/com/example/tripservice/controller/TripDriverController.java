@@ -4,11 +4,7 @@ import com.example.shared.security.UserPrincipal;
 import com.example.tripservice.dto.data.RouteDto;
 import com.example.tripservice.dto.response.DriverCoordinatesRequest;
 import com.example.tripservice.dto.response.RouteResponse;
-import com.example.tripservice.service.search.DriverSearchService;
-import com.example.tripservice.service.trip.TripService;
-import com.example.tripservice.service.trip.TripStatusService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import com.example.tripservice.service.trip.TripDriverService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,75 +15,39 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class TripDriverController {
 
-    private final TripStatusService tripStatusService;
-    private final DriverSearchService driverSearchService;
-    private final TripService tripService;
+    private final TripDriverService tripDriverService;
 
     @PostMapping("/{tripId}/accept")
-    @Operation(
-            summary = "Принять поездку",
-            description = "Принимает поездку по активному предложению водителю",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Водитель назначен"),
-                    @ApiResponse(responseCode = "403", description = "Пользователь не является водителем или предложение для водителя не существует")
-            }
-    )
     public ResponseEntity<RouteResponse> acceptTrip(
             @PathVariable Long tripId,
             @AuthenticationPrincipal UserPrincipal principal,
-            @RequestBody DriverCoordinatesRequest request
-    ) {
-        driverSearchService.handleDriverAccept(tripId, principal.userId());
-        RouteDto route = tripService.getRouteToPassenger(
-                tripId, request.longitude(), request.latitude()
-        );
+            @RequestBody DriverCoordinatesRequest request) {
+        RouteDto route = tripDriverService.acceptTrip(
+                tripId, principal.userId(), request.longitude(), request.latitude());
         return ResponseEntity.ok(RouteResponse.from(route));
     }
 
     @PostMapping("/{tripId}/reject")
-    @Operation(
-            summary = "Отклонить поездку",
-            description = "Отклоняет предложение поездки",
-            responses = {
-                    @ApiResponse(responseCode = "204", description = "Предложение отклонено"),
-                    @ApiResponse(responseCode = "403", description = "Пользователь не является водителем или предложение для водителя не существует")
-            }
-    )
     public ResponseEntity<Void> rejectTrip(
             @PathVariable Long tripId,
-            @AuthenticationPrincipal UserPrincipal principal
-    ) {
-        driverSearchService.handleDriverReject(tripId, principal.userId());
-
+            @AuthenticationPrincipal UserPrincipal principal) {
+        tripDriverService.rejectTrip(tripId, principal.userId());
         return ResponseEntity.noContent().build();
     }
 
-
     @PostMapping("/{tripId}/start")
-    @Operation(
-            summary = "Начать поездку",
-            description = "Водитель подбирает пассажира и начинает поездку",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Поездка начата"),
-                    @ApiResponse(responseCode = "403", description = "Пользователь не является водителем")
-            }
-    )
     public ResponseEntity<Void> startTrip(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long tripId
-    ) {
-        tripStatusService.startTrip(tripId, principal.userId());
-
-        return ResponseEntity.ok().build();
+            @PathVariable Long tripId) {
+        tripDriverService.startTrip(tripId, principal.userId());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{tripId}/complete")
     public ResponseEntity<Void> completeTrip(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long tripId
-    ) {
-        tripStatusService.completeTrip(tripId, principal.userId());
-
-        return ResponseEntity.ok().build();
+            @PathVariable Long tripId) {
+        tripDriverService.completeTrip(tripId, principal.userId());
+        return ResponseEntity.noContent().build();
     }
 }
