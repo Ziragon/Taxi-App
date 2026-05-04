@@ -1,6 +1,7 @@
 package com.example.userservice.integration;
 
 import com.example.shared.dto.enums.VehicleClass;
+import com.example.userservice.client.TripClient;
 import com.example.userservice.config.TestContainersConfig;
 import com.example.userservice.dto.data.AuthDto;
 import com.example.userservice.dto.data.DriverProfileDto;
@@ -16,15 +17,18 @@ import com.example.userservice.util.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyLong;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -57,6 +61,9 @@ class DriverWorkflowIntegrationTest {
     @Autowired
     private jakarta.persistence.EntityManager entityManager;
 
+    @MockitoBean
+    private TripClient tripClient;
+
     @BeforeEach
     void cleanup() {
         vehicleRepository.deleteAll();
@@ -82,6 +89,8 @@ class DriverWorkflowIntegrationTest {
                 "7799887766",
                 null
         );
+
+        Mockito.when(tripClient.hasActiveTrip(anyLong())).thenReturn(false);
 
         assertThat(profile.verified()).isFalse();
         assertThat(profile.status()).isEqualTo(DriverStatus.OFFLINE);

@@ -33,7 +33,7 @@ class DriverCacheIntegrationTest {
 
     private static final String KEY_LOCATION_PREFIX = "driver:location:";
     private static final String KEY_STATUS_PREFIX   = "driver:status:";
-    private static final String ONLINE_DRIVERS_KEY  = "drivers:online";
+    private static final String ONLINE_DRIVERS_KEY  = "drivers:online:heartbeat";
     private static final String GEO_KEY             = "drivers:geo";
 
     private static final Long DRIVER_ID_1 = 1L;
@@ -167,7 +167,7 @@ class DriverCacheIntegrationTest {
         void shouldAddDriverToOnlineSetWhenStatusIsOnline() {
             driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
 
-            Set<String> onlineIds = redisStatusTemplate.opsForSet().members(ONLINE_DRIVERS_KEY);
+            Set<String> onlineIds = redisStatusTemplate.opsForZSet().range(ONLINE_DRIVERS_KEY, 0, -1);
             assertThat(onlineIds)
                     .isNotNull()
                     .isNotEmpty()
@@ -180,7 +180,7 @@ class DriverCacheIntegrationTest {
             driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
             driverCachingService.updateStatus(DRIVER_ID_2, DriverStatus.ONLINE);
 
-            Set<String> onlineIdsBefore = redisStatusTemplate.opsForSet().members(ONLINE_DRIVERS_KEY);
+            Set<String> onlineIdsBefore = redisStatusTemplate.opsForZSet().range(ONLINE_DRIVERS_KEY, 0, -1);
             assertThat(onlineIdsBefore)
                     .isNotNull()
                     .isNotEmpty()
@@ -188,7 +188,7 @@ class DriverCacheIntegrationTest {
 
             driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.OFFLINE);
 
-            Set<String> onlineIdsAfter = redisStatusTemplate.opsForSet().members(ONLINE_DRIVERS_KEY);
+            Set<String> onlineIdsAfter = redisStatusTemplate.opsForZSet().range(ONLINE_DRIVERS_KEY, 0, -1);
             assertThat(onlineIdsAfter)
                     .isNotNull()
                     .isNotEmpty()
@@ -204,7 +204,7 @@ class DriverCacheIntegrationTest {
 
             driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.BUSY);
 
-            Set<String> onlineIdsAfter = redisStatusTemplate.opsForSet().members(ONLINE_DRIVERS_KEY);
+            Set<String> onlineIdsAfter = redisStatusTemplate.opsForZSet().range(ONLINE_DRIVERS_KEY, 0, -1);
             assertThat(onlineIdsAfter)
                     .isNotNull()
                     .isNotEmpty()
@@ -248,7 +248,7 @@ class DriverCacheIntegrationTest {
             driverCachingService.updateStatus(DRIVER_ID_1, DriverStatus.ONLINE);
             driverCachingService.updateStatus(DRIVER_ID_2, DriverStatus.ONLINE);
 
-            Set<String> onlineIdsBefore = redisStatusTemplate.opsForSet().members(ONLINE_DRIVERS_KEY);
+            Set<String> onlineIdsBefore = redisStatusTemplate.opsForZSet().range(ONLINE_DRIVERS_KEY, 0, -1);
             assertThat(onlineIdsBefore)
                     .isNotNull()
                     .isNotEmpty()
@@ -256,7 +256,7 @@ class DriverCacheIntegrationTest {
 
             driverCachingService.deleteDriver(DRIVER_ID_1);
 
-            Set<String> onlineIdsAfter = redisStatusTemplate.opsForSet().members(ONLINE_DRIVERS_KEY);
+            Set<String> onlineIdsAfter = redisStatusTemplate.opsForZSet().range(ONLINE_DRIVERS_KEY, 0, -1);
             assertThat(onlineIdsAfter)
                     .isNotNull()
                     .isNotEmpty()
