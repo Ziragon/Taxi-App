@@ -168,7 +168,12 @@ class DriverService:
 
         def on_open(ws):
             print(f"[+] WS открыт ({self.email}). STOMP CONNECT...")
-            ws.send(self._stomp_frame("CONNECT", {"accept-version": "1.1", "heart-beat": "10000,10000"}))
+            ws.send(self._stomp_frame("CONNECT", {
+                "accept-version": "1.1",
+                "heart-beat": "10000,10000",
+                "host": "localhost",
+                "userType": "DRIVER",
+            }))
 
         def on_message(ws, message):
             if message.startswith("CONNECTED"):
