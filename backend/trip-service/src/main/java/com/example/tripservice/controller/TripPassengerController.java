@@ -30,14 +30,13 @@ public class TripPassengerController {
         return ResponseEntity.ok(TripResponse.from(result));
     }
 
-    @PostMapping("/{tripId}/start-search")
-    public ResponseEntity<Void> startSearching(
+    @PostMapping("/start-search")
+    public ResponseEntity<TripResponse> startSearching(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long tripId,
             @RequestParam VehicleClass vehicleClass
     ) {
-        tripPassengerService.startSearching(principal.userId(), tripId, vehicleClass);
-        return ResponseEntity.noContent().build();
+        TripDto result = tripPassengerService.startSearching(principal.userId(), vehicleClass);
+        return ResponseEntity.ok(TripResponse.from(result));
     }
 
     @PostMapping("/{tripId}/cancel")

@@ -50,7 +50,7 @@ public class TripStatusService {
         }
 
         Tariff tariff = tariffService.getByVehicleClass(vehicleClass);
-        TariffDto tariffDto = tariffService.calculatePrice(tariff, TripDto.from(trip, null, null));
+        TariffDto tariffDto = tariffService.calculateTariffOffer(tariff, TripDto.from(trip, null, null));
 
         trip.setTripClass(vehicleClass);
         trip.setPrice(tariffDto.prices().price());

@@ -6,6 +6,7 @@ import com.example.tripservice.dto.data.*;
 import com.example.tripservice.entity.Tariff;
 import com.example.tripservice.entity.Trip;
 import com.example.tripservice.entity.enums.TripStatus;
+import com.example.tripservice.exception.TripDraftExpiredException;
 import com.example.tripservice.repository.TripRepository;
 import com.example.tripservice.service.external.ProfileStatusService;
 import com.example.tripservice.service.external.TripDataAggregator;
@@ -34,78 +35,92 @@ public class TripCreationService {
     private final ProfileStatusService profileStatusService;
     private final ActiveTripCacheService activeTripCacheService;
     private final TripDataAggregator tripDataAggregator;
+    private final TripDraftCacheService tripDraftCacheService;
 
-    @Transactional
-    public TripDto createTrip(Long userId, TripCreateDto dto) {
+    public TripDto createDraft(Long userId, TripCreateDto dto) {
         profileStatusService.verifyPassengerCanOrder(userId);
-
-        Long existing = activeTripCacheService.getPassengerActiveTripId(userId);
-        if (existing != null) {
-            tripRepository.findById(existing).ifPresent(StatusValidationUtil::assertTripNotActive);
-            activeTripCacheService.removeForPassenger(userId);
-        }
-
-        // Для уменьшения мусора в бд используем уже созданную поездку пользователя
-        // Если нет - создаем новую
-        Trip trip = tripRepository.findFirstByPassengerIdAndStatusOrderByCreatedAtDesc(userId, TripStatus.CREATED)
-                .orElseGet(() -> buildTrip(userId, dto));
-
-        updateTripCoordinates(trip, dto);
+        assertNoActiveTrip(userId);
 
         TripExternalDto data = tripDataAggregator.fetchAll(dto);
 
-        trip.setDistanceKm(BigDecimal.valueOf(data.route().distance()).divide(new BigDecimal("1000"), 3, RoundingMode.HALF_UP));
-        trip.setDurationMin(BigDecimal.valueOf(data.route().duration()).divide(new BigDecimal("60"), 2, RoundingMode.HALF_UP));
-        trip.setWeatherCoef(data.weather().weatherCoef());
-        trip.setSurgeCoef(priceService.getSurgeCoef(data.weather().localtime()));
+        TripDraftDto draft = buildDraft(userId, dto, data);
+        tripDraftCacheService.save(userId, draft);
 
-        List<TariffDto> tariffDtos = buildFilteredTariffs(
-                data.tariffs(), data.drivers(), TripDto.from(trip, null, null));
+        List<TariffDto> tariffs = buildFilteredTariffs(data.tariffs(), data.drivers(), draft);
+        return TripDto.fromDraft(draft, tariffs, data.route().geometry());
+    }
 
+    @Transactional
+    public TripDto confirmTrip(Long userId, VehicleClass chosenClass) {
+        TripDraftDto draft = tripDraftCacheService.get(userId)
+                .orElseThrow(TripDraftExpiredException::new);
+
+        Trip trip = buildTripFromDraft(draft, chosenClass);
         Trip saved = tripRepository.save(trip);
-        return TripDto.from(saved, tariffDtos, data.route().geometry());
+
+        tripDraftCacheService.delete(userId);
+
+        log.info("Trip {} confirmed for passenger {}", saved.getId(), userId);
+        return TripDto.from(saved, null, null);
     }
 
     private List<TariffDto> buildFilteredTariffs(List<Tariff> tariffs,
                                                  List<DriverLocationDto> drivers,
-                                                 TripDto tripDto) {
+                                                 TripDraftDto tripDto) {
         Map<VehicleClass, Long> driverCountByClass = drivers.stream()
                 .collect(Collectors.groupingBy(DriverLocationDto::vehicleClass, Collectors.counting()));
 
         return tariffs.stream()
                 .filter(t -> driverCountByClass.containsKey(t.getTripClass()))
-                .map(t -> tariffService.calculatePrice(t, tripDto))
-                .map(t -> new TariffDto(
-                        t.id(),
-                        t.tripClass(),
-                        t.baseFare(),
-                        t.pricePerKm(),
-                        t.pricePerMin(),
-                        t.prices(),
-                        driverCountByClass.get(t.tripClass()).intValue()
-                ))
+                .map(t -> {
+                    int count = driverCountByClass.get(t.getTripClass()).intValue();
+                    return tariffService.calculateTariffOffer(t, tripDto, count);
+                })
                 .toList();
     }
 
-    private void updateTripCoordinates(Trip trip, TripCreateDto dto) {
-        trip.setOriginAddress(dto.originAddress());
-        trip.setOriginLat(dto.originLat());
-        trip.setOriginLng(dto.originLng());
-        trip.setDestinationAddress(dto.destAddress());
-        trip.setDestinationLat(dto.destLat());
-        trip.setDestinationLng(dto.destLng());
+    private void assertNoActiveTrip(Long userId) {
+        Long existingId = activeTripCacheService.getPassengerActiveTripId(userId);
+        if (existingId != null) {
+            tripRepository.findById(existingId)
+                    .ifPresent(StatusValidationUtil::assertTripNotActive);
+            activeTripCacheService.removeForPassenger(userId);
+        }
     }
 
-    private Trip buildTrip(Long userId, TripCreateDto dto) {
+    private TripDraftDto buildDraft(Long userId, TripCreateDto dto, TripExternalDto data) {
+        return new TripDraftDto(
+                userId,
+                dto.originAddress(),
+                dto.originLat(),
+                dto.originLng(),
+                dto.destAddress(),
+                dto.destLat(),
+                dto.destLng(),
+                BigDecimal.valueOf(data.route().distance())
+                        .divide(new BigDecimal("1000"), 3, RoundingMode.HALF_UP),
+                BigDecimal.valueOf(data.route().duration())
+                        .divide(new BigDecimal("60"), 2, RoundingMode.HALF_UP),
+                data.weather().weatherCoef(),
+                priceService.getSurgeCoef(data.weather().localtime())
+        );
+    }
+
+    private Trip buildTripFromDraft(TripDraftDto draft, VehicleClass vehicleClass) {
         return Trip.builder()
-                .passengerId(userId)
+                .passengerId(draft.passengerId())
                 .status(TripStatus.CREATED)
-                .originAddress(dto.originAddress())
-                .originLat(dto.originLat())
-                .originLng(dto.originLng())
-                .destinationAddress(dto.destAddress())
-                .destinationLat(dto.destLat())
-                .destinationLng(dto.destLng())
+                .tripClass(vehicleClass)
+                .originAddress(draft.originAddress())
+                .originLat(draft.originLat())
+                .originLng(draft.originLng())
+                .destinationAddress(draft.destinationAddress())
+                .destinationLat(draft.destinationLat())
+                .destinationLng(draft.destinationLng())
+                .distanceKm(draft.distanceKm())
+                .durationMin(draft.durationMin())
+                .weatherCoef(draft.weatherCoef())
+                .surgeCoef(draft.surgeCoef())
                 .build();
     }
 }

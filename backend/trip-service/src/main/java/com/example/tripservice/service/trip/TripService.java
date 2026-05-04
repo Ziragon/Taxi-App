@@ -33,7 +33,7 @@ public class TripService {
     private final TripStatusService tripStatusService;
 
     // Метод просто меняет статус поездки и заполняет его данными, сам поиск происходит в DriverService
-    public AddressDto startSearching(Long userId, Long tripId, VehicleClass vehicleClass) {
+    public void startSearching(Long userId, Long tripId, VehicleClass vehicleClass) {
 
         Trip trip = tripStatusService.setSearching(userId, tripId, vehicleClass);
 
@@ -58,12 +58,6 @@ public class TripService {
             tripStatusService.cancelTripInternal(tripId, "Payment failed");
             throw new TripBookingException("Payment failed, trip cancelled");
         }
-
-        return new AddressDto(
-                trip.getOriginAddress(),
-                trip.getOriginLat(),
-                trip.getOriginLng()
-        );
     }
 
     public void beginDriverSearch(Long tripId, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {

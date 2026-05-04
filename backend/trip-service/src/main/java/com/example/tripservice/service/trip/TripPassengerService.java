@@ -1,7 +1,6 @@
 package com.example.tripservice.service.trip;
 
 import com.example.shared.dto.enums.VehicleClass;
-import com.example.tripservice.dto.data.AddressDto;
 import com.example.tripservice.dto.data.TripCreateDto;
 import com.example.tripservice.dto.data.TripDto;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +18,14 @@ public class TripPassengerService {
     private final TripService tripService;
 
     public TripDto createTrip(Long userId, TripCreateDto dto) {
-        return tripCreationService.createTrip(userId, dto);
+        return tripCreationService.createDraft(userId, dto);
     }
 
-    public void startSearching(Long userId, Long tripId, VehicleClass vehicleClass) {
-        AddressDto dto = tripService.startSearching(userId, tripId, vehicleClass);
-        tripService.beginDriverSearch(tripId, dto.longitude(), dto.latitude(), vehicleClass);
+    public TripDto startSearching(Long userId, VehicleClass vehicleClass) {
+        TripDto trip = tripCreationService.confirmTrip(userId, vehicleClass);
+        tripService.startSearching(userId, trip.id(), vehicleClass);
+        tripService.beginDriverSearch(trip.id(), trip.originLng(), trip.originLat(), vehicleClass);
+        return trip;
     }
 
     public void cancelTrip(Long tripId, Long passengerId) {
