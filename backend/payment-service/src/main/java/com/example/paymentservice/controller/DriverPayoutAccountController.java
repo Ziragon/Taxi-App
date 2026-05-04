@@ -58,6 +58,24 @@ public class DriverPayoutAccountController {
         return ResponseEntity.ok(DriverPayoutAccountResponse.from(account));
     }
 
+    @DeleteMapping("/{accountId}")
+    @Operation(
+            summary = "Удалить счёт для выплат",
+            description = "Физически удаляет счёт. Нельзя удалить дефолтный если есть другие счета",
+            responses = {
+                    @ApiResponse(responseCode = "204", description = "Счёт удалён"),
+                    @ApiResponse(responseCode = "404", description = "Счёт не найден"),
+                    @ApiResponse(responseCode = "400", description = "Нельзя удалить дефолтный счёт")
+            }
+    )
+    public ResponseEntity<Void> deletePayoutAccount(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long accountId
+    ) {
+        payoutAccountService.delete(principal.userId(), accountId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     @Operation(
             summary = "Получить все счета водителя",

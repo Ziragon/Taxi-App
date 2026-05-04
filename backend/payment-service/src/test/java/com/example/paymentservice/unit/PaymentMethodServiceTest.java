@@ -181,6 +181,7 @@ class PaymentMethodServiceTest {
     void shouldSetDefault() {
         Long passengerId = 100L;
         Long paymentMethodId = 1L;
+        mockPaymentMethod.setDefaultvalue(false);
         when(repository.findById(paymentMethodId)).thenReturn(Optional.of(mockPaymentMethod));
         when(repository.save(any())).thenReturn(mockPaymentMethod);
 
@@ -217,7 +218,7 @@ class PaymentMethodServiceTest {
         service.deactivate(passengerId, paymentMethodId);
 
         verify(stripeService).detachPaymentMethod(mockPaymentMethod.getStripePaymentMethodId());
-        verify(repository).deactivateById(paymentMethodId);
+        verify(repository).deleteById(paymentMethodId);
     }
 
     @Test
@@ -225,11 +226,20 @@ class PaymentMethodServiceTest {
     void shouldThrowExceptionWhenDeactivateDefault() {
         Long passengerId = 100L;
         Long paymentMethodId = 1L;
+        PaymentMethod otherCard = PaymentMethod.builder()
+                .id(2L)
+                .passengerId(passengerId)
+                .active(true)
+                .defaultvalue(false)
+                .build();
+
         when(repository.findById(paymentMethodId)).thenReturn(Optional.of(mockPaymentMethod));
+        when(repository.findAllByPassengerIdAndActiveTrue(passengerId))
+                .thenReturn(List.of(otherCard));
 
         assertThatThrownBy(() -> service.deactivate(passengerId, paymentMethodId))
                 .isInstanceOf(DefaultPaymentMethodException.class);
 
-        verify(repository, never()).deactivateById(anyLong());
+        verify(repository, never()).deleteById(anyLong());
     }
 }

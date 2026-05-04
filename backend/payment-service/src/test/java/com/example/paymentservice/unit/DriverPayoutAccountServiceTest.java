@@ -174,6 +174,7 @@ class DriverPayoutAccountServiceTest {
     void shouldSetDefault() {
         Long driverId = 100L;
         Long accountId = 1L;
+        mockPayoutAccount.setDefaultvalue(false);
         when(repository.findById(accountId)).thenReturn(Optional.of(mockPayoutAccount));
         when(repository.save(any())).thenReturn(mockPayoutAccount);
 

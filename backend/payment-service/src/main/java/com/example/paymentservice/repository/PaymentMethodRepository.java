@@ -19,8 +19,6 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
 
     Optional<PaymentMethod> findByPassengerIdAndDefaultvalueTrue(Long passengerId);
 
-    Optional<PaymentMethod> findByStripePaymentMethodId(String stripePaymentMethodId);
-
     boolean existsByPassengerIdAndStripePaymentMethodId(Long passengerId, String stripePaymentMethodId);
 
     @Modifying
@@ -30,4 +28,8 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
     @Modifying
     @Query("UPDATE PaymentMethod pm SET pm.active = false WHERE pm.id = :id")
     int deactivateById(@Param("id") Long id);
+
+    @Modifying
+    @Query("DELETE FROM PaymentMethod pm WHERE pm.id = :id")
+    int deleteById_(@Param("id") Long id);
 }
