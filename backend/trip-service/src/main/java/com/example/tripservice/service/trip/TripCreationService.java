@@ -43,18 +43,21 @@ public class TripCreationService {
     private final ProfileStatusService profileStatusService;
     @Qualifier("applicationTaskExecutor")
     private final AsyncTaskExecutor executor;
-
-    private static final List<TripStatus> ACTIVE_STATUSES = List.of(
-            TripStatus.SEARCHING, TripStatus.DRIVER_ASSIGNED, TripStatus.IN_PROGRESS
-    );
+    private final ActiveTripCacheService activeTripCacheService;
 
     @Transactional
     public TripDto createTrip(Long userId, TripCreateDto dto) {
 
         profileStatusService.verifyPassengerCanOrder(userId);
 
-        boolean hasActive = tripRepository.existsByPassengerIdAndStatusIn(userId, ACTIVE_STATUSES);
-        if (hasActive) throw new TripAlreadyExistsException();
+        Long existing = activeTripCacheService.getPassengerActiveTripId(userId);
+        if (existing != null) {
+            Trip trip = tripRepository.findById(existing).orElse(null);
+            if (trip != null) {
+                throw new TripAlreadyExistsException();
+            }
+            activeTripCacheService.removeForPassenger(userId);
+        }
 
         // Для уменьшения мусора в бд используем уже созданную поездку пользователя
         // Если нет - создаем новую

@@ -18,6 +18,6 @@ public class TripInternalController {
     public ResponseEntity<Boolean> hasActiveTrip(
             @PathVariable Long driverId
     ) {
-        return ResponseEntity.ok(cacheService.hasActiveTrip(driverId));
+        return ResponseEntity.ok(cacheService.driverHasActiveTrip(driverId));
     }
 }

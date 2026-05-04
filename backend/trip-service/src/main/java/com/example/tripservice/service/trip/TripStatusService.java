@@ -39,13 +39,13 @@ public class TripStatusService {
     private final NotificationPublisher notificationPublisher;
 
     @Transactional
-    public Trip setSearching(Long tripId, Long passengerId, VehicleClass vehicleClass) {
+    public Trip setSearching(Long userId, Long tripId, VehicleClass vehicleClass) {
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new TripNotFoundException(tripId));
 
         StatusValidationUtil.assertTripNotActive(trip);
 
-        if (!trip.getPassengerId().equals(passengerId)) {
+        if (!trip.getPassengerId().equals(userId)) {
             throw new AccessDeniedException("You are not owner of this trip");
         }
 
@@ -57,6 +57,7 @@ public class TripStatusService {
         trip.setDetails(PriceBreakdown.from(trip, tariffDto));
         trip.setStatus(TripStatus.SEARCHING);
 
+        activeTripCacheService.saveForPassenger(userId, tripId);
         return tripRepository.save(trip);
     }
 
@@ -89,7 +90,7 @@ public class TripStatusService {
 
         log.info("Driver {} assigned to trip {}", driverId, tripId);
         notificationPublisher.publishDriverAssigned(trip.getPassengerId(), tripId, driverId);
-        activeTripCacheService.save(driverId, tripId);
+        activeTripCacheService.saveForDriver(driverId, tripId);
     }
 
     @Transactional
@@ -124,7 +125,7 @@ public class TripStatusService {
         ));
 
         notificationPublisher.publishTripCompleted(trip.getPassengerId(), tripId, trip.getPrice());
-        activeTripCacheService.remove(driverId);
+        activeTripCacheService.removeForDriver(driverId);
     }
 
     @Transactional
@@ -153,9 +154,11 @@ public class TripStatusService {
             ));
         }
 
+        activeTripCacheService.removeForPassenger(trip.getPassengerId());
+
         if (trip.getDriverId() != null) {
             notificationPublisher.publishTripCancelled(trip.getDriverId(), tripId, "Отменено пассажиром");
-            activeTripCacheService.remove(trip.getDriverId());
+            activeTripCacheService.removeForDriver(trip.getDriverId());
         }
     }
 
