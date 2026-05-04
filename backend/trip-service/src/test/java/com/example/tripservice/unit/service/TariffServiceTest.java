@@ -185,7 +185,7 @@ class TariffServiceTest {
             );
             when(priceService.calculatePrice(any(CalculatePriceDto.class))).thenReturn(priceData);
 
-            tariffService.calculatePrice(tariff, tripDto);
+            tariffService.calculateTariffOffer(tariff, tripDto);
 
             verify(priceService, times(1)).calculatePrice(any(CalculatePriceDto.class));
         }
@@ -201,7 +201,7 @@ class TariffServiceTest {
             );
             when(priceService.calculatePrice(captor.capture())).thenReturn(priceData);
 
-            tariffService.calculatePrice(tariff, tripDto);
+            tariffService.calculateTariffOffer(tariff, tripDto);
 
             CalculatePriceDto captured = captor.getValue();
             assertThat(captured.baseFare()).isEqualByComparingTo(tariff.getBaseFare());
@@ -222,7 +222,7 @@ class TariffServiceTest {
             );
             when(priceService.calculatePrice(any())).thenReturn(priceData);
 
-            TariffDto result = tariffService.calculatePrice(tariff, tripDto);
+            TariffDto result = tariffService.calculateTariffOffer(tariff, tripDto);
 
             assertThat(result.prices()).isEqualTo(priceData);
         }
@@ -236,7 +236,7 @@ class TariffServiceTest {
                     new TariffPriceData(BigDecimal.TEN, BigDecimal.TEN, new BigDecimal("210.00"))
             );
 
-            TariffDto result = tariffService.calculatePrice(tariff, tripDto);
+            TariffDto result = tariffService.calculateTariffOffer(tariff, tripDto);
 
             assertThat(result.tripClass()).isEqualTo(VehicleClass.COMFORT);
             assertThat(result.baseFare()).isEqualByComparingTo(tariff.getBaseFare());
@@ -252,7 +252,7 @@ class TariffServiceTest {
                     new TariffPriceData(BigDecimal.TEN, BigDecimal.TEN, new BigDecimal("100.00"))
             );
 
-            TariffDto result = tariffService.calculatePrice(tariff, buildTripDto());
+            TariffDto result = tariffService.calculateTariffOffer(tariff, buildTripDto());
 
             assertThat(result.driversNearby()).isNull();
         }
