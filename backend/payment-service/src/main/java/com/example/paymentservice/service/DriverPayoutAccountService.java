@@ -3,8 +3,10 @@ package com.example.paymentservice.service;
 import com.example.paymentservice.entity.DriverPayoutAccount;
 import com.example.paymentservice.exception.DriverPayoutAccountNotFoundException;
 import com.example.paymentservice.exception.DuplicatePaymentMethodException;
+import com.example.paymentservice.exception.InvalidPaymentOperationException;
 import com.example.paymentservice.exception.PayoutAccountNotVerifiedException;
 import com.example.paymentservice.repository.DriverPayoutAccountRepository;
+import com.example.shared.exception.common.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -83,16 +85,55 @@ public class DriverPayoutAccountService {
     public void setDefault(Long driverId, Long payoutAccountId) {
         DriverPayoutAccount payoutAccount = getById(payoutAccountId);
 
+        if (!payoutAccount.getDriverId().equals(driverId)) {
+            throw new AccessDeniedException();
+        }
+
         if (!payoutAccount.isVerified()) {
             throw new PayoutAccountNotVerifiedException(
                     "Cannot set unverified payout account as default: %s".formatted(payoutAccountId)
             );
         }
 
+        if (payoutAccount.isDefaultvalue()) {
+            return;
+        }
+
         driverPayoutAccountRepository.clearDefaultForDriver(driverId);
 
         payoutAccount.setDefaultvalue(true);
         driverPayoutAccountRepository.save(payoutAccount);
+
+        log.info("Payout account {} set as default for driver {}", payoutAccountId, driverId);
+    }
+
+
+    @Transactional
+    public void delete(Long driverId, Long payoutAccountId) {
+        DriverPayoutAccount payoutAccount = getById(payoutAccountId);
+
+        if (!payoutAccount.getDriverId().equals(driverId)) {
+            throw new AccessDeniedException();
+        }
+
+        if (payoutAccount.isDefaultvalue()) {
+            List<DriverPayoutAccount> others = driverPayoutAccountRepository
+                    .findAllByDriverId(driverId)
+                    .stream()
+                    .filter(a -> !a.getId().equals(payoutAccountId))
+                    .toList();
+
+            if (!others.isEmpty()) {
+                throw new InvalidPaymentOperationException(
+                        "Payout account",
+                        "cannot delete default account while other accounts exist"
+                );
+            }
+        }
+
+        driverPayoutAccountRepository.deleteById(payoutAccountId);
+
+        log.info("Payout account {} deleted for driver {}", payoutAccountId, driverId);
     }
 
     @Transactional
