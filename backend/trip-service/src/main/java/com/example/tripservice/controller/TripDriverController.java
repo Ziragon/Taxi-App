@@ -2,7 +2,7 @@ package com.example.tripservice.controller;
 
 import com.example.shared.security.UserPrincipal;
 import com.example.tripservice.dto.data.RouteDto;
-import com.example.tripservice.dto.response.DriverCoordinatesRequest;
+import com.example.tripservice.dto.request.DriverCoordinatesRequest;
 import com.example.tripservice.dto.response.RouteResponse;
 import com.example.tripservice.service.trip.TripDriverService;
 import lombok.RequiredArgsConstructor;
