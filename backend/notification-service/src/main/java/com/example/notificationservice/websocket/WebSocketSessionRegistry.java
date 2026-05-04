@@ -9,30 +9,25 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WebSocketSessionRegistry {
 
     private final Map<String, Long> sessionUserMap = new ConcurrentHashMap<>();
+    private final Map<String, String> sessionUserTypeMap = new ConcurrentHashMap<>();
 
-    private final Map<String, String> sessionRoleMap = new ConcurrentHashMap<>();
-
-    public void register(String sessionId, Long userId, String role) {
+    public void register(String sessionId, Long userId, String userType) {
         sessionUserMap.put(sessionId, userId);
-        if (role != null) {
-            sessionRoleMap.put(sessionId, role);
+        if (userType != null) {
+            sessionUserTypeMap.put(sessionId, userType);
         }
     }
 
     public void unregister(String sessionId) {
         sessionUserMap.remove(sessionId);
-        sessionRoleMap.remove(sessionId);
+        sessionUserTypeMap.remove(sessionId);
     }
 
     public Long getUserId(String sessionId) {
         return sessionUserMap.get(sessionId);
     }
 
-    public String getRole(String sessionId) {
-        return sessionRoleMap.get(sessionId);
-    }
-
     public boolean isDriver(String sessionId) {
-        return "ROLE_DRIVER".equals(sessionRoleMap.get(sessionId));
+        return "DRIVER".equals(sessionUserTypeMap.get(sessionId));
     }
 }
