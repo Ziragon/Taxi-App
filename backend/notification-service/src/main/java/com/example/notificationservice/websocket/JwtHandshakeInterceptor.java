@@ -22,6 +22,7 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
     private static final String TOKEN_PARAM = "token";
     public static final String SESSION_ATTR_USER_ID = "userId";
     public static final String SESSION_ATTR_USER_ROLE = "userRole";
+    public static final String SESSION_ATTR_USER_TYPE = "userType";
 
     private final JwtUtil jwtUtil;
 

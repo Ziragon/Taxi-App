@@ -17,4 +17,11 @@ public interface UserServiceClient {
             @PathVariable Long driverId,
             @RequestBody DriverLocationRequest request
     );
+
+    @PutMapping("/api/v1/internal/driver/{driverId}/status/offline")
+    void setDriverOffline(@PathVariable Long driverId);
+
+    @PutMapping("/api/v1/internal/driver/{driverId}/status/busy")
+    void setDriverBusy(@PathVariable Long driverId);
+
 }

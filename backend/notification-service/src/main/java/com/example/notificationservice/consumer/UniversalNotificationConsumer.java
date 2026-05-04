@@ -82,109 +82,91 @@ public class UniversalNotificationConsumer {
 
     @SuppressWarnings("unchecked")
     private NotificationEventDto parseEvent(Object rawEvent, String routingKey) {
-        // парсинг регистрации пользователя
-        if ("user.registered".equals(routingKey)) {
-            Map<String, Object> event = (Map<String, Object>) rawEvent;
 
-            Long accountId = event.get("accountId") instanceof Number number
-                    ? number.longValue()
-                    : Long.parseLong(event.get("accountId").toString());
+        // Специфичные события — ПЕРВЫМИ
+        switch (routingKey) {
 
-            return NotificationEventDto.builder()
-                    .tripId(null)
-                    .eventType(EventType.USER_REGISTERED)
-                    .recipientType(RecipientType.PASSENGER)
-                    .recipientId(accountId)
-                    .channel(Channel.PUSH)
-                    .message("Welcome to TaxiApp! Your account has been created.")
-                    .build();
+            case "user.registered" -> {
+                Map<String, Object> event = (Map<String, Object>) rawEvent;
+                Long accountId = getLong(event, "accountId");
+                return NotificationEventDto.builder()
+                        .tripId(null)
+                        .eventType(EventType.USER_REGISTERED)
+                        .recipientType(RecipientType.PASSENGER)
+                        .recipientId(accountId)
+                        .channel(Channel.PUSH)
+                        .message("Добро пожаловать в TaxiApp!")
+                        .build();
+            }
+
+            case "notification.trip.offer" -> {
+                TripOfferEvent event = rawEvent instanceof TripOfferEvent e
+                        ? e
+                        : objectMapper.convertValue(rawEvent, TripOfferEvent.class);
+
+                String message = String.format(
+                        "Новый заказ: %s → %s, %.1f км, %.0f мин, %.2f ₽",
+                        event.originAddress(),
+                        event.destinationAddress(),
+                        event.distanceKm(),
+                        event.durationMin(),
+                        event.price()
+                );
+                return NotificationEventDto.builder()
+                        .tripId(event.tripId())
+                        .eventType(EventType.TRIP_OFFER)
+                        .recipientType(RecipientType.DRIVER)
+                        .recipientId(event.driverId())
+                        .channel(Channel.PUSH)
+                        .message(message)
+                        .build();
+            }
+
+            case "notification.trip.offer.expired" -> {
+                Map<String, Object> event = (Map<String, Object>) rawEvent;
+                return NotificationEventDto.builder()
+                        .tripId(getLong(event, "tripId"))
+                        .eventType(EventType.TRIP_OFFER_EXPIRED)
+                        .recipientType(RecipientType.DRIVER)
+                        .recipientId(getLong(event, "driverId"))
+                        .channel(Channel.PUSH)
+                        .message("Время ответа на заказ истекло")
+                        .build();
+            }
+
+            case "notification.trip.driver_assigned" ->
+            { return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.DRIVER_ASSIGNED); }
+
+            case "notification.trip.started" ->
+            { return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.TRIP_STARTED); }
+
+            case "notification.trip.completed" ->
+            { return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.TRIP_COMPLETED); }
+
+            case "notification.trip.cancelled" ->
+            { return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.TRIP_CANCELLED); }
+
+            case "notification.payment.succeeded", "notification.payout.succeeded" ->
+            { return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.PAYMENT_SUCCEEDED); }
+
+            case "notification.payment.failed" ->
+            { return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.PAYMENT_FAILED); }
+
+            case "notification.refund.succeeded" ->
+            { return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.REFUND_SUCCEEDED); }
         }
 
         if (routingKey.startsWith("notification.")) {
             if (rawEvent instanceof NotificationEventDto dto) {
                 return dto;
             }
-
             if (rawEvent instanceof Map) {
-                return objectMapper.convertValue(rawEvent, NotificationEventDto.class);
+                try {
+                    return objectMapper.convertValue(rawEvent, NotificationEventDto.class);
+                } catch (Exception e) {
+                    log.warn("Failed to convert Map to NotificationEventDto for routingKey={}", routingKey);
+                }
             }
-        }
-        // парсинг предложения поездки водителю
-        if ("notification.trip.offer".equals(routingKey)) {
-            TripOfferEvent event;
-
-            if (rawEvent instanceof TripOfferEvent e) {
-                event = e;
-            } else {
-                event = objectMapper.convertValue(rawEvent, TripOfferEvent.class);
-            }
-
-            String message = String.format(
-                    "Новый заказ: %s → %s, %.1f км, %.0f мин, %.2f$",
-                    event.originAddress(),
-                    event.destinationAddress(),
-                    event.distanceKm(),
-                    event.durationMin(),
-                    event.price()
-            );
-
-            return NotificationEventDto.builder()
-                    .tripId(event.tripId())
-                    .eventType(EventType.TRIP_OFFER)
-                    .recipientType(RecipientType.DRIVER)
-                    .recipientId(event.driverId())
-                    .channel(Channel.PUSH)
-                    .message(message)
-                    .build();
-        }
-
-        if ("notification.trip.offer.expired".equals(routingKey)) {
-            Map<String, Object> event = (Map<String, Object>) rawEvent;
-
-            Long tripId = event.get("tripId") instanceof Number n ? n.longValue()
-                    : Long.parseLong(event.get("tripId").toString());
-            Long driverId = event.get("driverId") instanceof Number n ? n.longValue()
-                    : Long.parseLong(event.get("driverId").toString());
-
-            return NotificationEventDto.builder()
-                    .tripId(tripId)
-                    .eventType(EventType.TRIP_OFFER_EXPIRED)
-                    .recipientType(RecipientType.DRIVER)
-                    .recipientId(driverId)
-                    .channel(Channel.PUSH)
-                    .message("Время ответа на заказ истекло")
-                    .build();
-        }
-
-
-        if ("notification.payment.succeeded".equals(routingKey)
-                || "notification.payout.succeeded".equals(routingKey)) {
-            return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.PAYMENT_SUCCEEDED);
-        }
-
-        if ("notification.payment.failed".equals(routingKey)) {
-            return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.PAYMENT_FAILED);
-        }
-
-        if ("notification.refund.succeeded".equals(routingKey)) {
-            return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.REFUND_SUCCEEDED);
-        }
-
-
-        if ("notification.trip.driver_assigned".equals(routingKey)) {
-            return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.DRIVER_ASSIGNED);
-        }
-
-        if ("notification.trip.started".equals(routingKey)) {
-            return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.TRIP_STARTED);
-        }
-
-        if ("notification.trip.completed".equals(routingKey)) {
-            return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.TRIP_COMPLETED);
-        }
-
-        if ("notification.trip.cancelled".equals(routingKey)) {
-            return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.TRIP_CANCELLED);
         }
 
         return null;
