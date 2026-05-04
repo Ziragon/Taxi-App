@@ -150,19 +150,19 @@ class PassengerService:
             return False
 
     def start_search(self, vehicle_class="COMFORT"):
-        """POST /api/v1/trips/{id}/start-search - Запуск поиска водителя"""
-        if not self.current_trip_id:
-            print("[!] Сначала нужно создать поездку (команда: create_trip).")
-            return False
+        """POST /api/v1/trips/start-search - Создание черновика и запуск поиска"""
 
-        url = f"{API_URL}/trips/{self.current_trip_id}/start-search?vehicleClass={vehicle_class}"
-        print(f"[*] Запуск поиска водителя (класс: {vehicle_class}) для поездки #{self.current_trip_id}...")
+        url = f"{API_URL}/trips/start-search?vehicleClass={vehicle_class}"
+        print(f"[*] Запуск поиска водителя (класс: {vehicle_class})...")
 
         try:
-            # Отправляем пустой json или data, т.к. бэкенд ожидает POST
             res = requests.post(url, headers=self._auth_headers(), json={})
-            if res.status_code == 204:
-                print("[✔] Поиск успешно запущен (в фоновом режиме).")
+
+            if res.status_code in [200, 201]:
+                data = res.json()
+                self.current_trip_id = data.get("id")
+
+                print(f"[✔] Поиск запущен. Создана поездка #{self.current_trip_id}")
                 return True
             else:
                 print(f"[!] Ошибка запуска поиска ({res.status_code}): {res.text}")

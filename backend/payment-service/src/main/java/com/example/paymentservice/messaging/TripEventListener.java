@@ -23,8 +23,8 @@ public class TripEventListener {
     private final TransactionService transactionService;
     private static final BigDecimal DRIVER_SHARE = new BigDecimal("0.80");
 
-    @RabbitListener(queues = TRIP_IN_PROGRESS_ROUTING_KEY)
-    public void onTripCompleted(TripInProgressEvent event) {
+    @RabbitListener(queues = TRIP_IN_PROGRESS_QUEUE)
+    public void onTripTransact(TripInProgressEvent event) {
         log.info("Received TripCompletedEvent: tripId={}, amount={}", event.tripId(), event.amount());
 
         Transaction charge;

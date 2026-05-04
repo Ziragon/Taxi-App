@@ -17,7 +17,7 @@ public class RabbitMQConfig {
     public static final String TRIP_EXCHANGE    = "trip.exchange";
 
     // Queues
-    public static final String TRIP_IN_PROGRESS_QUEUE     = "payment.trip.completed";
+    public static final String TRIP_IN_PROGRESS_QUEUE   = "payment.trip.inprogress";
     public static final String PAYMENT_SUCCEEDED_QUEUE  = "payment.succeeded";
     public static final String PAYMENT_FAILED_QUEUE     = "payment.failed";
     public static final String REFUND_REQUESTED_QUEUE   = "payment.refund.requested";
