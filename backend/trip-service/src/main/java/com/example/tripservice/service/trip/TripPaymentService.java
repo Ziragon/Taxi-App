@@ -40,6 +40,7 @@ public class TripPaymentService {
         );
     }
 
+    @Transactional(readOnly = true)
     public void handlePaymentFailed(PaymentFailedEvent event) {
         Trip trip = tripRepository.findById(event.tripId())
                 .orElseThrow(() -> new TripNotFoundException(event.tripId()));
@@ -53,6 +54,7 @@ public class TripPaymentService {
         );
     }
 
+    @Transactional(readOnly = true)
     public void handleRefundSucceeded(RefundSucceededEvent event) {
         Trip trip = tripRepository.findById(event.tripId())
                 .orElseThrow(() -> new TripNotFoundException(event.tripId()));

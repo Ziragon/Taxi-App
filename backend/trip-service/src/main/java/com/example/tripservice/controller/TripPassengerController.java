@@ -65,4 +65,13 @@ public class TripPassengerController {
         TripDto trip = tripService.getTripById(principal.userId(), tripId);
         return ResponseEntity.ok(TripResponse.from(trip));
     }
+
+    @GetMapping("/active")
+    public ResponseEntity<TripResponse> getActiveTrip(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long tripId
+    ) {
+        // TODO
+        return ResponseEntity.ok(TripResponse.from(null));
+    }
 }

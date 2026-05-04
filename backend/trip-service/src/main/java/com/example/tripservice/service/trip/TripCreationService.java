@@ -6,7 +6,6 @@ import com.example.tripservice.dto.data.*;
 import com.example.tripservice.entity.Tariff;
 import com.example.tripservice.entity.Trip;
 import com.example.tripservice.entity.enums.TripStatus;
-import com.example.tripservice.exception.TripAlreadyExistsException;
 import com.example.tripservice.exception.TripBookingException;
 import com.example.tripservice.repository.TripRepository;
 import com.example.tripservice.service.external.NavigationService;
@@ -15,6 +14,7 @@ import com.example.tripservice.service.external.WeatherService;
 import com.example.tripservice.service.pricing.PriceService;
 import com.example.tripservice.service.pricing.TariffService;
 import com.example.tripservice.service.search.DriverSearchService;
+import com.example.tripservice.util.StatusValidationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -52,10 +52,7 @@ public class TripCreationService {
 
         Long existing = activeTripCacheService.getPassengerActiveTripId(userId);
         if (existing != null) {
-            Trip trip = tripRepository.findById(existing).orElse(null);
-            if (trip != null) {
-                throw new TripAlreadyExistsException();
-            }
+            tripRepository.findById(existing).ifPresent(StatusValidationUtil::assertTripNotActive);
             activeTripCacheService.removeForPassenger(userId);
         }
 

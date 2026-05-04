@@ -27,6 +27,14 @@ public class StatusValidationUtil {
         }
     }
 
+    public static void assertTripStatusNotIn(Trip trip, List<TripStatus> forbiddenStatuses) {
+        if (forbiddenStatuses.contains(trip.getStatus())) {
+            throw new InvalidTripStatusException(
+                    trip.getId(), trip.getStatus()
+            );
+        }
+    }
+
     public static void assertTripHasNotStatus(Trip trip, TripStatus expected) {
         if (trip.getStatus() == expected) {
             throw new InvalidTripStatusException(trip.getId(), expected);
