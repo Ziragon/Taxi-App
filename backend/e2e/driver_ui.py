@@ -20,6 +20,8 @@ HELP_TEXT = """
 ║  status  - показать текущий профиль  ║
 ║  accept  - принять поездку по ID     ║
 ║  reject  - отклонить поездку по ID   ║
+║  start   - начать поездку по ID      ║
+║  complete- завершить поездку по ID   ║
 ║  card    - привязать тестовую карту  ║
 ║  help    - эта справка               ║
 ║  exit    - выход                     ║
@@ -98,6 +100,20 @@ def main():
             trip_id = input("  Введите ID поездки для отклонения: ").strip()
             if trip_id.isdigit():
                 service.reject_trip(trip_id)
+            else:
+                print("  [!] Некорректный ID поездки.")
+
+        elif cmd == "start":
+            trip_id = input("  Введите ID поездки для старта: ").strip()
+            if trip_id.isdigit():
+                service.start_trip(trip_id)
+            else:
+                print("  [!] Некорректный ID поездки.")
+
+        elif cmd == "complete":
+            trip_id = input("  Введите ID поездки для завершения: ").strip()
+            if trip_id.isdigit():
+                service.complete_trip(trip_id)
             else:
                 print("  [!] Некорректный ID поездки.")
 
