@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 
-// Кэширует статус активной поездки водителя
+// Кэширует статус активной поездки водителя и пассажира
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -38,6 +38,12 @@ public class ActiveTripCacheService {
 
     public boolean driverHasActiveTrip(Long driverId) {
         return longRedisTemplate.hasKey(DRIVER_ACTIVE_TRIP_KEY.formatted(driverId));
+    }
+
+    public Long getDriverActiveTripId(Long driverId) {
+        return longRedisTemplate.opsForValue().get(
+                DRIVER_ACTIVE_TRIP_KEY.formatted(driverId)
+        );
     }
 
     public Long getPassengerActiveTripId(Long passengerId) {

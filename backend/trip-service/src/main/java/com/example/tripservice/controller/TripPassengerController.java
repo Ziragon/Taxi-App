@@ -18,6 +18,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
+
 @RestController
 @RequestMapping("/api/v1/trips")
 @RequiredArgsConstructor
@@ -122,7 +124,8 @@ public class TripPassengerController {
     public ResponseEntity<TripResponse> getActiveTrip(
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ResponseEntity.ok(
-                TripResponse.from(tripPassengerService.getActiveTrip(principal.userId())));
+        return Optional.ofNullable(tripPassengerService.getActiveTrip(principal.userId()))
+                .map(trip -> ResponseEntity.ok(TripResponse.from(trip)))
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 }
