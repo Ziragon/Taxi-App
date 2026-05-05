@@ -409,13 +409,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          Text(
-                            '${_profile?.firstName ?? ''} ${_profile?.lastName ?? ''}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 26,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Center(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '${_profile?.firstName ?? ''} ${_profile?.lastName ?? ''}',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 4),
