@@ -11,7 +11,7 @@ public class StatusValidationUtil {
 
     private StatusValidationUtil() {}
 
-    private static final List<TripStatus> ACTIVE_STATUSES = List.of(
+    public static final List<TripStatus> ACTIVE_STATUSES = List.of(
             TripStatus.SEARCHING, TripStatus.DRIVER_ASSIGNED, TripStatus.IN_PROGRESS
     );
 
@@ -32,12 +32,6 @@ public class StatusValidationUtil {
             throw new InvalidTripStatusException(
                     trip.getId(), trip.getStatus()
             );
-        }
-    }
-
-    public static void assertTripHasNotStatus(Trip trip, TripStatus expected) {
-        if (trip.getStatus() == expected) {
-            throw new InvalidTripStatusException(trip.getId(), expected);
         }
     }
 }

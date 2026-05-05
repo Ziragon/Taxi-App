@@ -111,11 +111,18 @@ public class TripPassengerController {
     }
 
     @GetMapping("/active")
+    @Operation(
+            summary = "Получить информацию об активной поездке",
+            description = "Возвращает детали активной поездки (если она есть), нужно при перезаходе в приложение",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Данные получены"),
+                    @ApiResponse(responseCode = "204", description = "Активной поездки нету, можно создавать новую")
+            }
+    )
     public ResponseEntity<TripResponse> getActiveTrip(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long tripId
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        // TODO
-        return ResponseEntity.ok(TripResponse.from(null));
+        return ResponseEntity.ok(
+                TripResponse.from(tripPassengerService.getActiveTrip(principal.userId())));
     }
 }

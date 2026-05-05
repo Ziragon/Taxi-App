@@ -10,6 +10,7 @@ import com.example.tripservice.exception.PaymentMethodNotFoundException;
 import com.example.tripservice.exception.TripBookingException;
 import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.repository.TripRepository;
+import com.example.tripservice.service.cache.ActiveTripCacheService;
 import com.example.tripservice.service.external.NavigationService;
 import com.example.tripservice.service.search.DriverSearchService;
 import feign.FeignException;
@@ -21,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.Objects;
 
+import static com.example.tripservice.util.StatusValidationUtil.ACTIVE_STATUSES;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -31,6 +34,7 @@ public class TripService {
     private final DriverSearchService driverSearchService;
     private final PaymentServiceClient paymentServiceClient;
     private final TripStatusService tripStatusService;
+    private final ActiveTripCacheService activeTripCacheService;
 
     // Метод просто меняет статус поездки и заполняет его данными, сам поиск происходит в DriverService
     public void startSearching(Long userId, Long tripId, VehicleClass vehicleClass) {
@@ -88,5 +92,45 @@ public class TripService {
         }
 
         return TripDto.from(trip, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public TripDto getTripByPassengerId(Long passengerId) {
+        Long existingId = activeTripCacheService.getPassengerActiveTripId(passengerId);
+        if (existingId == null) return null;
+
+        Trip trip = tripRepository.findById(existingId).orElse(null);
+
+        if (trip == null || !ACTIVE_STATUSES.contains(trip.getStatus())) {
+            activeTripCacheService.removeForPassenger(passengerId);
+            return null;
+        }
+
+        RouteDto route = navigationService.getRouteInfo(
+                trip.getOriginLng(), trip.getOriginLat(),
+                trip.getDestinationLng(), trip.getDestinationLat()
+        );
+
+        return TripDto.from(trip, null, route.geometry());
+    }
+
+    @Transactional(readOnly = true)
+    public TripDto getTripByDriverId(Long driverId) {
+        Long existingId = activeTripCacheService.getPassengerActiveTripId(driverId);
+        if (existingId == null) return null;
+
+        Trip trip = tripRepository.findById(existingId).orElse(null);
+
+        if (trip == null || !ACTIVE_STATUSES.contains(trip.getStatus())) {
+            activeTripCacheService.removeForDriver(driverId);
+            return null;
+        }
+
+        RouteDto route = navigationService.getRouteInfo(
+                trip.getOriginLng(), trip.getOriginLat(),
+                trip.getDestinationLng(), trip.getDestinationLat()
+        );
+
+        return TripDto.from(trip, null, route.geometry());
     }
 }
