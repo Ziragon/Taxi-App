@@ -2,7 +2,7 @@ package com.example.tripservice.integration;
 
 import com.example.shared.exception.common.AccessDeniedException;
 import com.example.tripservice.BaseIntegrationTest;
-import com.example.tripservice.service.search.OfferCacheService;
+import com.example.tripservice.service.cache.OfferCacheService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,7 +41,7 @@ class OfferCacheServiceIntegrationTest extends BaseIntegrationTest {
 
         offerCacheService.setActiveOffer(tripId, driverId);
 
-        offerCacheService.validateActiveOffer(tripId, driverId);
+        offerCacheService.validateAndRemoveActiveOffer(tripId, driverId);
     }
 
     @Test
@@ -54,7 +54,7 @@ class OfferCacheServiceIntegrationTest extends BaseIntegrationTest {
         offerCacheService.setActiveOffer(tripId, actualDriverId);
 
         assertThrows(AccessDeniedException.class, () ->
-                offerCacheService.validateActiveOffer(tripId, wrongDriverId)
+                offerCacheService.validateAndRemoveActiveOffer(tripId, wrongDriverId)
         );
     }
 
@@ -77,7 +77,7 @@ class OfferCacheServiceIntegrationTest extends BaseIntegrationTest {
         Long driverId = 1000L;
 
         assertThrows(AccessDeniedException.class, () ->
-                offerCacheService.validateActiveOffer(tripId, driverId)
+                offerCacheService.validateAndRemoveActiveOffer(tripId, driverId)
         );
     }
 }

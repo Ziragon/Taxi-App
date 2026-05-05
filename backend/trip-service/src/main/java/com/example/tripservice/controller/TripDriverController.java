@@ -4,6 +4,7 @@ import com.example.shared.security.UserPrincipal;
 import com.example.tripservice.dto.data.RouteDto;
 import com.example.tripservice.dto.request.DriverCoordinatesRequest;
 import com.example.tripservice.dto.response.RouteResponse;
+import com.example.tripservice.dto.response.TripResponse;
 import com.example.tripservice.service.trip.TripDriverService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/trips")
@@ -70,14 +73,15 @@ public class TripDriverController {
             summary = "Начать поездку",
             description = "Отметка о том, что пассажир в машине. Статус меняется на IN_PROGRESS",
             responses = {
-                    @ApiResponse(responseCode = "204", description = "Поездка начата")
+                    @ApiResponse(responseCode = "200", description = "Поездка начата")
             }
     )
-    public ResponseEntity<Void> startTrip(
+    public ResponseEntity<RouteResponse> startTrip(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long tripId) {
-        tripDriverService.startTrip(tripId, principal.userId());
-        return ResponseEntity.noContent().build();
+            @PathVariable Long tripId
+    ) {
+        RouteDto route = tripDriverService.startTrip(tripId, principal.userId());
+        return ResponseEntity.ok(RouteResponse.from(route));
     }
 
     @PostMapping("/{tripId}/complete")
@@ -94,5 +98,23 @@ public class TripDriverController {
     ) {
         tripDriverService.completeTrip(tripId, principal.userId());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/driver-active")
+    @Operation(
+            summary = "Получить информацию об активной поездке водителя",
+            description = "Возвращает детали активной поездки (если она есть), нужно при перезаходе в приложение",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Данные получены"),
+                    @ApiResponse(responseCode = "204", description = "Активной поездки нету, можно искать новые предложения")
+            }
+    )
+    public ResponseEntity<TripResponse> getActiveTrip(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody DriverCoordinatesRequest request
+    ) {
+        return Optional.ofNullable(tripDriverService.getActiveTrip(principal.userId(), request.latitude(), request.latitude()))
+                .map(trip -> ResponseEntity.ok(TripResponse.from(trip)))
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 }

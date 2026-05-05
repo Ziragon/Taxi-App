@@ -17,7 +17,7 @@ public class RabbitMQConfig {
     public static final String TRIP_EXCHANGE    = "trip.exchange";
 
     // Queues
-    public static final String TRIP_IN_PROGRESS_QUEUE   = "payment.trip.inprogress";
+    public static final String TRIP_COMPLETED_QUEUE   = "payment.trip.completed";
     public static final String PAYMENT_SUCCEEDED_QUEUE  = "payment.succeeded";
     public static final String PAYMENT_FAILED_QUEUE     = "payment.failed";
     public static final String REFUND_REQUESTED_QUEUE   = "payment.refund.requested";
@@ -25,7 +25,7 @@ public class RabbitMQConfig {
     public static final String PAYOUT_SUCCEEDED_QUEUE   = "payment.payout.succeeded";
 
     // Routing Keys
-    public static final String TRIP_IN_PROGRESS_ROUTING_KEY  = "trip.inprogress";
+    public static final String TRIP_COMPLETED_ROUTING_KEY  = "trip.completed";
     public static final String PAYMENT_SUCCEEDED_ROUTING_KEY = "payment.succeeded";
     public static final String PAYMENT_FAILED_ROUTING_KEY    = "payment.failed";
     public static final String REFUND_REQUESTED_ROUTING_KEY  = "refund.requested";
@@ -47,8 +47,8 @@ public class RabbitMQConfig {
     // Queues
 
     @Bean
-    public Queue tripInProgressQueue() {
-        return QueueBuilder.durable(TRIP_IN_PROGRESS_QUEUE).build();
+    public Queue tripCompletedQueue() {
+        return QueueBuilder.durable(TRIP_COMPLETED_QUEUE).build();
     }
 
     @Bean
@@ -79,9 +79,9 @@ public class RabbitMQConfig {
     // Bindings
 
     @Bean
-    public Binding tripInProgressBinding() {
-        return BindingBuilder.bind(tripInProgressQueue())
-                .to(tripExchange()).with(TRIP_IN_PROGRESS_ROUTING_KEY);
+    public Binding tripCompletedBinding() {
+        return BindingBuilder.bind(tripCompletedQueue())
+                .to(tripExchange()).with(TRIP_COMPLETED_ROUTING_KEY);
     }
 
     @Bean

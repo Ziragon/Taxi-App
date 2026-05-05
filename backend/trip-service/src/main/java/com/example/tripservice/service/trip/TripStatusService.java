@@ -1,8 +1,7 @@
 package com.example.tripservice.service.trip;
 
 import com.example.shared.dto.enums.VehicleClass;
-import com.example.shared.dto.event.RefundRequestedEvent;
-import com.example.shared.dto.event.TripInProgressEvent;
+import com.example.shared.dto.event.TripCompletedEvent;
 import com.example.shared.exception.common.AccessDeniedException;
 import com.example.tripservice.client.PaymentServiceClient;
 import com.example.tripservice.dto.client.PaymentMethodResponse;
@@ -16,6 +15,7 @@ import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.messaging.NotificationPublisher;
 import com.example.tripservice.messaging.TripEventPublisher;
 import com.example.tripservice.repository.TripRepository;
+import com.example.tripservice.service.cache.ActiveTripCacheService;
 import com.example.tripservice.service.pricing.TariffService;
 import com.example.tripservice.util.StatusValidationUtil;
 import feign.FeignException;
@@ -100,15 +100,6 @@ public class TripStatusService {
         Trip trip = getTripForDriver(tripId, driverId);
         StatusValidationUtil.assertTripHasStatus(trip, TripStatus.DRIVER_ASSIGNED);
 
-        tripEventPublisher.publishTripInProgress(new TripInProgressEvent(
-                trip.getId(),
-                trip.getPassengerId(),
-                trip.getDriverId(),
-                trip.getPrice(),
-                "rub",
-                Instant.now()
-        ));
-
         trip.setStatus(TripStatus.IN_PROGRESS);
         tripRepository.save(trip);
 
@@ -124,50 +115,21 @@ public class TripStatusService {
         trip.setStatus(TripStatus.COMPLETED);
         tripRepository.save(trip);
 
+        // Оплата заказа
+        tripEventPublisher.publishTripCompleted(new TripCompletedEvent(
+                trip.getId(),
+                trip.getPassengerId(),
+                trip.getDriverId(),
+                trip.getPrice(),
+                "rub",
+                Instant.now()
+        ));
+
         log.info("Trip {} completed by driver {}, publishing TripCompletedEvent", tripId, driverId);
 
         notificationPublisher.publishTripCompleted(trip.getPassengerId(), tripId, trip.getPrice());
         activeTripCacheService.removeForDriver(driverId);
-    }
-
-    @Transactional
-    public void cancelTrip(Long tripId, Long passengerId) {
-        Trip trip = tripRepository.findById(tripId)
-                .orElseThrow(() -> new TripNotFoundException(tripId));
-
-        StatusValidationUtil.assertTripHasNotStatus(trip, TripStatus.COMPLETED);
-
-        if (!trip.getPassengerId().equals(passengerId)) {
-            throw new AccessDeniedException("You're not owner of this trip");
-        }
-
-        trip.setStatus(TripStatus.CANCELLED);
-        tripRepository.save(trip);
-
-        log.info("Trip {} cancelled by passenger {}", tripId, passengerId);
-
-        if (trip.getPaymentId() != null) {
-            tripEventPublisher.publishRefundRequested(new RefundRequestedEvent(
-                    trip.getId(),
-                    trip.getPassengerId(),
-                    trip.getDriverId(),
-                    trip.getPrice(),
-                    "Trip cancelled by passenger"
-            ));
-        }
-
         activeTripCacheService.removeForPassenger(trip.getPassengerId());
-
-        if (trip.getDriverId() != null) {
-            notificationPublisher.publishTripCancelled(
-                    tripId,
-                    trip.getPassengerId(),
-                    null,
-                    "Отсутствует платёжный метод",
-                    "SYSTEM"
-            );
-            activeTripCacheService.removeForDriver(trip.getDriverId());
-        }
     }
 
     @Transactional
@@ -186,10 +148,11 @@ public class TripStatusService {
                 "Водители не найдены",
                 "SYSTEM"
         );
+        activeTripCacheService.removeForPassenger(trip.getPassengerId());
     }
 
     @Transactional
-    public void cancelTripInternal(Long tripId, String message) {
+    public void cancelTripByPayment(Long tripId, String message) {
         log.warn("{} for trip {}", message, tripId);
         tripRepository.findById(tripId).ifPresent(trip -> {
             trip.setStatus(TripStatus.CANCELLED);

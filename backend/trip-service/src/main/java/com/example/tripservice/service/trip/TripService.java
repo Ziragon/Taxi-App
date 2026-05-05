@@ -6,10 +6,12 @@ import com.example.tripservice.client.PaymentServiceClient;
 import com.example.tripservice.dto.data.*;
 import com.example.shared.dto.request.CreateHoldRequest;
 import com.example.tripservice.entity.Trip;
+import com.example.tripservice.entity.enums.TripStatus;
 import com.example.tripservice.exception.PaymentMethodNotFoundException;
 import com.example.tripservice.exception.TripBookingException;
 import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.repository.TripRepository;
+import com.example.tripservice.service.cache.ActiveTripCacheService;
 import com.example.tripservice.service.external.NavigationService;
 import com.example.tripservice.service.search.DriverSearchService;
 import feign.FeignException;
@@ -21,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.Objects;
 
+import static com.example.tripservice.util.StatusValidationUtil.ACTIVE_STATUSES;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -31,6 +35,7 @@ public class TripService {
     private final DriverSearchService driverSearchService;
     private final PaymentServiceClient paymentServiceClient;
     private final TripStatusService tripStatusService;
+    private final ActiveTripCacheService activeTripCacheService;
 
     // Метод просто меняет статус поездки и заполняет его данными, сам поиск происходит в DriverService
     public void startSearching(Long userId, Long tripId, VehicleClass vehicleClass) {
@@ -50,12 +55,12 @@ public class TripService {
 
         } catch (FeignException.NotFound _) {
             log.warn("Payment method not found for user {}", userId);
-            tripStatusService.cancelTripInternal(tripId, "Payment failed");
+            tripStatusService.cancelTripByPayment(tripId, "Payment failed");
             throw new PaymentMethodNotFoundException(userId);
 
         } catch (Exception e) {
             log.error("Payment failed for trip {}: {}", tripId, e.getMessage());
-            tripStatusService.cancelTripInternal(tripId, "Payment failed");
+            tripStatusService.cancelTripByPayment(tripId, "Payment failed");
             throw new TripBookingException("Payment failed, trip cancelled");
         }
     }
@@ -78,6 +83,16 @@ public class TripService {
         );
     }
 
+    public RouteDto getRouteForTrip(Long tripId) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new TripNotFoundException(tripId));
+
+        return navigationService.getRouteInfo(
+                trip.getOriginLng(), trip.getOriginLat(),
+                trip.getDestinationLng(), trip.getDestinationLat()
+        );
+    }
+
     @Transactional(readOnly = true)
     public TripDto getTripById(Long userId, Long tripId) {
         Trip trip = tripRepository.findById(tripId)
@@ -88,5 +103,56 @@ public class TripService {
         }
 
         return TripDto.from(trip, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public TripDto getActiveTripByPassengerId(Long passengerId) {
+        Long existingId = activeTripCacheService.getPassengerActiveTripId(passengerId);
+        if (existingId == null) return null;
+
+        Trip trip = tripRepository.findById(existingId).orElse(null);
+
+        if (trip == null || !ACTIVE_STATUSES.contains(trip.getStatus())) {
+            activeTripCacheService.removeForPassenger(passengerId);
+            return null;
+        }
+
+        RouteDto route = navigationService.getRouteInfo(
+                trip.getOriginLng(), trip.getOriginLat(),
+                trip.getDestinationLng(), trip.getDestinationLat()
+        );
+
+        return TripDto.from(trip, null, route.geometry());
+    }
+
+    @Transactional(readOnly = true)
+    public TripDto getActiveTripByDriverId(Long driverId, BigDecimal driverLat, BigDecimal driverLng) {
+        Long existingId = activeTripCacheService.getDriverActiveTripId(driverId);
+        if (existingId == null) return null;
+
+        Trip trip = tripRepository.findById(existingId).orElse(null);
+
+        if (trip == null || !ACTIVE_STATUSES.contains(trip.getStatus())) {
+            activeTripCacheService.removeForDriver(driverId);
+            return null;
+        }
+
+        // Логика выдачи маршрута
+        RouteDto route;
+        if (trip.getStatus() == TripStatus.DRIVER_ASSIGNED) {
+            // От водителя до пассажира
+            route = navigationService.getRouteInfo(
+                    driverLng, driverLat,
+                    trip.getOriginLng(), trip.getOriginLat()
+            );
+        } else {
+            // Маршрут самой поездки
+            route = navigationService.getRouteInfo(
+                    trip.getOriginLng(), trip.getOriginLat(),
+                    trip.getDestinationLng(), trip.getDestinationLat()
+            );
+        }
+
+        return TripDto.from(trip, null, route.geometry());
     }
 }

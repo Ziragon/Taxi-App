@@ -18,6 +18,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
+
 @RestController
 @RequestMapping("/api/v1/trips")
 @RequiredArgsConstructor
@@ -79,9 +81,10 @@ public class TripPassengerController {
     @PostMapping("/{tripId}/cancel")
     @Operation(
             summary = "Отмена поездки",
-            description = "Позволяет пассажиру отменить поездку на этапе поиска",
+            description = "Позволяет пассажиру отменить поездку на этапе поиска и когда водитель едет к пассажиру",
             responses = {
                     @ApiResponse(responseCode = "204", description = "Поездка успешно отменена"),
+                    @ApiResponse(responseCode = "422", description = "Невозможно отменить поездку когда она уже в процессе")
             }
     )
     public ResponseEntity<Void> cancelTrip(
@@ -110,11 +113,19 @@ public class TripPassengerController {
     }
 
     @GetMapping("/active")
+    @Operation(
+            summary = "Получить информацию об активной поездке",
+            description = "Возвращает детали активной поездки (если она есть), нужно при перезаходе в приложение",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Данные получены"),
+                    @ApiResponse(responseCode = "204", description = "Активной поездки нету, можно создавать новую")
+            }
+    )
     public ResponseEntity<TripResponse> getActiveTrip(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long tripId
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        // TODO
-        return ResponseEntity.ok(TripResponse.from(null));
+        return Optional.ofNullable(tripPassengerService.getActiveTrip(principal.userId()))
+                .map(trip -> ResponseEntity.ok(TripResponse.from(trip)))
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 }

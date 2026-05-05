@@ -1,10 +1,12 @@
 package com.example.tripservice.service.trip;
 
 import com.example.tripservice.dto.data.RouteDto;
+import com.example.tripservice.dto.data.TripDto;
 import com.example.tripservice.service.search.DriverSearchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
@@ -26,11 +28,17 @@ public class TripDriverService {
         driverSearchService.handleDriverReject(tripId, driverId);
     }
 
-    public void startTrip(Long tripId, Long driverId) {
+    public RouteDto startTrip(Long tripId, Long driverId) {
         tripStatusService.startTrip(tripId, driverId);
+        return tripService.getRouteForTrip(tripId);
     }
 
     public void completeTrip(Long tripId, Long driverId) {
         tripStatusService.completeTrip(tripId, driverId);
+    }
+
+    @Transactional(readOnly = true)
+    public TripDto getActiveTrip(Long userId, BigDecimal driverLat, BigDecimal driverLng) {
+        return tripService.getActiveTripByDriverId(userId, driverLat, driverLng);
     }
 }

@@ -10,7 +10,7 @@ import com.example.tripservice.service.external.ProfileStatusService;
 import com.example.tripservice.service.search.DriverResponsePublisher;
 import com.example.tripservice.service.search.DriverResponseSubscriber;
 import com.example.tripservice.service.search.DriverSearchService;
-import com.example.tripservice.service.search.OfferCacheService;
+import com.example.tripservice.service.cache.OfferCacheService;
 import com.example.tripservice.service.trip.TripStatusService;
 import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,7 +65,7 @@ class DriverSearchServiceTest {
 
         driverSearchService.handleDriverAccept(tripId, driverId);
 
-        verify(offerCacheService).validateActiveOffer(tripId, driverId);
+        verify(offerCacheService).validateAndRemoveActiveOffer(tripId, driverId);
         verify(responsePublisher).publish(tripId, "ACCEPT", driverId);
     }
 
@@ -77,7 +77,7 @@ class DriverSearchServiceTest {
 
         driverSearchService.handleDriverReject(tripId, driverId);
 
-        verify(offerCacheService).validateActiveOffer(tripId, driverId);
+        verify(offerCacheService).validateAndRemoveActiveOffer(tripId, driverId);
         verify(responsePublisher).publish(tripId, "REJECT", driverId);
     }
 
@@ -110,8 +110,7 @@ class DriverSearchServiceTest {
 
         driverSearchService.searchDrivers(mockTrip, BigDecimal.ZERO, BigDecimal.ZERO, VehicleClass.ECONOMY);
 
-        verify(responseSubscriber).registerFuture(eq(tripId), any());
         verify(tripStatusService).cancelSearch(tripId);
-        verify(responseSubscriber).removeFuture(tripId);
+        verifyNoInteractions(responseSubscriber);
     }
 }
