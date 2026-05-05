@@ -23,6 +23,7 @@ public class NotificationPublisher {
                 "recipientId", passengerId,
                 "recipientType", "PASSENGER",
                 "tripId", tripId,
+                "driverId", driverId,
                 "eventType", "DRIVER_ASSIGNED",
                 "channel", "PUSH",
                 "message", "Водитель найден и едет к вам!"

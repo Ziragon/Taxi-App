@@ -14,5 +14,9 @@ public record NotificationPayload(
 
         String message,
 
-        Instant createdAt
+        Instant createdAt,
+
+        DriverProfileSnapshot driverProfile,
+
+        PassengerProfileSnapshot passengerProfile
 ) {}

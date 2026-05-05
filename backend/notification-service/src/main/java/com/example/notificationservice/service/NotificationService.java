@@ -1,7 +1,9 @@
 package com.example.notificationservice.service;
 
+import com.example.notificationservice.dto.DriverProfileSnapshot;
 import com.example.notificationservice.dto.NotificationEventDto;
 import com.example.notificationservice.dto.NotificationPayload;
+import com.example.notificationservice.dto.PassengerProfileSnapshot;
 import com.example.notificationservice.entity.Notification;
 import com.example.notificationservice.entity.enums.NotificationStatus;
 import com.example.notificationservice.repository.NotificationRepository;
@@ -46,13 +48,19 @@ public class NotificationService {
         notificationRepository.updateStatus(id, NotificationStatus.FAILED);
     }
 
-    public void sendToUser(Notification notification) {
+    public void sendToUser(
+            Notification notification,
+            DriverProfileSnapshot driverProfile,
+            PassengerProfileSnapshot passengerProfile
+    ) {
         NotificationPayload payload = new NotificationPayload(
                 notification.getId(),
                 notification.getTripId(),
                 notification.getEventType(),
                 notification.getMessage(),
-                notification.getCreatedAt()
+                notification.getCreatedAt(),
+                driverProfile,
+                passengerProfile
         );
 
         messagingTemplate.convertAndSendToUser(

@@ -119,7 +119,9 @@ public class NotificationController {
                 n.getTripId(),
                 n.getEventType(),
                 n.getMessage(),
-                n.getCreatedAt()
+                n.getCreatedAt(),
+                null,
+                null
         );
     }
 }
