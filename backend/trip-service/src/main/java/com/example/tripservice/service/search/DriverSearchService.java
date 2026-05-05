@@ -98,7 +98,12 @@ public class DriverSearchService {
                         if (response.type() == DriverReply.CANCELLED) {
                             log.info("Trip {} cancelled during offer to driver {}", trip.getId(), driver.driverId());
                             notificationPublisher.publishTripCancelled(
-                                    driver.driverId(), trip.getId(), "Поездка отменена пассажиром");
+                                    trip.getId(),
+                                    trip.getPassengerId(),
+                                    null,
+                                    "Поездка отменена пассажиром",
+                                    "SYSTEM"
+                            );
                             return;
                         }
 

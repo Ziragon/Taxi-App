@@ -53,7 +53,13 @@ public class TripCancellationService {
         activeTripCacheService.removeForPassenger(trip.getPassengerId());
 
         if (trip.getDriverId() != null) {
-            notificationPublisher.publishTripCancelled(trip.getDriverId(), tripId, "Отменено пассажиром");
+            notificationPublisher.publishTripCancelled(
+                    tripId,
+                    trip.getPassengerId(),
+                    null,
+                    "Отсутствует платёжный метод",
+                    "SYSTEM"
+            );
             activeTripCacheService.removeForDriver(trip.getDriverId());
         }
     }
