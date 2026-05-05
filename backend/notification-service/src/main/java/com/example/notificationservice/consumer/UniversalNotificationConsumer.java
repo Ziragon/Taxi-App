@@ -1,6 +1,9 @@
 package com.example.notificationservice.consumer;
 
+import com.example.notificationservice.client.UserServiceClient;
+import com.example.notificationservice.dto.DriverProfileSnapshot;
 import com.example.notificationservice.dto.NotificationEventDto;
+import com.example.notificationservice.dto.PassengerProfileSnapshot;
 import com.example.notificationservice.entity.Notification;
 import com.example.notificationservice.entity.enums.Channel;
 import com.example.notificationservice.entity.enums.EventType;
@@ -29,6 +32,7 @@ public class UniversalNotificationConsumer {
     private final NotificationService notificationService;
     private final ObjectMapper objectMapper;
     private final MessageConverter messageConverter;
+    private final UserServiceClient userServiceClient;
 
     @RabbitListener(queues = NOTIFICATION_QUEUE, containerFactory = "rabbitListenerContainerFactory")
     public void consume(
@@ -36,12 +40,6 @@ public class UniversalNotificationConsumer {
             @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey
     ) {
         Object rawEvent = messageConverter.fromMessage(message);
-
-        log.debug("Received event: routingKey={}, type={}, messageId={}",
-                routingKey,
-                rawEvent != null ? rawEvent.getClass().getSimpleName() : "null",
-                message.getMessageProperties().getMessageId()
-        );
 
         try {
             NotificationEventDto dto = parseEvent(rawEvent, routingKey);
@@ -52,15 +50,30 @@ public class UniversalNotificationConsumer {
             }
 
             Notification notification = notificationService.save(dto);
-            notificationService.sendToUser(notification);
-            notificationService.markSent(notification.getId());
 
-            log.info("Notification delivered: id={}, recipientId={}, event={}, routingKey={}",
-                    notification.getId(),
-                    notification.getRecipientId(),
-                    notification.getEventType(),
-                    routingKey
-            );
+            DriverProfileSnapshot driverProfile = null;
+            PassengerProfileSnapshot passengerProfile = null;
+
+            try {
+                if (routingKey.equals("notification.trip.driver_assigned")) {
+                    Map<String, Object> event = (Map<String, Object>) rawEvent;
+                    Long driverId = getLong(event, "driverId");
+                    driverProfile = userServiceClient.getDriverProfile(driverId);
+                }
+
+                if (routingKey.equals("notification.trip.offer")) {
+                    TripOfferEvent event = rawEvent instanceof TripOfferEvent e
+                            ? e
+                            : objectMapper.convertValue(rawEvent, TripOfferEvent.class);
+                    passengerProfile = userServiceClient.getPassengerProfile(event.passengerId());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to enrich notification id={} with profile: {}",
+                        notification.getId(), e.getMessage());
+            }
+
+            notificationService.sendToUser(notification, driverProfile, passengerProfile);
+            notificationService.markSent(notification.getId());
 
         } catch (Exception e) {
             log.error("Failed to process event: routingKey={}, error={}",
