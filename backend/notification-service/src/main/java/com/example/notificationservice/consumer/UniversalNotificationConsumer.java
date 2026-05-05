@@ -181,6 +181,52 @@ public class UniversalNotificationConsumer {
                 }
             }
         }
+        // парсинг предложения поездки водителю
+        if ("notification.trip.offer".equals(routingKey)) {
+            TripOfferEvent event;
+
+            if (rawEvent instanceof TripOfferEvent e) {
+                event = e;
+            } else {
+                event = objectMapper.convertValue(rawEvent, TripOfferEvent.class);
+            }
+
+            String message = String.format(
+                    "Новый заказ: %s → %s, %.1f км, %.0f мин, %.2f$",
+                    event.originAddress(),
+                    event.destinationAddress(),
+                    event.distanceKm(),
+                    event.durationMin(),
+                    event.price()
+            );
+
+            return NotificationEventDto.builder()
+                    .tripId(event.tripId())
+                    .eventType(EventType.TRIP_OFFER)
+                    .recipientType(RecipientType.DRIVER)
+                    .recipientId(event.driverId())
+                    .channel(Channel.PUSH)
+                    .message(message)
+                    .build();
+        }
+
+        if ("notification.trip.offer.expired".equals(routingKey)) {
+            Map<String, Object> event = (Map<String, Object>) rawEvent;
+
+            Long tripId = event.get("tripId") instanceof Number n ? n.longValue()
+                    : Long.parseLong(event.get("tripId").toString());
+            Long driverId = event.get("driverId") instanceof Number n ? n.longValue()
+                    : Long.parseLong(event.get("driverId").toString());
+
+            return NotificationEventDto.builder()
+                    .tripId(tripId)
+                    .eventType(EventType.TRIP_OFFER_EXPIRED)
+                    .recipientType(RecipientType.DRIVER)
+                    .recipientId(driverId)
+                    .channel(Channel.PUSH)
+                    .message("Время ответа на заказ истекло")
+                    .build();
+        }
 
         return null;
     }
