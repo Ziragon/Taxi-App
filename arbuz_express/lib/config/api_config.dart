@@ -7,4 +7,5 @@ class ApiConfig {
   static const String profilesPassenger = '$baseUrl/profiles/passenger';
   static const String vehicles = '$baseUrl/vehicles';
   static const String paymentMethods = '$baseUrl/payment-methods';
+  static const String payoutAccounts = '$baseUrl/payout-accounts';
 }
