@@ -419,7 +419,16 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
             ),
             PrimaryButton(
               label: _isDriver ? 'Добавить счёт' : 'Добавить карту',
-              onPressed: _showAddCardSheet,
+              onPressed: () {
+                if (_isDriver && _cards.isNotEmpty) {
+                  _showTopNotification(
+                    'Вы можете иметь только один счёт. Для добавления нового удалите текущий.',
+                    isError: true,
+                  );
+                  return;
+                }
+                _showAddCardSheet();
+              },
             ),
           ],
         ),
