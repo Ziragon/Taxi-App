@@ -7,6 +7,7 @@ import com.example.tripservice.client.UserServiceClient;
 import com.example.tripservice.dto.data.DriverResponseDto;
 import com.example.tripservice.entity.Trip;
 import com.example.tripservice.entity.enums.DriverReply;
+import com.example.tripservice.messaging.NotificationPublisher;
 import com.example.tripservice.messaging.TripOfferPublisher;
 import com.example.tripservice.service.external.ProfileStatusService;
 import com.example.tripservice.service.trip.TripStatusService;
@@ -31,6 +32,7 @@ public class DriverSearchService {
     private final OfferCacheService offerCacheService;
     private final ProfileStatusService profileStatusService;
 
+    private final NotificationPublisher notificationPublisher;
     private final DriverResponseSubscriber responseSubscriber;
     private final DriverResponsePublisher responsePublisher;
     private final TripOfferPublisher tripOfferPublisher;
@@ -89,6 +91,13 @@ public class DriverSearchService {
                         if (response.type() == DriverReply.ACCEPT) {
                             log.info("Driver {} accepted trip {}", response.driverId(), trip.getId());
                             tripStatusService.assignDriver(trip.getId(), response.driverId());
+                            return;
+                        }
+
+                        if (response.type() == DriverReply.CANCELLED) {
+                            log.info("Trip {} cancelled during offer to driver {}", trip.getId(), driver.driverId());
+                            notificationPublisher.publishTripCancelled(
+                                    driver.driverId(), trip.getId(), "Поездка отменена пассажиром");
                             return;
                         }
 

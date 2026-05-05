@@ -17,4 +17,8 @@ public record DriverResponseDto (
     public static DriverResponseDto timeout() {
         return new DriverResponseDto(null, DriverReply.TIMEOUT);
     }
+
+    public static DriverResponseDto cancelled() {
+        return new DriverResponseDto(null, DriverReply.CANCELLED);
+    }
 }

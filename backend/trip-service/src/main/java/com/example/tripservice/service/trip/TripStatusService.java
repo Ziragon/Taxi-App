@@ -1,7 +1,6 @@
 package com.example.tripservice.service.trip;
 
 import com.example.shared.dto.enums.VehicleClass;
-import com.example.shared.dto.event.RefundRequestedEvent;
 import com.example.shared.dto.event.TripCompletedEvent;
 import com.example.shared.exception.common.AccessDeniedException;
 import com.example.tripservice.client.PaymentServiceClient;
@@ -129,46 +128,7 @@ public class TripStatusService {
 
         notificationPublisher.publishTripCompleted(trip.getPassengerId(), tripId, trip.getPrice());
         activeTripCacheService.removeForDriver(driverId);
-    }
-
-    @Transactional
-    public void cancelTrip(Long tripId, Long passengerId) {
-        Trip trip = tripRepository.findById(tripId)
-                .orElseThrow(() -> new TripNotFoundException(tripId));
-
-        StatusValidationUtil.assertTripHasNotStatus(trip, TripStatus.COMPLETED);
-
-        if (!trip.getPassengerId().equals(passengerId)) {
-            throw new AccessDeniedException("You're not owner of this trip");
-        }
-
-        trip.setStatus(TripStatus.CANCELLED);
-        tripRepository.save(trip);
-
-        log.info("Trip {} cancelled by passenger {}", tripId, passengerId);
-
-        if (trip.getPaymentId() != null) {
-            tripEventPublisher.publishRefundRequested(new RefundRequestedEvent(
-                    trip.getId(),
-                    trip.getPassengerId(),
-                    trip.getDriverId(),
-                    trip.getPrice(),
-                    "Trip cancelled by passenger"
-            ));
-        }
-
         activeTripCacheService.removeForPassenger(trip.getPassengerId());
-
-        if (trip.getDriverId() != null) {
-            notificationPublisher.publishTripCancelled(
-                    tripId,
-                    trip.getPassengerId(),
-                    null,
-                    "Отсутствует платёжный метод",
-                    "SYSTEM"
-            );
-            activeTripCacheService.removeForDriver(trip.getDriverId());
-        }
     }
 
     @Transactional
@@ -187,10 +147,11 @@ public class TripStatusService {
                 "Водители не найдены",
                 "SYSTEM"
         );
+        activeTripCacheService.removeForPassenger(trip.getPassengerId());
     }
 
     @Transactional
-    public void cancelTripInternal(Long tripId, String message) {
+    public void cancelTripByPayment(Long tripId, String message) {
         log.warn("{} for trip {}", message, tripId);
         tripRepository.findById(tripId).ifPresent(trip -> {
             trip.setStatus(TripStatus.CANCELLED);

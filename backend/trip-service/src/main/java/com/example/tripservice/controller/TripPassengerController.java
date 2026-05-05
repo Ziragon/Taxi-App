@@ -79,9 +79,10 @@ public class TripPassengerController {
     @PostMapping("/{tripId}/cancel")
     @Operation(
             summary = "Отмена поездки",
-            description = "Позволяет пассажиру отменить поездку на этапе поиска",
+            description = "Позволяет пассажиру отменить поездку на этапе поиска и когда водитель едет к пассажиру",
             responses = {
                     @ApiResponse(responseCode = "204", description = "Поездка успешно отменена"),
+                    @ApiResponse(responseCode = "422", description = "Невозможно отменить поездку когда она уже в процессе")
             }
     )
     public ResponseEntity<Void> cancelTrip(

@@ -50,12 +50,12 @@ public class TripService {
 
         } catch (FeignException.NotFound _) {
             log.warn("Payment method not found for user {}", userId);
-            tripStatusService.cancelTripInternal(tripId, "Payment failed");
+            tripStatusService.cancelTripByPayment(tripId, "Payment failed");
             throw new PaymentMethodNotFoundException(userId);
 
         } catch (Exception e) {
             log.error("Payment failed for trip {}: {}", tripId, e.getMessage());
-            tripStatusService.cancelTripInternal(tripId, "Payment failed");
+            tripStatusService.cancelTripByPayment(tripId, "Payment failed");
             throw new TripBookingException("Payment failed, trip cancelled");
         }
     }

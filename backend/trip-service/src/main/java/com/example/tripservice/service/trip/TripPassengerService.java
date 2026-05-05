@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TripPassengerService {
 
     private final TripCreationService tripCreationService;
-    private final TripStatusService tripStatusService;
+    private final TripCancellationService tripCancellationService;
     private final TripService tripService;
 
     public TripDto createTrip(Long userId, TripCreateDto dto) {
@@ -29,7 +29,7 @@ public class TripPassengerService {
     }
 
     public void cancelTrip(Long tripId, Long passengerId) {
-        tripStatusService.cancelTrip(tripId, passengerId);
+        tripCancellationService.cancelTrip(tripId, passengerId);
     }
 
     @Transactional(readOnly = true)

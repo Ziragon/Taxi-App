@@ -25,6 +25,13 @@ public class DriverResponseSubscriber {
         pendingOffers.remove(tripId);
     }
 
+    public void cancelFuture(Long tripId) {
+        CompletableFuture<DriverResponseDto> future = pendingOffers.get(tripId);
+        if (future != null) {
+            future.complete(DriverResponseDto.cancelled());
+        }
+    }
+
     // При получении сообщения из redis вызывается метод
     @SuppressWarnings("unused") // onMessage указан в RedisConfig
     public void onMessage(String message) {
