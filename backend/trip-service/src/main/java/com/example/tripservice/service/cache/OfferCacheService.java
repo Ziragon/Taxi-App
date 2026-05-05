@@ -15,6 +15,7 @@ import java.time.Duration;
 public class OfferCacheService {
 
     private final RedisTemplate<String, Long> longRedisTemplate;
+    private static final String DRIVER_BUSY_KEY = "driver_busy:";
 
     @Value("${searching.duration}")
     private int searchDuration;
@@ -46,5 +47,19 @@ public class OfferCacheService {
                     driverId, tripId, expected);
             throw new AccessDeniedException();
         }
+    }
+
+    // Блокировка водителя на время предложения о заказе
+    public boolean tryLockDriver(Long driverId, Long tripId) {
+        Boolean locked = longRedisTemplate.opsForValue().setIfAbsent(
+                DRIVER_BUSY_KEY + driverId,
+                tripId,
+                Duration.ofSeconds(searchDuration + 5L)
+        );
+        return Boolean.TRUE.equals(locked);
+    }
+
+    public void unlockDriver(Long driverId) {
+        longRedisTemplate.delete(DRIVER_BUSY_KEY + driverId);
     }
 }

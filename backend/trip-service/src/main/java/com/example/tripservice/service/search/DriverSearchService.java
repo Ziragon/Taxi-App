@@ -64,66 +64,36 @@ public class DriverSearchService {
     @Async
     public void searchDrivers(Trip trip, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {
         Set<Long> alreadyOffered = new HashSet<>();
-
         try {
             for (int radius : radiuses) {
                 log.debug("Driver searching with radius {}", radius);
-
-                List<DriverLocationDto> drivers = getNearbyDrivers(
-                        longitude, latitude, BigDecimal.valueOf(radius), vehicleClass)
+                for (DriverLocationDto driver : getNearbyDrivers(longitude, latitude, BigDecimal.valueOf(radius), vehicleClass)
                         .stream()
                         .filter(d -> !alreadyOffered.contains(d.driverId()))
-                        .toList();
+                        .toList()) {
 
-                for (DriverLocationDto driver : drivers) {
                     alreadyOffered.add(driver.driverId());
 
-                    CompletableFuture<DriverResponseDto> future = new CompletableFuture<DriverResponseDto>()
-                            .completeOnTimeout(DriverResponseDto.timeout(), searchDuration, TimeUnit.SECONDS);
+                    if (!offerCacheService.tryLockDriver(driver.driverId(), trip.getId())) {
+                        log.debug("Driver {} is already busy, skipping", driver.driverId());
+                        continue;
+                    }
 
-                    responseSubscriber.registerFuture(trip.getId(), future);
+                    DriverReply result = sendOfferAndAwaitReply(trip, driver.driverId());
 
-                    try {
-                        offerCacheService.setActiveOffer(trip.getId(), driver.driverId());
-                        tripOfferPublisher.publishOffer(trip, driver.driverId());
-
-                        DriverResponseDto response = future.join();
-
-                        if (response.type() == DriverReply.ACCEPT) {
-                            log.info("Driver {} accepted trip {}", response.driverId(), trip.getId());
-                            tripStatusService.assignDriver(trip.getId(), response.driverId());
-                            return;
-                        }
-
-                        if (response.type() == DriverReply.CANCELLED) {
-                            log.info("Trip {} cancelled during offer to driver {}", trip.getId(), driver.driverId());
-                            notificationPublisher.publishTripCancelled(
-                                    trip.getId(),
-                                    trip.getPassengerId(),
-                                    null,
-                                    "Поездка отменена пассажиром",
-                                    "SYSTEM"
-                            );
-                            return;
-                        }
-
-                        if (response.type() == DriverReply.TIMEOUT) {
-                            log.debug("Driver {} timed out for trip {}", driver.driverId(), trip.getId());
-                            tripOfferPublisher.publishOfferExpired(trip.getId(), driver.driverId());
-                        } else {
-                            log.debug("Driver {} rejected trip {}", driver.driverId(), trip.getId());
-                        }
-
-                    } finally {
-                        responseSubscriber.removeFuture(trip.getId());
-                        offerCacheService.removeActiveOffer(trip.getId());
+                    if (result == DriverReply.ACCEPT) {
+                        tripStatusService.assignDriver(trip.getId(), driver.driverId());
+                        return;
+                    }
+                    if (result == DriverReply.CANCELLED) {
+                        notificationPublisher.publishTripCancelled(trip.getId(), trip.getPassengerId(),
+                                null, "Поездка отменена пассажиром", "SYSTEM");
+                        return;
                     }
                 }
             }
-
             log.info("Drivers for trip {} not found after all radiuses", trip.getId());
             tripStatusService.cancelSearch(trip.getId());
-
         } catch (Exception e) {
             log.error("Global error during driver search for trip {}", trip.getId(), e);
         }
@@ -141,5 +111,26 @@ public class DriverSearchService {
         offerCacheService.validateAndRemoveActiveOffer(tripId, driverId);
         log.info("Driver {} rejected offer for trip {}", driverId, tripId);
         responsePublisher.publish(tripId, "REJECT", driverId);
+    }
+
+    private DriverReply sendOfferAndAwaitReply(Trip trip, Long driverId) {
+        CompletableFuture<DriverResponseDto> future = new CompletableFuture<DriverResponseDto>()
+                .completeOnTimeout(DriverResponseDto.timeout(), searchDuration, TimeUnit.SECONDS);
+
+        responseSubscriber.registerFuture(trip.getId(), future);
+        offerCacheService.setActiveOffer(trip.getId(), driverId);
+        tripOfferPublisher.publishOffer(trip, driverId);
+
+        try {
+            DriverResponseDto response = future.join();
+            if (response.type() == DriverReply.TIMEOUT) {
+                tripOfferPublisher.publishOfferExpired(trip.getId(), driverId);
+            }
+            return response.type();
+        } finally {
+            responseSubscriber.removeFuture(trip.getId());
+            offerCacheService.removeActiveOffer(trip.getId());
+            offerCacheService.unlockDriver(driverId);
+        }
     }
 }
