@@ -70,7 +70,7 @@ public class TripDriverController {
             summary = "Начать поездку",
             description = "Отметка о том, что пассажир в машине. Статус меняется на IN_PROGRESS",
             responses = {
-                    @ApiResponse(responseCode = "204", description = "Поездка начата")
+                    @ApiResponse(responseCode = "200", description = "Поездка начата")
             }
     )
     public ResponseEntity<Void> startTrip(
