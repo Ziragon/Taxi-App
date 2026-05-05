@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 @Schema(description = "Событие: поездка завершена")
-public record TripInProgressEvent(
+public record TripCompletedEvent(
 
         @Schema(description = "ID поездки", example = "123")
         Long tripId,

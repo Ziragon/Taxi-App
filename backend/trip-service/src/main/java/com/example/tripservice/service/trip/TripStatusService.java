@@ -2,7 +2,7 @@ package com.example.tripservice.service.trip;
 
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.dto.event.RefundRequestedEvent;
-import com.example.shared.dto.event.TripInProgressEvent;
+import com.example.shared.dto.event.TripCompletedEvent;
 import com.example.shared.exception.common.AccessDeniedException;
 import com.example.tripservice.client.PaymentServiceClient;
 import com.example.tripservice.dto.client.PaymentMethodResponse;
@@ -100,15 +100,6 @@ public class TripStatusService {
         Trip trip = getTripForDriver(tripId, driverId);
         StatusValidationUtil.assertTripHasStatus(trip, TripStatus.DRIVER_ASSIGNED);
 
-        tripEventPublisher.publishTripInProgress(new TripInProgressEvent(
-                trip.getId(),
-                trip.getPassengerId(),
-                trip.getDriverId(),
-                trip.getPrice(),
-                "rub",
-                Instant.now()
-        ));
-
         trip.setStatus(TripStatus.IN_PROGRESS);
         tripRepository.save(trip);
 
@@ -123,6 +114,16 @@ public class TripStatusService {
 
         trip.setStatus(TripStatus.COMPLETED);
         tripRepository.save(trip);
+
+        // Оплата заказа
+        tripEventPublisher.publishTripCompleted(new TripCompletedEvent(
+                trip.getId(),
+                trip.getPassengerId(),
+                trip.getDriverId(),
+                trip.getPrice(),
+                "rub",
+                Instant.now()
+        ));
 
         log.info("Trip {} completed by driver {}, publishing TripCompletedEvent", tripId, driverId);
 
