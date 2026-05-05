@@ -83,6 +83,16 @@ public class TripService {
         );
     }
 
+    public RouteDto getRouteForTrip(Long tripId) {
+        Trip trip = tripRepository.findById(tripId)
+                .orElseThrow(() -> new TripNotFoundException(tripId));
+
+        return navigationService.getRouteInfo(
+                trip.getOriginLng(), trip.getOriginLat(),
+                trip.getDestinationLng(), trip.getDestinationLat()
+        );
+    }
+
     @Transactional(readOnly = true)
     public TripDto getTripById(Long userId, Long tripId) {
         Trip trip = tripRepository.findById(tripId)

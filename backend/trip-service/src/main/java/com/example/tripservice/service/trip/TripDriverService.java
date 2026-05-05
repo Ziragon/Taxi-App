@@ -28,8 +28,9 @@ public class TripDriverService {
         driverSearchService.handleDriverReject(tripId, driverId);
     }
 
-    public void startTrip(Long tripId, Long driverId) {
+    public RouteDto startTrip(Long tripId, Long driverId) {
         tripStatusService.startTrip(tripId, driverId);
+        return tripService.getRouteForTrip(tripId);
     }
 
     public void completeTrip(Long tripId, Long driverId) {

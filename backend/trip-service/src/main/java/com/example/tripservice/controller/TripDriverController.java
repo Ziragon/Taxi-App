@@ -76,11 +76,12 @@ public class TripDriverController {
                     @ApiResponse(responseCode = "200", description = "Поездка начата")
             }
     )
-    public ResponseEntity<Void> startTrip(
+    public ResponseEntity<RouteResponse> startTrip(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Long tripId) {
-        tripDriverService.startTrip(tripId, principal.userId());
-        return ResponseEntity.noContent().build();
+            @PathVariable Long tripId
+    ) {
+        RouteDto route = tripDriverService.startTrip(tripId, principal.userId());
+        return ResponseEntity.ok(RouteResponse.from(route));
     }
 
     @PostMapping("/{tripId}/complete")
