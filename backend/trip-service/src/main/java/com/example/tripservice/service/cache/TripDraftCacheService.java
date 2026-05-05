@@ -1,4 +1,4 @@
-package com.example.tripservice.service.trip;
+package com.example.tripservice.service.cache;
 
 import com.example.tripservice.dto.data.TripDraftDto;
 import lombok.RequiredArgsConstructor;

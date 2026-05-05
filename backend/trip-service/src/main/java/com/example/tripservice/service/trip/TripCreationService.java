@@ -8,6 +8,8 @@ import com.example.tripservice.entity.Trip;
 import com.example.tripservice.entity.enums.TripStatus;
 import com.example.tripservice.exception.TripDraftExpiredException;
 import com.example.tripservice.repository.TripRepository;
+import com.example.tripservice.service.cache.ActiveTripCacheService;
+import com.example.tripservice.service.cache.TripDraftCacheService;
 import com.example.tripservice.service.external.ProfileStatusService;
 import com.example.tripservice.service.external.TripDataAggregator;
 import com.example.tripservice.service.pricing.PriceService;

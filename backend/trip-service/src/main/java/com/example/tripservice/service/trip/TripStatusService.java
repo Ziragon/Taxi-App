@@ -15,6 +15,7 @@ import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.messaging.NotificationPublisher;
 import com.example.tripservice.messaging.TripEventPublisher;
 import com.example.tripservice.repository.TripRepository;
+import com.example.tripservice.service.cache.ActiveTripCacheService;
 import com.example.tripservice.service.pricing.TariffService;
 import com.example.tripservice.util.StatusValidationUtil;
 import feign.FeignException;

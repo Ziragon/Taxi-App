@@ -10,7 +10,7 @@ import com.example.tripservice.service.external.ProfileStatusService;
 import com.example.tripservice.service.search.DriverResponsePublisher;
 import com.example.tripservice.service.search.DriverResponseSubscriber;
 import com.example.tripservice.service.search.DriverSearchService;
-import com.example.tripservice.service.search.OfferCacheService;
+import com.example.tripservice.service.cache.OfferCacheService;
 import com.example.tripservice.service.trip.TripStatusService;
 import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;

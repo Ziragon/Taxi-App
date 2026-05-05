@@ -1,4 +1,4 @@
-package com.example.tripservice.service.search;
+package com.example.tripservice.service.cache;
 
 import com.example.shared.exception.common.AccessDeniedException;
 import lombok.RequiredArgsConstructor;

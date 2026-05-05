@@ -1,5 +1,6 @@
 package com.example.tripservice.unit.service;
 
+import com.example.tripservice.dto.data.DriverResponseDto;
 import com.example.tripservice.service.search.DriverResponseSubscriber;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,20 +27,18 @@ class DriverResponseSubscriberTest {
     @Test
     @DisplayName("ACCEPT: future завершается с driverId")
     void onMessage_accept_completesFutureWithDriverId() throws Exception {
-        CompletableFuture<Long> future = new CompletableFuture<>();
+        CompletableFuture<DriverResponseDto> future = new CompletableFuture<>();
         subscriber.registerFuture(10L, future);
 
         subscriber.onMessage("ACCEPT:10:99");
 
-        assertThat(future.get(1, TimeUnit.SECONDS)).isEqualTo(99L);
+        assertThat(future.get(1, TimeUnit.SECONDS).driverId()).isEqualTo(99L);
     }
-
-    // ─── onMessage: REJECT ────────────────────────────────────────────────────
 
     @Test
     @DisplayName("REJECT: future завершается с CancellationException")
     void onMessage_reject_completesFutureExceptionally() {
-        CompletableFuture<Long> future = new CompletableFuture<>();
+        CompletableFuture<DriverResponseDto> future = new CompletableFuture<>();
         subscriber.registerFuture(10L, future);
 
         subscriber.onMessage("REJECT:10:99");
@@ -49,12 +48,10 @@ class DriverResponseSubscriberTest {
                 .isInstanceOf(CancellationException.class);
     }
 
-    // ─── onMessage: неизвестный action ───────────────────────────────────────
-
     @Test
     @DisplayName("Неизвестный action: future остаётся незавершённой")
     void onMessage_unknownAction_futureNotCompleted() {
-        CompletableFuture<Long> future = new CompletableFuture<>();
+        CompletableFuture<DriverResponseDto> future = new CompletableFuture<>();
         subscriber.registerFuture(10L, future);
 
         subscriber.onMessage("UNKNOWN:10:42");
@@ -62,16 +59,12 @@ class DriverResponseSubscriberTest {
         assertThat(future).isNotDone();
     }
 
-    // ─── onMessage: future не зарегистрирована ────────────────────────────────
-
     @Test
     @DisplayName("Нет зарегистрированной future: сообщение игнорируется без исключений")
     void onMessage_noFutureRegistered_doesNotThrow() {
         assertThatCode(() -> subscriber.onMessage("ACCEPT:999:42"))
                 .doesNotThrowAnyException();
     }
-
-    // ─── onMessage: невалидный формат ─────────────────────────────────────────
 
     @Test
     @DisplayName("Невалидный формат сообщения: исключение поглощается внутри")

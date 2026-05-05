@@ -1,6 +1,7 @@
 package com.example.tripservice.integration;
 
 import com.example.tripservice.BaseIntegrationTest;
+import com.example.tripservice.dto.data.DriverResponseDto;
 import com.example.tripservice.service.search.DriverResponsePublisher;
 import com.example.tripservice.service.search.DriverResponseSubscriber;
 import org.junit.jupiter.api.DisplayName;
@@ -30,12 +31,12 @@ class DriverResponseIntegrationTest extends BaseIntegrationTest {
         Long tripId   = 100L;
         Long driverId = 42L;
 
-        CompletableFuture<Long> future = new CompletableFuture<>();
+        CompletableFuture<DriverResponseDto> future = new CompletableFuture<>();
         subscriber.registerFuture(tripId, future);
 
         publisher.publish(tripId, "ACCEPT", driverId);
 
-        assertThat(future.get(AWAIT_SECONDS, TimeUnit.SECONDS)).isEqualTo(driverId);
+        assertThat(future.get(AWAIT_SECONDS, TimeUnit.SECONDS).driverId()).isEqualTo(driverId);
     }
 
     @Test
@@ -44,7 +45,7 @@ class DriverResponseIntegrationTest extends BaseIntegrationTest {
         Long tripId   = 101L;
         Long driverId = 77L;
 
-        CompletableFuture<Long> future = new CompletableFuture<>();
+        CompletableFuture<DriverResponseDto> future = new CompletableFuture<>();
         subscriber.registerFuture(tripId, future);
 
         publisher.publish(tripId, "REJECT", driverId);
@@ -59,16 +60,16 @@ class DriverResponseIntegrationTest extends BaseIntegrationTest {
         Long tripId1   = 200L; Long driverId1 = 11L;
         Long tripId2   = 201L; Long driverId2 = 22L;
 
-        CompletableFuture<Long> future1 = new CompletableFuture<>();
-        CompletableFuture<Long> future2 = new CompletableFuture<>();
+        CompletableFuture<DriverResponseDto> future1 = new CompletableFuture<>();
+        CompletableFuture<DriverResponseDto> future2 = new CompletableFuture<>();
         subscriber.registerFuture(tripId1, future1);
         subscriber.registerFuture(tripId2, future2);
 
         publisher.publish(tripId1, "ACCEPT", driverId1);
         publisher.publish(tripId2, "ACCEPT", driverId2);
 
-        assertThat(future1.get(AWAIT_SECONDS, TimeUnit.SECONDS)).isEqualTo(driverId1);
-        assertThat(future2.get(AWAIT_SECONDS, TimeUnit.SECONDS)).isEqualTo(driverId2);
+        assertThat(future1.get(AWAIT_SECONDS, TimeUnit.SECONDS).driverId()).isEqualTo(driverId1);
+        assertThat(future2.get(AWAIT_SECONDS, TimeUnit.SECONDS).driverId()).isEqualTo(driverId2);
     }
 
     @Test
@@ -83,7 +84,7 @@ class DriverResponseIntegrationTest extends BaseIntegrationTest {
     void publish_afterRemoveFuture_futureNotCompleted() throws Exception {
         Long tripId = 300L;
 
-        CompletableFuture<Long> future = new CompletableFuture<>();
+        CompletableFuture<DriverResponseDto> future = new CompletableFuture<>();
         subscriber.registerFuture(tripId, future);
         subscriber.removeFuture(tripId);
 
@@ -100,11 +101,11 @@ class DriverResponseIntegrationTest extends BaseIntegrationTest {
         Long driverId1 = 55L;
         Long driverId2 = 66L;
 
-        CompletableFuture<Long> future = new CompletableFuture<>();
+        CompletableFuture<DriverResponseDto> future = new CompletableFuture<>();
         subscriber.registerFuture(tripId, future);
 
         publisher.publish(tripId, "ACCEPT", driverId1);
-        Long result = future.get(AWAIT_SECONDS, TimeUnit.SECONDS);
+        Long result = future.get(AWAIT_SECONDS, TimeUnit.SECONDS).driverId();
 
         assertThatCode(() -> publisher.publish(tripId, "ACCEPT", driverId2))
                 .doesNotThrowAnyException();
