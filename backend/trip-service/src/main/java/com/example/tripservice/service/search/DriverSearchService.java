@@ -59,9 +59,6 @@ public class DriverSearchService {
     @Async
     public void searchDrivers(Trip trip, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {
 
-        Trip trip = tripRepository.findById(tripId)
-                .orElseThrow(() -> new TripNotFoundException(tripId));
-
         Set<Long> alreadyOffered = new HashSet<>();
         CompletableFuture<Long> future = new CompletableFuture<>();
         responseSubscriber.registerFuture(trip.getId(), future);
