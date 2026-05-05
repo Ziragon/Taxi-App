@@ -41,7 +41,7 @@ class OfferCacheServiceIntegrationTest extends BaseIntegrationTest {
 
         offerCacheService.setActiveOffer(tripId, driverId);
 
-        offerCacheService.validateActiveOffer(tripId, driverId);
+        offerCacheService.validateAndRemoveActiveOffer(tripId, driverId);
     }
 
     @Test
@@ -54,7 +54,7 @@ class OfferCacheServiceIntegrationTest extends BaseIntegrationTest {
         offerCacheService.setActiveOffer(tripId, actualDriverId);
 
         assertThrows(AccessDeniedException.class, () ->
-                offerCacheService.validateActiveOffer(tripId, wrongDriverId)
+                offerCacheService.validateAndRemoveActiveOffer(tripId, wrongDriverId)
         );
     }
 
@@ -77,7 +77,7 @@ class OfferCacheServiceIntegrationTest extends BaseIntegrationTest {
         Long driverId = 1000L;
 
         assertThrows(AccessDeniedException.class, () ->
-                offerCacheService.validateActiveOffer(tripId, driverId)
+                offerCacheService.validateAndRemoveActiveOffer(tripId, driverId)
         );
     }
 }

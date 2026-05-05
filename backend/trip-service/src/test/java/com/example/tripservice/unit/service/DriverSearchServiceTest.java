@@ -65,7 +65,7 @@ class DriverSearchServiceTest {
 
         driverSearchService.handleDriverAccept(tripId, driverId);
 
-        verify(offerCacheService).validateActiveOffer(tripId, driverId);
+        verify(offerCacheService).validateAndRemoveActiveOffer(tripId, driverId);
         verify(responsePublisher).publish(tripId, "ACCEPT", driverId);
     }
 
@@ -77,7 +77,7 @@ class DriverSearchServiceTest {
 
         driverSearchService.handleDriverReject(tripId, driverId);
 
-        verify(offerCacheService).validateActiveOffer(tripId, driverId);
+        verify(offerCacheService).validateAndRemoveActiveOffer(tripId, driverId);
         verify(responsePublisher).publish(tripId, "REJECT", driverId);
     }
 
