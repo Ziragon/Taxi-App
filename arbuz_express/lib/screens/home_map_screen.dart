@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:arbuz_express/screens/profile_screen.dart';
-import 'package:arbuz_express/screens/homeScreensWidgets/verification_banner.dart';
 import 'package:arbuz_express/screens/homeScreensWidgets/search_results_list.dart';
 import 'package:arbuz_express/screens/homeScreensWidgets/collapsible_bottom_card.dart';
 import 'package:arbuz_express/screens/homeScreensWidgets/active_order_card.dart';
@@ -20,14 +19,7 @@ import 'package:http/http.dart' as http;
 import 'homeScreensWidgets/stats_bottom_sheet.dart';
 
 class HomeMapScreen extends StatefulWidget {
-  const HomeMapScreen({
-    super.key,
-    this.isDriver = false,
-    this.showVerificationBanner = false,
-  });
-
-  final bool isDriver;
-  final bool showVerificationBanner;
+  const HomeMapScreen({super.key});
 
   @override
   State<HomeMapScreen> createState() => _HomeMapScreenState();
@@ -73,7 +65,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
       _mapController.move(_currentPosition!, 15.0);
       _updateRoute();
     } catch (e) {
-      debugPrint('Error getting location: $e');
+      debugPrint(e.toString());
     }
   }
 
@@ -104,7 +96,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Error getting suggestions: $e');
+      debugPrint(e.toString());
     }
   }
 
@@ -207,7 +199,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
       setState(() {
         _toController.text = '';
       });
-      debugPrint('Error setting destination: $e');
+      debugPrint(e.toString());
     }
   }
 
@@ -232,7 +224,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
 
       _buildRouteFromResponse(tripData);
     } catch (e) {
-      debugPrint('Error updating route: $e');
+      debugPrint(e.toString());
       _buildRouteFallback();
     }
   }
@@ -326,7 +318,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
         ),
       );
     } catch (e) {
-      debugPrint('Error fitting camera: $e');
+      debugPrint(e.toString());
       _buildRouteFallback();
     }
   }
@@ -342,7 +334,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
         ),
       );
     } catch (e) {
-      debugPrint('Error fitting camera: $e');
+      debugPrint(e.toString());
     }
   }
 
@@ -540,13 +532,6 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
               ),
             ),
           ),
-          if (widget.showVerificationBanner)
-            const Positioned(
-              top: 76,
-              left: 0,
-              right: 0,
-              child: SafeArea(child: VerificationBanner()),
-            ),
           SafeArea(
             child: Column(
               children: [
@@ -575,13 +560,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
                           carNumber: _orderOptions['carNumber'] ?? 'А123ВС',
                           waitTime: '5-7 мин',
                           avatarUrl: _orderOptions['avatarUrl'],
-                          onCall: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Звонок водителю...'),
-                              ),
-                            );
-                          },
+                          onCall: () {},
                           onIAmHere: _cancelOrder,
                         )
                       : CollapsibleBottomCard(
