@@ -45,4 +45,15 @@ public class OfferCacheService {
             throw new AccessDeniedException();
         }
     }
+
+    public void validateAndRemoveActiveOffer(Long tripId, Long driverId) {
+        String key = ACTIVE_OFFER_KEY + tripId;
+        Long expected = longRedisTemplate.opsForValue().getAndDelete(key);
+
+        if (expected == null || !expected.equals(driverId)) {
+            log.warn("Driver {} tried to respond to trip {} but offer was sent to driver {}",
+                    driverId, tripId, expected);
+            throw new AccessDeniedException();
+        }
+    }
 }
