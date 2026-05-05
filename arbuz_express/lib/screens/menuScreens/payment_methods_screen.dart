@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:arbuz_express/hooks/use_payment.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
+import 'package:arbuz_express/services/token_storage.dart';
 
 class PaymentMethodsScreen extends StatefulWidget {
   const PaymentMethodsScreen({super.key});
@@ -10,12 +12,33 @@ class PaymentMethodsScreen extends StatefulWidget {
 }
 
 class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
-  List<String> cards = ['**** **** **** 4412', '**** **** **** 8890'];
+  final _usePayment = UsePayment();
+  List<Map<String, dynamic>> _cards = [];
+  bool _isLoading = true;
+  int? _settingDefaultId;
+
+  bool get _isDriver => TokenStorage.userRole == 'driver';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCards();
+  }
+
+  Future<void> _loadCards() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    final cards = await _usePayment.getPaymentMethods();
+    if (!mounted) return;
+    setState(() {
+      _cards = cards;
+      _isLoading = false;
+    });
+  }
 
   void _showTopNotification(String message, {bool isError = false}) {
     OverlayState? overlayState = Overlay.of(context);
     late OverlayEntry overlayEntry;
-
     overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         top: MediaQuery.of(context).padding.top + 10,
@@ -62,188 +85,202 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
         ),
       ),
     );
-
     overlayState.insert(overlayEntry);
     Future.delayed(const Duration(seconds: 3), () => overlayEntry.remove());
   }
 
   void _showAddCardSheet() {
-    final numberController = TextEditingController();
-    final dateController = TextEditingController();
-    final cvvController = TextEditingController();
+    CardFieldInputDetails? cardDetails;
+    final ValueNotifier<bool> isValidNotifier = ValueNotifier(false);
+    final ValueNotifier<bool> isSubmittingNotifier = ValueNotifier(false);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black.withOpacity(0.7),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          bool isFormValid() {
-            return numberController.text.length == 19 &&
-                dateController.text.length == 5 &&
-                cvvController.text.length == 3;
-          }
-
-          void updateState() => setModalState(() {});
-
-          return Container(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: GlassCard(
-              radius: 32,
-              padding: const EdgeInsets.fromLTRB(32, 12, 32, 32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 24),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: SingleChildScrollView(
+          child: GlassCard(
+            radius: 32,
+            padding: const EdgeInsets.fromLTRB(32, 12, 32, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Text(
+                  _isDriver ? 'Новый счёт' : 'Новая карта',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4, bottom: 8),
+                      child: Text(
+                        'ДАННЫЕ КАРТЫ',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.4),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const Text(
-                    'Новая карта',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildField(
-                    'Номер карты',
-                    '0000 0000 0000 0000',
-                    Icons.credit_card,
-                    numberController,
-                    TextInputType.number,
-                    19,
-                    [
-                      FilteringTextInputFormatter.digitsOnly,
-                      CardNumberFormatter(),
-                    ],
-                    onChanged: (_) => updateState(),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildField(
-                          'Срок действия',
-                          'ММ/ГГ',
-                          Icons.calendar_today,
-                          dateController,
-                          TextInputType.number,
-                          5,
-                          [
-                            FilteringTextInputFormatter.digitsOnly,
-                            CardDateFormatter(),
-                          ],
-                          onChanged: (_) => updateState(),
+                        color: Colors.white.withOpacity(0.04),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.06),
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildField(
-                          'CVV',
-                          '123',
-                          Icons.lock_outline,
-                          cvvController,
-                          TextInputType.number,
-                          3,
-                          [FilteringTextInputFormatter.digitsOnly],
-                          onChanged: (_) => updateState(),
+                      child: CardField(
+                        enablePostalCode: false,
+                        autofocus: true,
+                        cursorColor: const Color(0xFFFFC107),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          height: 1.4,
                         ),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        numberHintText: '•••• •••• •••• ••••',
+                        expirationHintText: 'MM/YY',
+                        cvcHintText: 'CVC',
+                        onCardChanged: (details) {
+                          cardDetails = details;
+                          isValidNotifier.value = details?.complete ?? false;
+                        },
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  Opacity(
-                    opacity: isFormValid() ? 1.0 : 0.5,
-                    child: PrimaryButton(
-                      label: 'Привязать карту',
-                      onPressed: isFormValid()
-                          ? () {
-                              final lastFour = numberController.text.substring(
-                                numberController.text.length - 4,
-                              );
-                              Navigator.pop(context);
-                              setState(() {
-                                cards.add('**** **** **** $lastFour');
-                              });
-                              _showTopNotification(
-                                'Карта **** $lastFour успешно добавлена',
-                              );
-                            }
-                          : () {},
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                ValueListenableBuilder<bool>(
+                  valueListenable: isValidNotifier,
+                  builder: (context, isValid, child) {
+                    return ValueListenableBuilder<bool>(
+                      valueListenable: isSubmittingNotifier,
+                      builder: (context, isSubmitting, child) {
+                        final bool canSubmit = isValid && !isSubmitting;
+                        return Opacity(
+                          opacity: canSubmit ? 1.0 : 0.5,
+                          child: PrimaryButton(
+                            label: _isDriver
+                                ? 'Привязать счёт'
+                                : 'Привязать карту',
+                            onPressed: canSubmit
+                                ? () async {
+                                    isSubmittingNotifier.value = true;
+                                    try {
+                                      final credentialId = await _usePayment
+                                          .createStripeCredential(
+                                            cardholderName: 'User',
+                                            postalCode: cardDetails?.postalCode,
+                                          );
+
+                                      if (credentialId != null) {
+                                        final lastFour =
+                                            cardDetails?.last4 ?? '';
+
+                                        await _usePayment
+                                            .addPaymentMethodToBackend(
+                                              credentialId,
+                                              lastFour,
+                                            );
+                                        if (mounted) {
+                                          Navigator.pop(context);
+                                          _loadCards();
+                                          _showTopNotification(
+                                            _isDriver
+                                                ? 'Счёт привязан'
+                                                : 'Карта привязана',
+                                          );
+                                        }
+                                      } else {
+                                        isSubmittingNotifier.value = false;
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        isSubmittingNotifier.value = false;
+                                        Navigator.pop(context);
+                                        _showTopNotification(
+                                          e.toString(),
+                                          isError: true,
+                                        );
+                                      }
+                                    }
+                                  }
+                                : () {},
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildField(
-    String label,
-    String hint,
-    IconData icon,
-    TextEditingController controller,
-    TextInputType type,
-    int maxLength,
-    List<TextInputFormatter>? formatters, {
-    required Function(String) onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
-          ),
-          child: TextField(
-            controller: controller,
-            keyboardType: type,
-            inputFormatters: formatters,
-            maxLength: maxLength,
-            onChanged: onChanged,
-            style: const TextStyle(color: Colors.white, letterSpacing: 1.5),
-            decoration: InputDecoration(
-              counterText: '',
-              icon: Icon(icon, color: const Color(0xFFFFC107), size: 20),
-              border: InputBorder.none,
-              hintText: hint,
-              hintStyle: TextStyle(
-                color: Colors.white.withOpacity(0.15),
-                letterSpacing: 1.5,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
+  String _formatCardLabel(Map<String, dynamic> card) {
+    final last4 = (card['lastFour'] as String?) ?? '';
+    final brand = (card['cardBrand'] as String?) ?? '';
+    if (_isDriver) {
+      return 'Счёт •••• $last4';
+    }
+    return '${brand.toUpperCase()} •••• $last4';
+  }
+
+  Future<void> _deleteCard(Map<String, dynamic> card) async {
+    final id = card['id'] as int;
+    final success = await _usePayment.deletePaymentMethod(id);
+    if (success) {
+      await _loadCards();
+      _showTopNotification('Удалено', isError: true);
+    }
+  }
+
+  Future<void> _setDefault(Map<String, dynamic> card) async {
+    final id = card['id'] as int;
+    setState(() => _settingDefaultId = id);
+    final success = await _usePayment.setDefaultPaymentMethod(id);
+    if (success) {
+      await _loadCards();
+      _showTopNotification('Обновлено');
+    }
+    setState(() => _settingDefaultId = null);
   }
 
   @override
@@ -265,9 +302,9 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
             ),
           ),
         ),
-        title: const Text(
-          'Способы оплаты',
-          style: TextStyle(
+        title: Text(
+          _isDriver ? 'Счета для выплат' : 'Способы оплаты',
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -279,75 +316,99 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
         child: Column(
           children: [
             Expanded(
-              child: cards.isEmpty
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFFFC107),
+                      ),
+                    )
+                  : _cards.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.sentiment_very_dissatisfied,
-                            size: 80,
-                            color: Colors.white.withOpacity(0.1),
+                            _isDriver
+                                ? Icons.account_balance
+                                : Icons.credit_card_off,
+                            size: 64,
+                            color: Colors.white10,
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 16),
                           const Text(
-                            'Пусто...',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Если нечем платить, возьмём в рабство',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.4),
-                              fontSize: 15,
-                            ),
+                            'Список пуст',
+                            style: TextStyle(color: Colors.white),
                           ),
                         ],
                       ),
                     )
                   : ListView.builder(
-                      itemCount: cards.length,
+                      itemCount: _cards.length,
                       itemBuilder: (context, index) {
+                        final card = _cards[index];
+                        final isDefault = card['isDefault'] == true;
+                        final id = card['id'] as int;
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: GlassCard(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
-                            ),
+                            padding: const EdgeInsets.all(16),
                             child: Row(
                               children: [
-                                const Icon(
-                                  Icons.credit_card,
-                                  color: Color(0xFFFFC107),
+                                Icon(
+                                  _isDriver
+                                      ? Icons.account_balance
+                                      : Icons.credit_card,
+                                  color: isDefault
+                                      ? const Color(0xFFFFC107)
+                                      : Colors.white38,
                                 ),
                                 const SizedBox(width: 16),
-                                Text(
-                                  cards[index],
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _formatCardLabel(card),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      if (isDefault) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _isDriver ? 'Основной' : 'Основная',
+                                          style: const TextStyle(
+                                            color: Color(0xFFFFC107),
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ),
-                                const Spacer(),
+                                if (!isDefault)
+                                  _settingDefaultId == id
+                                      ? const SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : IconButton(
+                                          icon: const Icon(
+                                            Icons.star_border,
+                                            color: Colors.white54,
+                                          ),
+                                          onPressed: () => _setDefault(card),
+                                        ),
                                 IconButton(
                                   icon: const Icon(
                                     Icons.delete_outline,
-                                    color: Color(0xFFFF5722),
+                                    color: Colors.redAccent,
                                   ),
-                                  onPressed: () {
-                                    final cardName = cards[index];
-                                    setState(() => cards.removeAt(index));
-                                    _showTopNotification(
-                                      'Карта $cardName удалена',
-                                      isError: true,
-                                    );
-                                  },
+                                  onPressed: () => _deleteCard(card),
                                 ),
                               ],
                             ),
@@ -357,54 +418,12 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                     ),
             ),
             PrimaryButton(
-              label: 'Добавить карту',
+              label: _isDriver ? 'Добавить счёт' : 'Добавить карту',
               onPressed: _showAddCardSheet,
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class CardNumberFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    String text = newValue.text.replaceAll(' ', '');
-    String formatted = "";
-    for (int i = 0; i < text.length; i++) {
-      formatted += text[i];
-      if ((i + 1) % 4 == 0 && (i + 1) != text.length) {
-        formatted += " ";
-      }
-    }
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-    );
-  }
-}
-
-class CardDateFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    String text = newValue.text.replaceAll('/', '');
-    String formatted = "";
-    for (int i = 0; i < text.length; i++) {
-      formatted += text[i];
-      if (i == 1 && text.length > 2) {
-        formatted += "/";
-      }
-    }
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }
