@@ -8,7 +8,9 @@ class ApiConfig {
   static const String vehicles = '$baseUrl/vehicles';
   static const String paymentMethods = '$baseUrl/payment-methods';
   static const String payoutAccounts = '$baseUrl/payout-accounts';
-
   static const String trips = '$baseUrl/trips';
   static const String tripsStartSearch = '$baseUrl/trips/start-search';
+
+  static const String driverOnline = '$baseUrl/driver/online';
+  static const String driverOffline = '$baseUrl/driver/offline';
 }
