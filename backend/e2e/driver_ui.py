@@ -22,6 +22,7 @@ HELP_TEXT = """
 ║  reject  - отклонить поездку по ID   ║
 ║  start   - начать поездку по ID      ║
 ║  complete- завершить поездку по ID   ║
+║  active  - получить активную поездку ║
 ║  card    - привязать тестовую карту  ║
 ║  help    - эта справка               ║
 ║  exit    - выход                     ║
@@ -44,15 +45,11 @@ def main():
         email_override=args.email,
     )
 
-    # Логин
     if not service.login():
         print("[!] Не удалось авторизоваться. Выход.")
         return
 
-    # WS в фоне
     service.connect_ws(block=False)
-
-    # Ждём STOMP CONNECTED, чтобы консоль открылась после успешного подключения
     time.sleep(1.5)
 
     print(HELP_TEXT)
@@ -85,37 +82,36 @@ def main():
             service.attach_card()
 
         elif cmd == "accept":
-            trip_id = input("  Введите ID поездки для принятия: ").strip()
+            trip_id = input("  ID поездки для принятия: ").strip()
             if trip_id.isdigit():
                 route_data = service.accept_trip(trip_id)
-                if isinstance(route_data, dict):
-                    dist = route_data.get('distanceKm', 0)
-                    dur = route_data.get('durationMin', 0)
-                    print(f"  [ℹ] Дистанция до подачи: {dist} км")
-                    print(f"  [ℹ] Примерное время: {dur:.2f} мин")
+                # Краткая сводка уже выводится внутри accept_trip
             else:
                 print("  [!] Некорректный ID поездки.")
 
         elif cmd == "reject":
-            trip_id = input("  Введите ID поездки для отклонения: ").strip()
+            trip_id = input("  ID поездки для отклонения: ").strip()
             if trip_id.isdigit():
                 service.reject_trip(trip_id)
             else:
                 print("  [!] Некорректный ID поездки.")
 
         elif cmd == "start":
-            trip_id = input("  Введите ID поездки для старта: ").strip()
+            trip_id = input("  ID поездки для старта: ").strip()
             if trip_id.isdigit():
                 service.start_trip(trip_id)
             else:
                 print("  [!] Некорректный ID поездки.")
 
         elif cmd == "complete":
-            trip_id = input("  Введите ID поездки для завершения: ").strip()
+            trip_id = input("  ID поездки для завершения: ").strip()
             if trip_id.isdigit():
                 service.complete_trip(trip_id)
             else:
                 print("  [!] Некорректный ID поездки.")
+
+        elif cmd == "active":
+            service.get_active_trip()
 
         elif cmd == "help":
             print(HELP_TEXT)

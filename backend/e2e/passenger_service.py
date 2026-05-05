@@ -14,6 +14,12 @@ WS_URL  = os.getenv("TAXI_WS_URL",  "ws://localhost:8083/ws/notifications/websoc
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
 DEFAULT_STATE_FILE = "state.json"
 
+
+def _print_json(data: dict):
+    """Вывод JSON в консоль."""
+    print(json.dumps(data, ensure_ascii=False, indent=2))
+
+
 class PassengerService:
     def __init__(self, state_file=DEFAULT_STATE_FILE, email_override=None):
         self.state_file = state_file
@@ -88,17 +94,14 @@ class PassengerService:
         return frame
 
     def _heartbeat_loop(self):
-        """Отправляет пустые сообщения (heartbeats) каждые 10 секунд"""
         while self.ws and self.ws.keep_running:
             try:
-                # В STOMP heartbeat — это просто символ новой строки
                 self.ws.send("\n")
             except Exception:
                 break
             time.sleep(10)
 
     def connect_ws(self, block=False):
-        """Подключает WebSocket для пассажира с поддержкой STOMP и Heartbeats"""
         if not self.token:
             print("[!] Нет токена для WS. Сначала нужно авторизоваться.")
             return
@@ -107,7 +110,6 @@ class PassengerService:
 
         def on_open(ws):
             print(f"[+] WS открыт ({self.email}). STOMP CONNECT...")
-            # Отправляем CONNECT фрейм с указанием интервала heart-beat
             ws.send(self._stomp_frame("CONNECT", {
                 "accept-version": "1.1",
                 "heart-beat": "10000,10000",
@@ -116,18 +118,15 @@ class PassengerService:
             }))
 
         def on_message(ws, message):
-            # Пропускаем пустые строки (входящие heartbeats от сервера)
             if message == "\n":
                 return
 
             if message.startswith("CONNECTED"):
                 print(f"[✔] STOMP подключён ({self.email}). Подписка на уведомления...")
-                # Подписываемся на очередь пользователя
                 ws.send(self._stomp_frame("SUBSCRIBE", {
                     "id": "sub-0",
                     "destination": "/user/queue/notifications"
                 }))
-                # Запускаем цикл отправки heartbeats в отдельном потоке
                 threading.Thread(target=self._heartbeat_loop, daemon=True).start()
 
             elif message.startswith("MESSAGE"):
@@ -156,12 +155,10 @@ class PassengerService:
             self.ws_thread.start()
 
     def disconnect_ws(self):
-        """Отключает WebSocket"""
         if self.ws:
             self.ws.close()
 
     def attach_card(self, set_as_default=False):
-        """Создает тестовый PaymentMethod в Stripe и отправляет его на наш бэкенд"""
         if not STRIPE_API_KEY:
             print("[!] STRIPE_API_KEY не установлен. Экспортни его в консоли.")
             return False
@@ -197,7 +194,6 @@ class PassengerService:
                 print(f"[✔] Карта привязана: {data.get('cardBrand', 'card')} **** {data.get('lastFour', '****')}")
                 return True
             elif b_res.status_code == 409:
-                # Карта уже привязана
                 print(f"[·] Карта уже привязана (409 Conflict)")
                 return True
             else:
@@ -209,7 +205,7 @@ class PassengerService:
             return False
 
     def create_trip(self, origin_addr, origin_lat, origin_lng, dest_addr, dest_lat, dest_lng):
-        """POST /api/v1/trips - Создает предварительный расчет поездки"""
+        """POST /api/v1/trips — создаёт черновик поездки и возвращает тарифы."""
         url = f"{API_URL}/trips"
         payload = {
             "originAddress": origin_addr,
@@ -226,8 +222,10 @@ class PassengerService:
             if res.status_code in [200, 201]:
                 data = res.json()
                 self.current_trip_id = data.get("id")
-                print(f"[+] Поездка #{self.current_trip_id} успешно создана.")
+                print(f"[+] Поездка #{self.current_trip_id} создана.")
                 print(f"    Дистанция: {data.get('distanceKm')} км, Время: {data.get('durationMin')} мин")
+                print("  --- JSON ответ ---")
+                _print_json(data)
                 return True
             else:
                 print(f"[!] Ошибка создания поездки ({res.status_code}): {res.text}")
@@ -237,8 +235,7 @@ class PassengerService:
             return False
 
     def start_search(self, vehicle_class="COMFORT"):
-        """POST /api/v1/trips/start-search - Создание черновика и запуск поиска"""
-
+        """POST /api/v1/trips/start-search — выбор тарифа и запуск поиска водителя."""
         url = f"{API_URL}/trips/start-search?vehicleClass={vehicle_class}"
         print(f"[*] Запуск поиска водителя (класс: {vehicle_class})...")
 
@@ -248,8 +245,9 @@ class PassengerService:
             if res.status_code in [200, 201]:
                 data = res.json()
                 self.current_trip_id = data.get("id")
-
-                print(f"[✔] Поиск запущен. Создана поездка #{self.current_trip_id}")
+                print(f"[✔] Поиск запущен. Поездка #{self.current_trip_id}")
+                print("  --- JSON ответ ---")
+                _print_json(data)
                 return True
             else:
                 print(f"[!] Ошибка запуска поиска ({res.status_code}): {res.text}")
@@ -258,21 +256,17 @@ class PassengerService:
             print(f"[!] Ошибка соединения: {e}")
             return False
 
-    def cancel_trip(self):
-        """POST /api/v1/trips/{id}/cancel - Отмена поездки"""
-        if not self.current_trip_id:
-            print("[!] Нет активной поездки для отмены.")
-            return False
-
-        url = f"{API_URL}/trips/{self.current_trip_id}/cancel"
-        print(f"[*] Отмена поездки #{self.current_trip_id}...")
+    def cancel_trip(self, trip_id):
+        """POST /api/v1/trips/{id}/cancel — отмена поездки по явно переданному id."""
+        url = f"{API_URL}/trips/{trip_id}/cancel"
+        print(f"[*] Отмена поездки #{trip_id}...")
 
         try:
             res = requests.post(url, headers=self._auth_headers(), json={})
-            # Ожидаем 200 или 204 в зависимости от реализации бэкенда
             if res.status_code in [200, 204]:
-                print("[✔] Поездка отменена.")
-                self.current_trip_id = None
+                print(f"[✔] Поездка #{trip_id} отменена.")
+                if self.current_trip_id == int(trip_id):
+                    self.current_trip_id = None
                 return True
             else:
                 print(f"[!] Ошибка отмены поездки ({res.status_code}): {res.text}")
@@ -280,3 +274,28 @@ class PassengerService:
         except Exception as e:
             print(f"[!] Ошибка соединения: {e}")
             return False
+
+    def get_active_trip(self):
+        """GET /api/v1/trips/active — возвращает активную поездку пассажира (при перезаходе)."""
+        url = f"{API_URL}/trips/active"
+        print("[*] Запрос активной поездки...")
+
+        try:
+            res = requests.get(url, headers=self._auth_headers())
+            if res.status_code == 200:
+                data = res.json()
+                self.current_trip_id = data.get("id")
+                print(f"[✔] Активная поездка #{self.current_trip_id}, статус: {data.get('status')}")
+                print("  --- JSON ответ ---")
+                _print_json(data)
+                return data
+            elif res.status_code == 204:
+                print("[·] Активной поездки нет.")
+                self.current_trip_id = None
+                return None
+            else:
+                print(f"[!] Ошибка запроса активной поездки ({res.status_code}): {res.text}")
+                return None
+        except Exception as e:
+            print(f"[!] Ошибка соединения: {e}")
+            return None

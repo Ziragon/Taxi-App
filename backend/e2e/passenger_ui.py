@@ -18,7 +18,8 @@ HELP_TEXT = """
 ║  card    - привязать тестовую карту  ║
 ║  order   - создать поездку           ║
 ║  search  - запустить поиск водителя  ║
-║  cancel  - отменить поездку          ║
+║  cancel  - отменить поездку по ID    ║
+║  active  - получить активную поездку ║
 ║  help    - эта справка               ║
 ║  exit    - выход                     ║
 ╚══════════════════════════════════════╝
@@ -47,7 +48,6 @@ def main():
         print(f"[!] Ошибка инициализации: {e}")
         return
 
-    # Логин
     if not service.login():
         print("[!] Не удалось авторизоваться. Выход.")
         return
@@ -71,7 +71,6 @@ def main():
             print(f"  Token    : {service.token[:50]}..." if service.token else "  Token : нет")
 
         elif cmd == "card":
-            # Установим как дефолтную для удобства последующих оплат
             service.attach_card(set_as_default=True)
 
         elif cmd == "order":
@@ -97,7 +96,14 @@ def main():
             service.start_search(vehicle_class=v_class)
 
         elif cmd == "cancel":
-            service.cancel_trip()
+            raw = input("  ID поездки для отмены: ").strip()
+            if not raw.isdigit():
+                print("  [!] Некорректный ID поездки.")
+                continue
+            service.cancel_trip(raw)
+
+        elif cmd == "active":
+            service.get_active_trip()
 
         elif cmd == "help":
             print(HELP_TEXT)

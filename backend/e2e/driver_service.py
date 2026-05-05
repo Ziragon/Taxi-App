@@ -14,6 +14,12 @@ WS_URL  = os.getenv("TAXI_WS_URL",  "ws://localhost:8083/ws/notifications/websoc
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
 DEFAULT_STATE_FILE = "state.json"
 
+
+def _print_json(data: dict):
+    """Красивый вывод JSON в консоль."""
+    print(json.dumps(data, ensure_ascii=False, indent=2))
+
+
 class DriverService:
     def __init__(self, state_file=DEFAULT_STATE_FILE, lat=55.755864, lng=37.617617, email_override=None):
         self.state_file     = state_file
@@ -25,7 +31,7 @@ class DriverService:
         self.token          = None
         self.ws             = None
         self.ws_thread      = None
-        self.on_ws_message = None
+        self.on_ws_message  = None
 
     # ------------------------------------------------------------------ state
 
@@ -35,7 +41,7 @@ class DriverService:
         with open(self.state_file, "r") as f:
             data = json.load(f)
 
-        self.full_state = data          # ← запоминаем полный объект
+        self.full_state = data
 
         if isinstance(data, dict) and "drivers" in data:
             drivers = data["drivers"]
@@ -223,7 +229,6 @@ class DriverService:
             pm_id = res.json()["id"]
             print(f"[+] PaymentMethod создан: {pm_id}")
 
-            # Исправлено: рут и payload как в test-payment.html
             backend_url = f"{API_URL}/payment-methods"
             payload = {
                 "stripePaymentMethodId": pm_id,
@@ -298,7 +303,7 @@ class DriverService:
             return False
 
     def accept_trip(self, trip_id):
-        """POST /api/v1/trips/{id}/accept - Принятие поездки с отправкой локации"""
+        """POST /api/v1/trips/{id}/accept — принятие поездки, возвращает маршрут до пассажира."""
         url = f"{API_URL}/trips/{trip_id}/accept"
 
         # Теперь отправляем текущие координаты водителя в Body
@@ -307,15 +312,16 @@ class DriverService:
             "longitude": self.start_lng
         }
 
-        print(f"[*] Принятие поездки #{trip_id} (Локация: {self.start_lat}, {self.start_lng})...")
+        print(f"[*] Принятие поездки #{trip_id} (локация: {self.start_lat}, {self.start_lng})...")
 
         try:
             res = requests.post(url, headers=self._auth_headers(), json=payload)
             if res.status_code == 200:
                 data = res.json()
                 print(f"[✔] Поездка #{trip_id} принята!")
-                print(f"    Маршрут до пассажира: {data.get('distanceKm')} км, ~{data.get('durationMin')} мин")
-                print(f"    String: {data.get('geometry')}")
+                print(f"    До пассажира: {data.get('distanceKm')} км, ~{data.get('durationMin')} мин")
+                print("  --- JSON ответ ---")
+                _print_json(data)
                 return data
             elif res.status_code == 204:
                 print(f"[✔] Поездка #{trip_id} принята (без данных о маршруте).")
@@ -328,7 +334,7 @@ class DriverService:
             return False
 
     def reject_trip(self, trip_id):
-        """POST /api/v1/trips/{id}/reject - Отклонение поездки водителем"""
+        """POST /api/v1/trips/{id}/reject — отклонение поездки."""
         url = f"{API_URL}/trips/{trip_id}/reject"
         print(f"[*] Отклонение поездки #{trip_id}...")
 
@@ -345,14 +351,21 @@ class DriverService:
             return False
 
     def start_trip(self, trip_id):
-        """POST /api/v1/trips/{id}/start - Начало поездки (пассажир в машине)"""
+        """POST /api/v1/trips/{id}/start — начало поездки, возвращает маршрут до пункта назначения."""
         url = f"{API_URL}/trips/{trip_id}/start"
         print(f"[*] Старт поездки #{trip_id}...")
 
         try:
             res = requests.post(url, headers=self._auth_headers(), json={})
-            if res.status_code in [200, 204]:
-                print(f"[✔] Поездка #{trip_id} начата. Вы в пути!")
+            if res.status_code == 200:
+                data = res.json()
+                print(f"[✔] Поездка #{trip_id} начата. Пассажир в машине!")
+                print(f"    Маршрут: {data.get('distanceKm')} км, ~{data.get('durationMin')} мин")
+                print("  --- JSON ответ ---")
+                _print_json(data)
+                return data
+            elif res.status_code == 204:
+                print(f"[✔] Поездка #{trip_id} начата.")
                 return True
             else:
                 print(f"[!] Ошибка старта поездки ({res.status_code}): {res.text}")
@@ -362,7 +375,7 @@ class DriverService:
             return False
 
     def complete_trip(self, trip_id):
-        """POST /api/v1/trips/{id}/complete - Завершение поездки"""
+        """POST /api/v1/trips/{id}/complete — завершение поездки."""
         url = f"{API_URL}/trips/{trip_id}/complete"
         print(f"[*] Завершение поездки #{trip_id}...")
 
@@ -377,3 +390,30 @@ class DriverService:
         except Exception as e:
             print(f"[!] Ошибка соединения: {e}")
             return False
+
+    def get_active_trip(self):
+        """GET /api/v1/trips/driver-active — возвращает активную поездку водителя (при перезаходе)."""
+        url = f"{API_URL}/trips/driver-active"
+        payload = {
+            "latitude": self.start_lat,
+            "longitude": self.start_lng,
+        }
+        print("[*] Запрос активной поездки водителя...")
+
+        try:
+            res = requests.get(url, headers=self._auth_headers(), json=payload)
+            if res.status_code == 200:
+                data = res.json()
+                print(f"[✔] Активная поездка #{data.get('id')}, статус: {data.get('status')}")
+                print("  --- JSON ответ ---")
+                _print_json(data)
+                return data
+            elif res.status_code == 204:
+                print("[·] Активной поездки нет. Можно искать новые предложения.")
+                return None
+            else:
+                print(f"[!] Ошибка запроса активной поездки ({res.status_code}): {res.text}")
+                return None
+        except Exception as e:
+            print(f"[!] Ошибка соединения: {e}")
+            return None
