@@ -110,8 +110,7 @@ class DriverSearchServiceTest {
 
         driverSearchService.searchDrivers(mockTrip, BigDecimal.ZERO, BigDecimal.ZERO, VehicleClass.ECONOMY);
 
-        verify(responseSubscriber).registerFuture(eq(tripId), any());
         verify(tripStatusService).cancelSearch(tripId);
-        verify(responseSubscriber).removeFuture(tripId);
+        verifyNoInteractions(responseSubscriber);
     }
 }

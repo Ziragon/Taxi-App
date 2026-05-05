@@ -6,7 +6,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -33,16 +32,15 @@ class DriverResponseSubscriberTest {
     }
 
     @Test
-    @DisplayName("REJECT: future завершается с CancellationException")
-    void onMessage_reject_completesFutureExceptionally() {
+    @DisplayName("REJECT: future завершается с DriverResponseDto.reject()")
+    void onMessage_reject_completesFutureWithRejectDto() throws Exception {
         CompletableFuture<DriverResponseDto> future = new CompletableFuture<>();
         subscriber.registerFuture(10L, future);
 
         subscriber.onMessage("REJECT:10:99");
 
-        assertThat(future).isCompletedExceptionally();
-        assertThatThrownBy(() -> future.get(1, TimeUnit.SECONDS))
-                .isInstanceOf(CancellationException.class);
+        assertThat(future).isCompleted();
+        assertThat(future.get(1, TimeUnit.SECONDS)).isEqualTo(DriverResponseDto.reject());
     }
 
     @Test
