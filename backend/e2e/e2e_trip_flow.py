@@ -47,7 +47,6 @@ API_URL        = os.getenv("TAXI_API_URL", "http://localhost:8000/api/v1")
 REDIS_URL      = os.getenv("TAXI_REDIS_URL", "redis://localhost:6379")
 STATE_FILE     = DEFAULT_STATE_FILE
 
-# Координаты — Москва, центр
 ORIGIN_LAT, ORIGIN_LNG = 55.755864, 37.617617
 DEST_LAT,   DEST_LNG   = 55.730000, 37.650000
 
@@ -55,7 +54,7 @@ ORIGIN_ADDRESS = "Красная площадь, Москва"
 DEST_ADDRESS   = "Парк Горького, Москва"
 
 VEHICLE_CLASS    = "COMFORT"
-WS_OFFER_TIMEOUT = 40  # секунд ждём оффер
+WS_OFFER_TIMEOUT = 40
 
 # ---------------------------------------------------------------------------
 # Утилиты вывода
@@ -71,6 +70,7 @@ def fail(text: str):
     print(f"  [✗] {text}")
     raise SystemExit(1)
 def info(text: str): print(f"  [·] {text}")
+def warn(text: str): print(f"  [⚠] {text}")
 
 # ---------------------------------------------------------------------------
 # Redis утилита
@@ -117,6 +117,53 @@ def extract_trip_id(message: str) -> Optional[int]:
     return int(trip_id) if trip_id is not None else None
 
 # ---------------------------------------------------------------------------
+# Валидация профилей в payload
+# ---------------------------------------------------------------------------
+
+def validate_passenger_profile(payload: dict) -> bool:
+    """Проверяет наличие и корректность passengerProfile в TRIP_OFFER"""
+    profile = payload.get("passengerProfile")
+    if profile is None:
+        warn("passengerProfile отсутствует в TRIP_OFFER payload")
+        return False
+
+    missing = []
+    for field in ["accountId", "firstName", "lastName", "averageRating"]:
+        if profile.get(field) is None:
+            missing.append(field)
+
+    if missing:
+        warn(f"passengerProfile неполный, отсутствуют поля: {missing}")
+        return False
+
+    ok(f"passengerProfile: {profile.get('firstName')} {profile.get('lastName')}, "
+       f"рейтинг={profile.get('averageRating')}, "
+       f"фото={'есть' if profile.get('photoUrl') else 'нет'}")
+    return True
+
+
+def validate_driver_profile(payload: dict) -> bool:
+    """Проверяет наличие и корректность driverProfile в DRIVER_ASSIGNED"""
+    profile = payload.get("driverProfile")
+    if profile is None:
+        warn("driverProfile отсутствует в DRIVER_ASSIGNED payload")
+        return False
+
+    missing = []
+    for field in ["accountId", "firstName", "lastName", "averageRating"]:
+        if profile.get(field) is None:
+            missing.append(field)
+
+    if missing:
+        warn(f"driverProfile неполный, отсутствуют поля: {missing}")
+        return False
+
+    ok(f"driverProfile: {profile.get('firstName')} {profile.get('lastName')}, "
+       f"рейтинг={profile.get('averageRating')}, "
+       f"фото={'есть' if profile.get('photoUrl') else 'нет'}")
+    return True
+
+# ---------------------------------------------------------------------------
 # HTTP — действия с поездкой
 # ---------------------------------------------------------------------------
 
@@ -138,34 +185,48 @@ def create_trip(passenger: PassengerService) -> dict:
     if res.status_code not in [200, 201]:
         fail(f"Создание поездки: {res.status_code} {res.text}")
     data = res.json()
-    ok(f"Поездка создана: id={data['id']}, статус={data.get('status')}")
+
+    ok(f"Расчёт тарифов получен для маршрута: {ORIGIN_ADDRESS} → {DEST_ADDRESS}")
 
     tariffs = data.get("tariffs", [])
     if tariffs:
         info("Доступные тарифы:")
         for t in tariffs:
             info(f"  {t.get('tripClass')} — "
-                 f"{t.get('prices', {}).get('price')} $ "
-                 f"({t.get('driversNearby', 0)} водителей рядом)")
+                 f"{t.get('price')} ₽ "
+                 f"({t.get('carsNearby', 0)} водителей рядом)")
     return data
 
 
-def start_search(passenger: PassengerService, trip_id: int) -> None:
+def start_search(passenger: PassengerService, vehicle_class: str = VEHICLE_CLASS) -> int:
+    """POST /trips/start-search — создаёт поездку и запускает поиск. Возвращает trip_id."""
     res = requests.post(
-        f"{API_URL}/trips/{trip_id}/start-search",
+        f"{API_URL}/trips/start-search",
         headers=passenger._auth_headers(),
-        params={"vehicleClass": VEHICLE_CLASS},
+        params={"vehicleClass": vehicle_class},
         timeout=15,
     )
-    if res.status_code not in [200, 204]:
+    if res.status_code not in [200, 201]:
         fail(f"start-search: {res.status_code} {res.text}")
-    ok(f"Поиск водителя запущен для trip={trip_id}")
 
+    data = res.json()
+    trip_id = data.get("id")
+
+    if not trip_id:
+        fail(f"start-search не вернул id: {data}")
+
+    ok(f"Поиск водителя запущен, поездка создана: id={trip_id}")
+    return trip_id
 
 def driver_accept_trip(driver: DriverService, trip_id: int) -> bool:
+    payload = {
+        "latitude": driver.start_lat,
+        "longitude": driver.start_lng
+    }
     res = requests.post(
         f"{API_URL}/trips/{trip_id}/accept",
         headers={"Authorization": f"Bearer {driver.token}"},
+        json=payload,
         timeout=10,
     )
     if res.status_code in [200, 204]:
@@ -200,8 +261,8 @@ def driver_complete_trip(driver: DriverService, trip_id: int) -> bool:
     info(f"complete вернул {res.status_code}: {res.text}")
     return False
 
+
 def get_trip_status(passenger: PassengerService, trip_id: int) -> Optional[str]:
-    """Получить статус поездки через GET /trips/{id}"""
     try:
         res = requests.get(
             f"{API_URL}/trips/{trip_id}",
@@ -277,6 +338,7 @@ def run(args):
             ok("Payout account готов")
         else:
             info("WARNING: Payout account не привязан — водитель не получит выплату")
+
     # ------------------------------------------------------------------
     # Шаг 4: WS-подключение водителя
     # ------------------------------------------------------------------
@@ -284,6 +346,12 @@ def run(args):
 
     offer_event = threading.Event()
     received_trip_id: list[Optional[int]] = [None]
+
+    # результаты валидации профилей
+    profile_check_results: dict = {
+        "passenger_profile_in_offer": None,    # bool или None если не проверялось
+        "driver_profile_in_assigned": None,
+    }
 
     def on_driver_message(message: str):
         event_type = extract_event_type(message)
@@ -293,12 +361,43 @@ def run(args):
             trip_id = extract_trip_id(message)
             info(f"Получен оффер: tripId={trip_id}")
             received_trip_id[0] = trip_id
+
+            # ← валидация passengerProfile
+            payload = extract_body(message)
+            if payload:
+                profile_check_results["passenger_profile_in_offer"] = \
+                    validate_passenger_profile(payload)
+
             offer_event.set()
 
     driver.on_ws_message = on_driver_message
     driver.connect_ws(block=False)
     time.sleep(2)
     ok("WS водителя подключён")
+
+    # ------------------------------------------------------------------
+    # Шаг 4.5: WS-подключение пассажира
+    # ------------------------------------------------------------------
+    step("4.5", "WebSocket подключение пассажира")
+
+    driver_assigned_event = threading.Event()
+
+    def on_passenger_message(message: str):
+        event_type = extract_event_type(message)
+        info(f"WS пассажира: eventType={event_type}")
+
+        if event_type == "DRIVER_ASSIGNED":
+            # ← валидация driverProfile
+            payload = extract_body(message)
+            if payload:
+                profile_check_results["driver_profile_in_assigned"] = \
+                    validate_driver_profile(payload)
+            driver_assigned_event.set()
+
+    passenger.on_ws_message = on_passenger_message
+    passenger.connect_ws(block=False)
+    time.sleep(2)
+    ok("WS пассажира подключён")
 
     # ------------------------------------------------------------------
     # Шаг 5: Водитель → ONLINE
@@ -326,14 +425,14 @@ def run(args):
     step(6, "Пассажир создаёт поездку")
 
     trip_data = create_trip(passenger)
-    trip_id   = trip_data["id"]
+    # trip_data НЕ содержит id — только тарифы
 
     # ------------------------------------------------------------------
-    # Шаг 7: Пассажир запускает поиск
+    # Шаг 7: Пассажир запускает поиск водителя
     # ------------------------------------------------------------------
     step(7, "Пассажир запускает поиск водителя")
 
-    start_search(passenger, trip_id)
+    trip_id = start_search(passenger)
 
     # ------------------------------------------------------------------
     # Шаг 8: Ждём оффер на WS водителя
@@ -370,7 +469,12 @@ def run(args):
 
     status_after = check_redis_driver_status(driver_id)
     info(f"Статус после Accept = {status_after}")
-    time.sleep(2)
+
+    # ждём DRIVER_ASSIGNED на WS пассажира (до 10с)
+    assigned_arrived = driver_assigned_event.wait(timeout=10)
+    if not assigned_arrived:
+        warn("Пассажир не получил DRIVER_ASSIGNED по WS за 10с")
+    time.sleep(1)
 
     # ------------------------------------------------------------------
     # Шаг 10: Водитель стартует поездку
@@ -425,8 +529,35 @@ def run(args):
     print(f"  trip_id    : {trip_id}")
     print(f"  пассажир   : {passenger.email}")
     print(f"  водитель   : {driver.email}")
-    print("█" * 60 + "\n")
+    print("█" * 60)
 
+    # ------------------------------------------------------------------
+    # Отчёт по профилям
+    # ------------------------------------------------------------------
+    print("\n" + "─" * 60)
+    print("  ПРОВЕРКА ПРОФИЛЕЙ В УВЕДОМЛЕНИЯХ")
+    print("─" * 60)
+
+    passenger_ok = profile_check_results["passenger_profile_in_offer"]
+    driver_ok    = profile_check_results["driver_profile_in_assigned"]
+
+    if passenger_ok is True:
+        print("  [✔] TRIP_OFFER → passengerProfile передан корректно")
+    elif passenger_ok is False:
+        print("  [⚠] TRIP_OFFER → passengerProfile отсутствует или неполный")
+    else:
+        print("  [·] TRIP_OFFER → passengerProfile не проверялся")
+
+    if driver_ok is True:
+        print("  [✔] DRIVER_ASSIGNED → driverProfile передан корректно")
+    elif driver_ok is False:
+        print("  [⚠] DRIVER_ASSIGNED → driverProfile отсутствует или неполный")
+    else:
+        print("  [·] DRIVER_ASSIGNED → не получено событие по WS")
+
+    print("─" * 60 + "\n")
+
+    passenger.disconnect_ws()
     driver.disconnect_ws()
 
 

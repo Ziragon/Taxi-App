@@ -249,6 +249,21 @@ class DriverService:
         if not self.token:
             return False
 
+        try:
+            check_res = requests.get(
+                f"{API_URL}/payout-accounts",
+                headers={"Authorization": f"Bearer {self.token}"},
+                timeout=10,
+            )
+
+            if check_res.status_code == 200:
+                accounts = check_res.json()
+                if accounts:
+                    print(f"[·] Payout account уже существует — пропускаем")
+                    return True
+        except Exception:
+            pass
+
         driver_id = self.state.get("driver_id")
         payload = {
             "stripeAccountId": f"acct_fake_{driver_id}",
@@ -272,7 +287,7 @@ class DriverService:
                 return True
 
             if res.status_code == 409:
-                print(f"[·] Payout account уже существует — пропускаем")
+                print(f"[·] Payout account уже существует (конфликт при создании)")
                 return True
 
             print(f"[!] Не удалось привязать payout account: {res.status_code} {res.text}")
