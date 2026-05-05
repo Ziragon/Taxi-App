@@ -10,6 +10,8 @@ import 'package:arbuz_express/screens/menuScreens/notifications_panel.dart';
 import 'package:arbuz_express/screens/menuScreens/notifications_button.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/destination_marker.dart';
+import 'package:arbuz_express/models/trip_models.dart';
+import 'package:arbuz_express/services/trip_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -45,16 +47,9 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
   bool _isCollapsed = false;
   Timer? _debounce;
 
-  int _nearbyCarsCount = 0;
-  String _weatherTariff = '0 ₽';
-  String _distanceTariff = '0 ₽';
-  double _totalTariff = 0;
-  double _routeDistanceKm = 0;
-  int _weatherSurchargeRaw = 0;
-  int _distanceBaseRaw = 0;
-
   bool _isOrderAccepted = false;
   Map<String, String> _orderOptions = {};
+  TripCalculationResponse? _lastTripData;
 
   @override
   void initState() {
@@ -100,7 +95,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
       );
       final response = await http.get(
         url,
-        headers: {'User-Agent': 'ArbuzExpressApp'},
+        headers: {'User-Agent': 'ArbuzExpressApp/1.0'},
       );
       if (response.statusCode == 200) {
         setState(() {
@@ -157,7 +152,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
       );
       final response = await http.get(
         url,
-        headers: {'User-Agent': 'ArbuzExpressApp'},
+        headers: {'User-Agent': 'ArbuzExpressApp/1.0'},
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -218,99 +213,207 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
 
   Future<void> _updateRoute() async {
     if (_currentPosition == null || _toPosition == null) return;
+
     try {
-      final url = Uri.parse(
-        'https://router.project-osrm.org/route/v1/driving/${_currentPosition!.longitude},${_currentPosition!.latitude};${_toPosition!.longitude},${_toPosition!.latitude}?overview=full&geometries=geojson',
+      final request = TripCalculationRequest(
+        originAddress: _fromController.text,
+        originLat: _currentPosition!.latitude,
+        originLng: _currentPosition!.longitude,
+        destAddress: _toController.text,
+        destLat: _toPosition!.latitude,
+        destLng: _toPosition!.longitude,
       );
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['routes'].isNotEmpty) {
-          final List coordinates = data['routes'][0]['geometry']['coordinates'];
-          final distanceMeters = data['routes'][0]['distance'] as double;
-          setState(() {
-            _routePoints = coordinates
-                .map((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
-                .toList();
-            _routeDistanceKm = distanceMeters / 1000;
-          });
-          try {
-            final bounds = LatLngBounds.fromPoints([
-              _currentPosition!,
-              _toPosition!,
-              ..._routePoints,
-            ]);
-            _mapController.fitCamera(
-              CameraFit.bounds(
-                bounds: bounds,
-                padding: const EdgeInsets.all(40),
-                maxZoom: 15.0,
-              ),
-            );
-          } catch (e) {
-            debugPrint('Error fitting camera: $e');
-          }
-          await _updateTariffInfo();
-        }
-      }
+
+      final tripData = await TripService.calculateTrip(request);
+
+      setState(() {
+        _lastTripData = tripData;
+      });
+
+      _buildRouteFromResponse(tripData);
     } catch (e) {
       debugPrint('Error updating route: $e');
+      _buildRouteFallback();
     }
   }
 
-  Future<void> _updateTariffInfo() async {
-    _distanceBaseRaw = (_routeDistanceKm * 30).round();
-    int weatherSurcharge = 0;
-    if (_currentPosition != null) {
-      try {
-        final weatherUrl = Uri.parse(
-          'https://api.open-meteo.com/v1/forecast?latitude=${_currentPosition!.latitude}&longitude=${_currentPosition!.longitude}&current_weather=true',
-        );
-        final weatherResponse = await http.get(weatherUrl);
-        if (weatherResponse.statusCode == 200) {
-          final weatherData = json.decode(weatherResponse.body);
-          final temperature = weatherData['current_weather']['temperature'];
-          if (temperature < -10) {
-            weatherSurcharge = 100;
-          } else if (temperature < 0) {
-            weatherSurcharge = 40;
-          } else if (temperature > 30) {
-            weatherSurcharge = 80;
-          }
-        }
-      } catch (e) {
-        debugPrint('Error getting weather: $e');
-      }
+  List<LatLng> _decodePolyline(String encoded) {
+    List<LatLng> points = [];
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
+
+    while (index < len) {
+      int b, shift = 0, result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+
+      points.add(LatLng(lat / 1E5, lng / 1E5));
     }
-    _weatherSurchargeRaw = weatherSurcharge;
-    final total = 50 + _distanceBaseRaw + weatherSurcharge;
-    final carsCount = (20 + (_routeDistanceKm * 2).round()).clamp(5, 80);
-    setState(() {
-      _weatherTariff = '$weatherSurcharge ₽';
-      _distanceTariff = '$_distanceBaseRaw ₽';
-      _totalTariff = total.toDouble();
-      _nearbyCarsCount = carsCount;
-    });
+    return points;
+  }
+
+  void _buildRouteFromResponse(TripCalculationResponse tripData) {
+    try {
+      List<LatLng> routePoints = [];
+      final dynamic geom = tripData.routeGeometry;
+
+      if (geom == null) {
+        _buildRouteFallback();
+        return;
+      }
+
+      if (geom is String) {
+        if (geom.startsWith('{')) {
+          final decoded = jsonDecode(geom);
+          if (decoded['coordinates'] != null) {
+            for (var coord in decoded['coordinates']) {
+              routePoints.add(LatLng(coord[1].toDouble(), coord[0].toDouble()));
+            }
+          }
+        } else {
+          routePoints = _decodePolyline(geom);
+        }
+      } else {
+        try {
+          if (geom.coordinates != null) {
+            for (var p in geom.coordinates) {
+              try {
+                routePoints.add(
+                  LatLng(p.latitude.toDouble(), p.longitude.toDouble()),
+                );
+              } catch (_) {
+                routePoints.add(LatLng(p[1].toDouble(), p[0].toDouble()));
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (routePoints.isEmpty) {
+        _buildRouteFallback();
+        return;
+      }
+
+      setState(() {
+        _routePoints = routePoints;
+      });
+
+      final bounds = LatLngBounds.fromPoints([
+        _currentPosition!,
+        _toPosition!,
+        ..._routePoints,
+      ]);
+      _mapController.fitCamera(
+        CameraFit.bounds(
+          bounds: bounds,
+          padding: const EdgeInsets.all(40),
+          maxZoom: 15.0,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error fitting camera: $e');
+      _buildRouteFallback();
+    }
+  }
+
+  void _buildRouteFallback() {
+    try {
+      final bounds = LatLngBounds.fromPoints([_currentPosition!, _toPosition!]);
+      _mapController.fitCamera(
+        CameraFit.bounds(
+          bounds: bounds,
+          padding: const EdgeInsets.all(40),
+          maxZoom: 15.0,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error fitting camera: $e');
+    }
   }
 
   void _showStatsDialogSheet() {
+    if (_currentPosition == null || _toPosition == null) return;
+
+    final request = TripCalculationRequest(
+      originAddress: _fromController.text,
+      originLat: _currentPosition!.latitude,
+      originLng: _currentPosition!.longitude,
+      destAddress: _toController.text,
+      destLat: _toPosition!.latitude,
+      destLng: _toPosition!.longitude,
+    );
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StatsBottomSheet(
-        nearbyCars: _nearbyCarsCount,
-        weatherTariff: _weatherTariff,
-        distanceTariff: _distanceTariff,
-        distanceBaseRaw: _distanceBaseRaw,
-        weatherSurchargeRaw: _weatherSurchargeRaw,
-        selectedTariff: _selectedTariff,
-        totalTariff: _totalTariff,
-        onAccept: (options) {
-          setState(() {
-            _isOrderAccepted = true;
-            _orderOptions = options;
-          });
+      builder: (context) => FutureBuilder<TripCalculationResponse>(
+        future: TripService.calculateTrip(request),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Container(
+              decoration: const BoxDecoration(color: Colors.transparent),
+              height: 200,
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFC107)),
+                ),
+              ),
+            );
+          }
+          if (snapshot.hasError) {
+            return Container(
+              decoration: const BoxDecoration(color: Colors.transparent),
+              height: 200,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'Ошибка: ${snapshot.error}',
+                    style: const TextStyle(color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            );
+          }
+          if (!snapshot.hasData) {
+            return Container(
+              decoration: const BoxDecoration(color: Colors.transparent),
+              height: 200,
+              child: const Center(
+                child: Text(
+                  'Нет данных',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            );
+          }
+          return StatsBottomSheet(
+            tripData: snapshot.data!,
+            selectedTariff: _selectedTariff,
+            onAccept: (options) {
+              setState(() {
+                _isOrderAccepted = true;
+                _orderOptions = options;
+              });
+            },
+          );
         },
       ),
     );
@@ -367,7 +470,9 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate:
+                      'https://{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png',
+                  subdomains: const ['a', 'b', 'c'],
                   userAgentPackageName: 'com.arbuzexpress.app',
                   retinaMode: true,
                 ),
@@ -493,8 +598,9 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
                           onFromChanged: (v) {
                             final trimmed = v.trim();
                             if (trimmed.isEmpty) {
-                              if (_debounce?.isActive ?? false)
+                              if (_debounce?.isActive ?? false) {
                                 _debounce!.cancel();
+                              }
                               setState(() {
                                 _currentPosition = null;
                                 _routePoints = [];
@@ -508,8 +614,9 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
                           onToChanged: (v) {
                             final trimmed = v.trim();
                             if (trimmed.isEmpty) {
-                              if (_debounce?.isActive ?? false)
+                              if (_debounce?.isActive ?? false) {
                                 _debounce!.cancel();
+                              }
                               setState(() {
                                 _toPosition = null;
                                 _routePoints = [];
@@ -521,10 +628,14 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
                             }
                           },
                           showTariffs: showTariffs,
+                          tariffs: _lastTripData?.tariffs,
                           selectedTariff: _selectedTariff,
                           onTariffSelected: (index) =>
                               setState(() => _selectedTariff = index),
-                          onOrderPressed: showTariffs
+                          onOrderPressed:
+                              (showTariffs &&
+                                  _lastTripData != null &&
+                                  _lastTripData!.tariffs.isNotEmpty)
                               ? _showStatsDialogSheet
                               : null,
                         ),
