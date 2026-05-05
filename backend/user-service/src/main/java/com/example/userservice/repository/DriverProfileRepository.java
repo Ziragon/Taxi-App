@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface DriverProfileRepository extends JpaRepository<DriverProfile, Long> {
@@ -21,4 +22,7 @@ public interface DriverProfileRepository extends JpaRepository<DriverProfile, Lo
 
     @Query("SELECT p FROM DriverProfile p JOIN FETCH p.account WHERE p.accountId = :id")
     Optional<DriverProfile> findByIdWithAccount(@Param("id") Long id);
+
+    @Query("SELECT d.accountId FROM DriverProfile d WHERE d.accountId IN :ids")
+    List<Long> findAllIdsByIdIn(@Param("ids") Set<Long> ids);
 }

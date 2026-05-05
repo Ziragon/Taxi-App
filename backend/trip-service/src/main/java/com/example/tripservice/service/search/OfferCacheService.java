@@ -1,4 +1,4 @@
-package com.example.tripservice.service;
+package com.example.tripservice.service.search;
 
 import com.example.shared.exception.common.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ public class OfferCacheService {
         longRedisTemplate.opsForValue().set(
                 ACTIVE_OFFER_KEY + tripId,
                 driverId,
-                Duration.ofSeconds(searchDuration + 5)
+                Duration.ofSeconds(searchDuration + 5L)
         );
     }
 

@@ -20,6 +20,8 @@ HELP_TEXT = """
 ║  status  - показать текущий профиль  ║
 ║  accept  - принять поездку по ID     ║
 ║  reject  - отклонить поездку по ID   ║
+║  start   - начать поездку по ID      ║
+║  complete- завершить поездку по ID   ║
 ║  card    - привязать тестовую карту  ║
 ║  help    - эта справка               ║
 ║  exit    - выход                     ║
@@ -85,7 +87,12 @@ def main():
         elif cmd == "accept":
             trip_id = input("  Введите ID поездки для принятия: ").strip()
             if trip_id.isdigit():
-                service.accept_trip(trip_id)
+                route_data = service.accept_trip(trip_id)
+                if isinstance(route_data, dict):
+                    dist = route_data.get('distanceKm', 0)
+                    dur = route_data.get('durationMin', 0)
+                    print(f"  [ℹ] Дистанция до подачи: {dist} км")
+                    print(f"  [ℹ] Примерное время: {dur:.2f} мин")
             else:
                 print("  [!] Некорректный ID поездки.")
 
@@ -93,6 +100,20 @@ def main():
             trip_id = input("  Введите ID поездки для отклонения: ").strip()
             if trip_id.isdigit():
                 service.reject_trip(trip_id)
+            else:
+                print("  [!] Некорректный ID поездки.")
+
+        elif cmd == "start":
+            trip_id = input("  Введите ID поездки для старта: ").strip()
+            if trip_id.isdigit():
+                service.start_trip(trip_id)
+            else:
+                print("  [!] Некорректный ID поездки.")
+
+        elif cmd == "complete":
+            trip_id = input("  Введите ID поездки для завершения: ").strip()
+            if trip_id.isdigit():
+                service.complete_trip(trip_id)
             else:
                 print("  [!] Некорректный ID поездки.")
 

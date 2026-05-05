@@ -23,7 +23,7 @@ public class RabbitMQConfig {
     public static final String REFUND_SUCCEEDED_QUEUE  = "trip.refund.succeeded";
 
     // Routing Keys
-    public static final String TRIP_COMPLETED_ROUTING_KEY    = "trip.completed";
+    public static final String TRIP_IN_PROGRESS_ROUTING_KEY  = "trip.inprogress";
     public static final String PAYMENT_SUCCEEDED_ROUTING_KEY = "payment.succeeded";
     public static final String PAYMENT_FAILED_ROUTING_KEY    = "payment.failed";
     public static final String REFUND_REQUESTED_ROUTING_KEY  = "refund.requested";

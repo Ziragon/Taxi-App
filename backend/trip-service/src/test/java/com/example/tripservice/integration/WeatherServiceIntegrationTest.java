@@ -3,7 +3,7 @@ package com.example.tripservice.integration;
 import com.example.tripservice.BaseIntegrationTest;
 import com.example.tripservice.dto.data.WeatherDto;
 import com.example.tripservice.dto.response.WeatherResponse;
-import com.example.tripservice.service.WeatherService;
+import com.example.tripservice.service.external.WeatherService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

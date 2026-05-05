@@ -6,7 +6,6 @@ import com.example.shared.exception.common.ResourceNotFoundException;
 import com.example.userservice.dto.data.VehicleDto;
 import com.example.userservice.entity.DriverProfile;
 import com.example.userservice.entity.Vehicle;
-import com.example.shared.dto.enums.DriverStatus;
 import com.example.userservice.exception.VehicleAlreadyExistsException;
 import com.example.userservice.repository.DriverProfileRepository;
 import com.example.userservice.repository.VehicleRepository;
@@ -22,7 +21,7 @@ public class VehicleService {
 
     private final VehicleRepository vehicleRepository;
     private final DriverProfileRepository driverProfileRepository;
-    private final DriverProfileService driverProfileService;
+    private final TripStatusService tripStatusService;
 
     @Transactional
     public VehicleDto addVehicle(Long driverId, String brand, String model, Short year,
@@ -104,7 +103,7 @@ public class VehicleService {
         checkOwnership(vehicle, requesterId);
 
         if (vehicle.isActive()) {
-            driverProfileService.updateStatus(requesterId, DriverStatus.OFFLINE);
+            tripStatusService.validateDriverStatus(requesterId);
         }
 
         vehicleRepository.deleteById(vehicleId);

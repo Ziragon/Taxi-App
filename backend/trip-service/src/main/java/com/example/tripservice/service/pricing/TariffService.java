@@ -1,10 +1,7 @@
-package com.example.tripservice.service;
+package com.example.tripservice.service.pricing;
 
 import com.example.shared.dto.enums.VehicleClass;
-import com.example.tripservice.dto.data.CalculatePriceDto;
-import com.example.tripservice.dto.data.TariffDto;
-import com.example.tripservice.dto.data.TariffPriceData;
-import com.example.tripservice.dto.data.TripDto;
+import com.example.tripservice.dto.data.*;
 import com.example.tripservice.entity.Tariff;
 import com.example.tripservice.exception.TariffNotActiveException;
 import com.example.tripservice.exception.TariffNotFoundException;
@@ -42,12 +39,19 @@ public class TariffService {
         return tariff;
     }
 
-    public TariffDto calculatePrice(Tariff tariff, TripDto tripDto) {
-
+    public TariffDto calculateTariffOffer(Tariff tariff, TripDto tripDto) {
         TariffPriceData prices = priceService.calculatePrice(
                 CalculatePriceDto.from(tariff, tripDto)
         );
 
         return TariffDto.from(tariff, prices, null);
+    }
+
+    public TariffDto calculateTariffOffer(Tariff tariff, TripDraftDto tripDto, int driverCount) {
+        TariffPriceData prices = priceService.calculatePrice(
+                CalculatePriceDto.from(tariff, tripDto)
+        );
+
+        return TariffDto.from(tariff, prices, driverCount);
     }
 }

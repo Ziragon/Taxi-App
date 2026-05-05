@@ -18,6 +18,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     Optional<Transaction> findByStripePaymentIntentId(String stripePaymentIntentId);
 
+    Optional<Transaction> findByTripIdAndType(Long tripId, TransactionType type);
+
     List<Transaction> findAllByPassengerId(Long passengerId);
 
     List<Transaction> findAllByDriverId(Long driverId);

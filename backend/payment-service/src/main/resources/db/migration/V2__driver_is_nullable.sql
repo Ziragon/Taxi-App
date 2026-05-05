@@ -1,0 +1,2 @@
+ALTER TABLE transactions
+ALTER COLUMN driver_id DROP NOT NULL;

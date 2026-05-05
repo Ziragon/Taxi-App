@@ -1,6 +1,9 @@
 package com.example.notificationservice.consumer;
 
+import com.example.notificationservice.client.UserServiceClient;
+import com.example.notificationservice.dto.DriverProfileSnapshot;
 import com.example.notificationservice.dto.NotificationEventDto;
+import com.example.notificationservice.dto.PassengerProfileSnapshot;
 import com.example.notificationservice.entity.Notification;
 import com.example.notificationservice.entity.enums.Channel;
 import com.example.notificationservice.entity.enums.EventType;
@@ -29,6 +32,7 @@ public class UniversalNotificationConsumer {
     private final NotificationService notificationService;
     private final ObjectMapper objectMapper;
     private final MessageConverter messageConverter;
+    private final UserServiceClient userServiceClient;
 
     @RabbitListener(queues = NOTIFICATION_QUEUE, containerFactory = "rabbitListenerContainerFactory")
     public void consume(
@@ -36,12 +40,6 @@ public class UniversalNotificationConsumer {
             @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey
     ) {
         Object rawEvent = messageConverter.fromMessage(message);
-
-        log.debug("Received event: routingKey={}, type={}, messageId={}",
-                routingKey,
-                rawEvent != null ? rawEvent.getClass().getSimpleName() : "null",
-                message.getMessageProperties().getMessageId()
-        );
 
         try {
             NotificationEventDto dto = parseEvent(rawEvent, routingKey);
@@ -52,15 +50,30 @@ public class UniversalNotificationConsumer {
             }
 
             Notification notification = notificationService.save(dto);
-            notificationService.sendToUser(notification);
-            notificationService.markSent(notification.getId());
 
-            log.info("Notification delivered: id={}, recipientId={}, event={}, routingKey={}",
-                    notification.getId(),
-                    notification.getRecipientId(),
-                    notification.getEventType(),
-                    routingKey
-            );
+            DriverProfileSnapshot driverProfile = null;
+            PassengerProfileSnapshot passengerProfile = null;
+
+            try {
+                if (routingKey.equals("notification.trip.driver_assigned")) {
+                    Map<String, Object> event = (Map<String, Object>) rawEvent;
+                    Long driverId = getLong(event, "driverId");
+                    driverProfile = userServiceClient.getDriverProfile(driverId);
+                }
+
+                if (routingKey.equals("notification.trip.offer")) {
+                    TripOfferEvent event = rawEvent instanceof TripOfferEvent e
+                            ? e
+                            : objectMapper.convertValue(rawEvent, TripOfferEvent.class);
+                    passengerProfile = userServiceClient.getPassengerProfile(event.passengerId());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to enrich notification id={} with profile: {}",
+                        notification.getId(), e.getMessage());
+            }
+
+            notificationService.sendToUser(notification, driverProfile, passengerProfile);
+            notificationService.markSent(notification.getId());
 
         } catch (Exception e) {
             log.error("Failed to process event: routingKey={}, error={}",
@@ -82,31 +95,90 @@ public class UniversalNotificationConsumer {
 
     @SuppressWarnings("unchecked")
     private NotificationEventDto parseEvent(Object rawEvent, String routingKey) {
-        // парсинг регистрации пользователя
-        if ("user.registered".equals(routingKey)) {
-            Map<String, Object> event = (Map<String, Object>) rawEvent;
 
-            Long accountId = event.get("accountId") instanceof Number number
-                    ? number.longValue()
-                    : Long.parseLong(event.get("accountId").toString());
+        // Специфичные события — ПЕРВЫМИ
+        switch (routingKey) {
 
-            return NotificationEventDto.builder()
-                    .tripId(null)
-                    .eventType(EventType.USER_REGISTERED)
-                    .recipientType(RecipientType.PASSENGER)
-                    .recipientId(accountId)
-                    .channel(Channel.PUSH)
-                    .message("Welcome to TaxiApp! Your account has been created.")
-                    .build();
+            case "user.registered" -> {
+                Map<String, Object> event = (Map<String, Object>) rawEvent;
+                Long accountId = getLong(event, "accountId");
+                return NotificationEventDto.builder()
+                        .tripId(null)
+                        .eventType(EventType.USER_REGISTERED)
+                        .recipientType(RecipientType.PASSENGER)
+                        .recipientId(accountId)
+                        .channel(Channel.PUSH)
+                        .message("Добро пожаловать в TaxiApp!")
+                        .build();
+            }
+
+            case "notification.trip.offer" -> {
+                TripOfferEvent event = rawEvent instanceof TripOfferEvent e
+                        ? e
+                        : objectMapper.convertValue(rawEvent, TripOfferEvent.class);
+
+                String message = String.format(
+                        "Новый заказ: %s → %s, %.1f км, %.0f мин, %.2f ₽",
+                        event.originAddress(),
+                        event.destinationAddress(),
+                        event.distanceKm(),
+                        event.durationMin(),
+                        event.price()
+                );
+                return NotificationEventDto.builder()
+                        .tripId(event.tripId())
+                        .eventType(EventType.TRIP_OFFER)
+                        .recipientType(RecipientType.DRIVER)
+                        .recipientId(event.driverId())
+                        .channel(Channel.PUSH)
+                        .message(message)
+                        .build();
+            }
+
+            case "notification.trip.offer.expired" -> {
+                Map<String, Object> event = (Map<String, Object>) rawEvent;
+                return NotificationEventDto.builder()
+                        .tripId(getLong(event, "tripId"))
+                        .eventType(EventType.TRIP_OFFER_EXPIRED)
+                        .recipientType(RecipientType.DRIVER)
+                        .recipientId(getLong(event, "driverId"))
+                        .channel(Channel.PUSH)
+                        .message("Время ответа на заказ истекло")
+                        .build();
+            }
+
+            case "notification.trip.driver_assigned" ->
+            { return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.DRIVER_ASSIGNED); }
+
+            case "notification.trip.started" ->
+            { return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.TRIP_STARTED); }
+
+            case "notification.trip.completed" ->
+            { return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.TRIP_COMPLETED); }
+
+            case "notification.trip.cancelled" ->
+            { return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.TRIP_CANCELLED); }
+
+            case "notification.payment.succeeded", "notification.payout.succeeded" ->
+            { return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.PAYMENT_SUCCEEDED); }
+
+            case "notification.payment.failed" ->
+            { return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.PAYMENT_FAILED); }
+
+            case "notification.refund.succeeded" ->
+            { return buildNotificationFromMap((Map<String, Object>) rawEvent, EventType.REFUND_SUCCEEDED); }
         }
 
         if (routingKey.startsWith("notification.")) {
             if (rawEvent instanceof NotificationEventDto dto) {
                 return dto;
             }
-
             if (rawEvent instanceof Map) {
-                return objectMapper.convertValue(rawEvent, NotificationEventDto.class);
+                try {
+                    return objectMapper.convertValue(rawEvent, NotificationEventDto.class);
+                } catch (Exception e) {
+                    log.warn("Failed to convert Map to NotificationEventDto for routingKey={}", routingKey);
+                }
             }
         }
         // парсинг предложения поездки водителю
@@ -157,5 +229,21 @@ public class UniversalNotificationConsumer {
         }
 
         return null;
+    }
+
+    private NotificationEventDto buildNotificationFromMap(Map<String, Object> event, EventType eventType) {
+        return NotificationEventDto.builder()
+                .tripId(getLong(event, "tripId"))
+                .eventType(eventType)
+                .recipientType(RecipientType.valueOf((String) event.get("recipientType")))
+                .recipientId(getLong(event, "recipientId"))
+                .channel(Channel.PUSH)
+                .message((String) event.get("message"))
+                .build();
+    }
+
+    private Long getLong(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        return value instanceof Number n ? n.longValue() : Long.parseLong(value.toString());
     }
 }

@@ -7,6 +7,7 @@ passenger_ui.py - консоль для управления пассажиро�
 """
 
 import argparse
+import time
 from passenger_service import PassengerService, DEFAULT_STATE_FILE
 
 HELP_TEXT = """
@@ -50,6 +51,9 @@ def main():
     if not service.login():
         print("[!] Не удалось авторизоваться. Выход.")
         return
+
+    service.connect_ws(block=False)
+    time.sleep(1)
 
     print(HELP_TEXT)
 

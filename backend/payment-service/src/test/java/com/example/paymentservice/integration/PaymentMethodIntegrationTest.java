@@ -150,12 +150,19 @@ class PaymentMethodIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("Нельзя деактивировать default карту")
+    @DisplayName("Нельзя деактивировать default карту если есть другие")
     void cannotDeactivateDefaultCard() {
-        PaymentMethod method = paymentMethodService.addPaymentMethod(100L, "pm_test123", false);
+        PaymentMethod first = paymentMethodService.addPaymentMethod(100L, "pm_test123", false);
+
+        StripeService.FakePaymentMethod secondStripe =
+                new StripeService.FakePaymentMethod("pm_second", "mastercard", "5555");
+        when(stripeService.attachPaymentMethodToCustomer(anyString(), anyString()))
+                .thenReturn(secondStripe);
+
+        paymentMethodService.addPaymentMethod(100L, "pm_second", false);
 
         assertThatThrownBy(() ->
-                paymentMethodService.deactivate(100L, method.getId())
+                paymentMethodService.deactivate(100L, first.getId())
         ).isInstanceOf(DefaultPaymentMethodException.class);
     }
 
@@ -199,13 +206,12 @@ class PaymentMethodIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("getAllByPassengerId возвращает все карты пассажира")
+    @DisplayName("getAllByPassengerId возвращает все активные карты пассажира")
     void getAllByPassengerIdReturnsAllCards() {
         paymentMethodService.addPaymentMethod(100L, "pm_first", false);
 
         StripeService.FakePaymentMethod secondStripe =
                 new StripeService.FakePaymentMethod("pm_second", "mastercard", "5555");
-
         when(stripeService.attachPaymentMethodToCustomer(anyString(), anyString()))
                 .thenReturn(secondStripe);
 
@@ -227,7 +233,7 @@ class PaymentMethodIntegrationTest extends BaseIntegrationTest {
         entityManager.clear();
 
         List<PaymentMethod> all = paymentMethodService.getAllByPassengerId(100L);
-        assertThat(all).hasSize(2);
+        assertThat(all).hasSize(1);
 
         List<PaymentMethod> active = paymentMethodService.getActiveByPassengerId(100L);
         assertThat(active).hasSize(1);

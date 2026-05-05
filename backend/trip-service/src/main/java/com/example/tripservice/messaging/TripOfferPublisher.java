@@ -21,6 +21,7 @@ public class TripOfferPublisher {
         TripOfferEvent event = new TripOfferEvent(
                 trip.getId(),
                 driverId,
+                trip.getPassengerId(),
                 trip.getOriginAddress(),
                 trip.getOriginLat(),
                 trip.getOriginLng(),

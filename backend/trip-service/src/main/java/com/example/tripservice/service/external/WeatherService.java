@@ -1,4 +1,4 @@
-package com.example.tripservice.service;
+package com.example.tripservice.service.external;
 
 import com.example.tripservice.client.WeatherAPIClient;
 import com.example.tripservice.dto.data.WeatherDto;

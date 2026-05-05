@@ -25,9 +25,6 @@ class DriverService:
         self.token          = None
         self.ws             = None
         self.ws_thread      = None
-
-        # Переопределяй снаружи для обработки входящих WS-сообщений:
-        #   service.on_ws_message = lambda msg: ...
         self.on_ws_message = None
 
     # ------------------------------------------------------------------ state
@@ -168,7 +165,12 @@ class DriverService:
 
         def on_open(ws):
             print(f"[+] WS открыт ({self.email}). STOMP CONNECT...")
-            ws.send(self._stomp_frame("CONNECT", {"accept-version": "1.1", "heart-beat": "10000,10000"}))
+            ws.send(self._stomp_frame("CONNECT", {
+                "accept-version": "1.1",
+                "heart-beat": "10000,10000",
+                "host": "localhost",
+                "userType": "DRIVER",
+            }))
 
         def on_message(ws, message):
             if message.startswith("CONNECTED"):
@@ -242,16 +244,81 @@ class DriverService:
             print(f"[!] Ошибка: {e}")
             return False
 
-    def accept_trip(self, trip_id):
-        """POST /api/v1/trips/{id}/accept - Принятие поездки водителем"""
-        url = f"{API_URL}/trips/{trip_id}/accept"
-        print(f"[*] Принятие поездки #{trip_id}...")
+    def attach_payout_account(self) -> bool:
+        """Привязать банковский счёт для выплат водителю"""
+        if not self.token:
+            return False
 
         try:
-            # Отправляем пустой json, так как бэкенд ожидает POST запрос
-            res = requests.post(url, headers=self._auth_headers(), json={})
-            if res.status_code in [200, 204]:
-                print(f"[✔] Поездка #{trip_id} успешно принята!")
+            check_res = requests.get(
+                f"{API_URL}/payout-accounts",
+                headers={"Authorization": f"Bearer {self.token}"},
+                timeout=10,
+            )
+
+            if check_res.status_code == 200:
+                accounts = check_res.json()
+                if accounts:
+                    print(f"[·] Payout account уже существует — пропускаем")
+                    return True
+        except Exception:
+            pass
+
+        driver_id = self.state.get("driver_id")
+        payload = {
+            "stripeAccountId": f"acct_fake_{driver_id}",
+            "lastFour": "1234"
+        }
+
+        try:
+            res = requests.post(
+                f"{API_URL}/payout-accounts",
+                headers={
+                    "Authorization": f"Bearer {self.token}",
+                    "Content-Type": "application/json"
+                },
+                json=payload,
+                timeout=10,
+            )
+
+            if res.status_code in [200, 201]:
+                data = res.json()
+                print(f"[✔] Payout account привязан: **** {data.get('lastFour', '1234')}")
+                return True
+
+            if res.status_code == 409:
+                print(f"[·] Payout account уже существует (конфликт при создании)")
+                return True
+
+            print(f"[!] Не удалось привязать payout account: {res.status_code} {res.text}")
+            return False
+
+        except Exception as e:
+            print(f"[!] Ошибка HTTP: {e}")
+            return False
+
+    def accept_trip(self, trip_id):
+        """POST /api/v1/trips/{id}/accept - Принятие поездки с отправкой локации"""
+        url = f"{API_URL}/trips/{trip_id}/accept"
+
+        # Теперь отправляем текущие координаты водителя в Body
+        payload = {
+            "latitude": self.start_lat,
+            "longitude": self.start_lng
+        }
+
+        print(f"[*] Принятие поездки #{trip_id} (Локация: {self.start_lat}, {self.start_lng})...")
+
+        try:
+            res = requests.post(url, headers=self._auth_headers(), json=payload)
+            if res.status_code == 200:
+                data = res.json()
+                print(f"[✔] Поездка #{trip_id} принята!")
+                print(f"    Маршрут до пассажира: {data.get('distanceKm')} км, ~{data.get('durationMin')} мин")
+                print(f"    String: {data.get('geometry')}")
+                return data
+            elif res.status_code == 204:
+                print(f"[✔] Поездка #{trip_id} принята (без данных о маршруте).")
                 return True
             else:
                 print(f"[!] Ошибка принятия поездки ({res.status_code}): {res.text}")
@@ -272,6 +339,40 @@ class DriverService:
                 return True
             else:
                 print(f"[!] Ошибка отклонения поездки ({res.status_code}): {res.text}")
+                return False
+        except Exception as e:
+            print(f"[!] Ошибка соединения: {e}")
+            return False
+
+    def start_trip(self, trip_id):
+        """POST /api/v1/trips/{id}/start - Начало поездки (пассажир в машине)"""
+        url = f"{API_URL}/trips/{trip_id}/start"
+        print(f"[*] Старт поездки #{trip_id}...")
+
+        try:
+            res = requests.post(url, headers=self._auth_headers(), json={})
+            if res.status_code in [200, 204]:
+                print(f"[✔] Поездка #{trip_id} начата. Вы в пути!")
+                return True
+            else:
+                print(f"[!] Ошибка старта поездки ({res.status_code}): {res.text}")
+                return False
+        except Exception as e:
+            print(f"[!] Ошибка соединения: {e}")
+            return False
+
+    def complete_trip(self, trip_id):
+        """POST /api/v1/trips/{id}/complete - Завершение поездки"""
+        url = f"{API_URL}/trips/{trip_id}/complete"
+        print(f"[*] Завершение поездки #{trip_id}...")
+
+        try:
+            res = requests.post(url, headers=self._auth_headers(), json={})
+            if res.status_code in [200, 204]:
+                print(f"[✔] Поездка #{trip_id} успешно завершена!")
+                return True
+            else:
+                print(f"[!] Ошибка завершения поездки ({res.status_code}): {res.text}")
                 return False
         except Exception as e:
             print(f"[!] Ошибка соединения: {e}")

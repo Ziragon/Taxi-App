@@ -1,13 +1,13 @@
-package com.example.tripservice.service;
+package com.example.tripservice.service.search;
 
 import com.example.shared.dto.data.DriverLocationDto;
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.exception.common.ServiceUnavailableException;
 import com.example.tripservice.client.UserServiceClient;
 import com.example.tripservice.entity.Trip;
-import com.example.tripservice.exception.TripNotFoundException;
 import com.example.tripservice.messaging.TripOfferPublisher;
-import com.example.tripservice.repository.TripRepository;
+import com.example.tripservice.service.external.ProfileStatusService;
+import com.example.tripservice.service.trip.TripStatusService;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +32,6 @@ public class DriverSearchService {
     private final DriverResponseSubscriber responseSubscriber;
     private final DriverResponsePublisher responsePublisher;
     private final TripOfferPublisher tripOfferPublisher;
-    private final TripRepository tripRepository;
 
     @Value("${searching.duration}")
     private int searchDuration;
@@ -58,14 +57,14 @@ public class DriverSearchService {
     }
 
     @Async
-    public void searchDrivers(Long tripId, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {
+    public void searchDrivers(Trip trip, BigDecimal longitude, BigDecimal latitude, VehicleClass vehicleClass) {
 
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new TripNotFoundException(tripId));
 
         Set<Long> alreadyOffered = new HashSet<>();
         CompletableFuture<Long> future = new CompletableFuture<>();
-        responseSubscriber.registerFuture(tripId, future);
+        responseSubscriber.registerFuture(trip.getId(), future);
 
         try {
             for (int radius : radiuses) {
@@ -82,31 +81,32 @@ public class DriverSearchService {
 
                     if (future.isCompletedExceptionally()) {
                         future = new CompletableFuture<>();
-                        responseSubscriber.registerFuture(tripId, future);
+                        responseSubscriber.registerFuture(trip.getId(), future);
                     }
 
-                    offerCacheService.setActiveOffer(tripId, driver.driverId());
+                    offerCacheService.setActiveOffer(trip.getId(), driver.driverId());
 
                     tripOfferPublisher.publishOffer(trip, driver.driverId());
 
                     boolean accepted = waitForAccept(future);
-                    offerCacheService.removeActiveOffer(tripId);
+                    offerCacheService.removeActiveOffer(trip.getId());
 
                     if (accepted) {
                         Long driverId = future.getNow(null);
-                        tripStatusService.assignDriver(tripId, driverId);
+                        tripStatusService.assignDriver(trip.getId(), driverId);
                         return;
                     }
 
-                    tripOfferPublisher.publishOfferExpired(tripId, driver.driverId());
+                    tripOfferPublisher.publishOfferExpired(trip.getId(), driver.driverId());
                 }
             }
 
-            log.info("Drivers for trip {} not found", tripId);
-            tripStatusService.cancelSearch(tripId);
+            log.info("Drivers for trip {} not found", trip.getId());
+            tripStatusService.cancelSearch(trip.getId());
 
         } finally {
-            responseSubscriber.removeFuture(tripId);
+            responseSubscriber.removeFuture(trip.getId());
+            offerCacheService.removeActiveOffer(trip.getId());
         }
     }
 

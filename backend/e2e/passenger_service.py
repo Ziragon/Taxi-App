@@ -1,12 +1,16 @@
 import json
 import os
+import time
+import threading
 import requests
+import websocket
 import random
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 
 API_URL = os.getenv("TAXI_API_URL", "http://localhost:8000/api/v1")
+WS_URL  = os.getenv("TAXI_WS_URL",  "ws://localhost:8083/ws/notifications/websocket")
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
 DEFAULT_STATE_FILE = "state.json"
 
@@ -17,6 +21,10 @@ class PassengerService:
         self.full_state = None
         self.state = self.load_state()
         self.token = None
+        self.current_trip_id = None
+        self.ws = None
+        self.ws_thread = None
+        self.on_ws_message = None
 
     def load_state(self):
         if not os.path.exists(self.state_file):
@@ -72,6 +80,86 @@ class PassengerService:
             print(f"[!] Auth-Service недоступен: {e}")
         return False
 
+    def _stomp_frame(self, command, headers, body=""):
+        frame = f"{command}\n"
+        for k, v in headers.items():
+            frame += f"{k}:{v}\n"
+        frame += f"\n{body}\x00"
+        return frame
+
+    def _heartbeat_loop(self):
+        """Отправляет пустые сообщения (heartbeats) каждые 10 секунд"""
+        while self.ws and self.ws.keep_running:
+            try:
+                # В STOMP heartbeat — это просто символ новой строки
+                self.ws.send("\n")
+            except Exception:
+                break
+            time.sleep(10)
+
+    def connect_ws(self, block=False):
+        """Подключает WebSocket для пассажира с поддержкой STOMP и Heartbeats"""
+        if not self.token:
+            print("[!] Нет токена для WS. Сначала нужно авторизоваться.")
+            return
+
+        ws_url = f"{WS_URL}?token={self.token}"
+
+        def on_open(ws):
+            print(f"[+] WS открыт ({self.email}). STOMP CONNECT...")
+            # Отправляем CONNECT фрейм с указанием интервала heart-beat
+            ws.send(self._stomp_frame("CONNECT", {
+                "accept-version": "1.1",
+                "heart-beat": "10000,10000",
+                "host": "localhost",
+                "userType": "PASSENGER",
+            }))
+
+        def on_message(ws, message):
+            # Пропускаем пустые строки (входящие heartbeats от сервера)
+            if message == "\n":
+                return
+
+            if message.startswith("CONNECTED"):
+                print(f"[✔] STOMP подключён ({self.email}). Подписка на уведомления...")
+                # Подписываемся на очередь пользователя
+                ws.send(self._stomp_frame("SUBSCRIBE", {
+                    "id": "sub-0",
+                    "destination": "/user/queue/notifications"
+                }))
+                # Запускаем цикл отправки heartbeats в отдельном потоке
+                threading.Thread(target=self._heartbeat_loop, daemon=True).start()
+
+            elif message.startswith("MESSAGE"):
+                print(f"\n[🔔 {self.email} WS]:\n{message}\n")
+                if self.on_ws_message:
+                    self.on_ws_message(message)
+
+        def on_error(ws, err):
+            print(f"[!] WS ошибка ({self.email}): {err}")
+
+        def on_close(ws, *args):
+            print(f"[-] WS закрыт ({self.email})")
+
+        self.ws = websocket.WebSocketApp(
+            ws_url,
+            on_open=on_open,
+            on_message=on_message,
+            on_error=on_error,
+            on_close=on_close,
+        )
+
+        if block:
+            self.ws.run_forever()
+        else:
+            self.ws_thread = threading.Thread(target=self.ws.run_forever, daemon=True)
+            self.ws_thread.start()
+
+    def disconnect_ws(self):
+        """Отключает WebSocket"""
+        if self.ws:
+            self.ws.close()
+
     def attach_card(self, set_as_default=False):
         """Создает тестовый PaymentMethod в Stripe и отправляет его на наш бэкенд"""
         if not STRIPE_API_KEY:
@@ -89,13 +177,12 @@ class PassengerService:
         try:
             res = requests.post(stripe_url, headers=headers, data=data)
             if res.status_code != 200:
-                print(f"[!] Ошибка Stripe API: {res.text}")
+                print(f"[!] Ошибка Stripe API ({res.status_code}): {res.text}")
                 return False
 
             pm_id = res.json()["id"]
             print(f"[+] PaymentMethod создан в Stripe: {pm_id}")
 
-            # Исправлено: рут и payload как в test-payment.html
             backend_url = f"{API_URL}/payment-methods"
             payload = {
                 "stripePaymentMethodId": pm_id,
@@ -108,6 +195,10 @@ class PassengerService:
             if b_res.status_code in [200, 201]:
                 data = b_res.json()
                 print(f"[✔] Карта привязана: {data.get('cardBrand', 'card')} **** {data.get('lastFour', '****')}")
+                return True
+            elif b_res.status_code == 409:
+                # Карта уже привязана
+                print(f"[·] Карта уже привязана (409 Conflict)")
                 return True
             else:
                 print(f"[!] Ошибка бэкенда ({b_res.status_code}): {b_res.text}")
@@ -146,19 +237,19 @@ class PassengerService:
             return False
 
     def start_search(self, vehicle_class="COMFORT"):
-        """POST /api/v1/trips/{id}/start-search - Запуск поиска водителя"""
-        if not self.current_trip_id:
-            print("[!] Сначала нужно создать поездку (команда: create_trip).")
-            return False
+        """POST /api/v1/trips/start-search - Создание черновика и запуск поиска"""
 
-        url = f"{API_URL}/trips/{self.current_trip_id}/start-search?vehicleClass={vehicle_class}"
-        print(f"[*] Запуск поиска водителя (класс: {vehicle_class}) для поездки #{self.current_trip_id}...")
+        url = f"{API_URL}/trips/start-search?vehicleClass={vehicle_class}"
+        print(f"[*] Запуск поиска водителя (класс: {vehicle_class})...")
 
         try:
-            # Отправляем пустой json или data, т.к. бэкенд ожидает POST
             res = requests.post(url, headers=self._auth_headers(), json={})
-            if res.status_code == 204:
-                print("[✔] Поиск успешно запущен (в фоновом режиме).")
+
+            if res.status_code in [200, 201]:
+                data = res.json()
+                self.current_trip_id = data.get("id")
+
+                print(f"[✔] Поиск запущен. Создана поездка #{self.current_trip_id}")
                 return True
             else:
                 print(f"[!] Ошибка запуска поиска ({res.status_code}): {res.text}")

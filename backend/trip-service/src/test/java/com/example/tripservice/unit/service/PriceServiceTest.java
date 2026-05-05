@@ -2,7 +2,7 @@ package com.example.tripservice.unit.service;
 
 import com.example.tripservice.dto.data.CalculatePriceDto;
 import com.example.tripservice.dto.data.TariffPriceData;
-import com.example.tripservice.service.PriceService;
+import com.example.tripservice.service.pricing.PriceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

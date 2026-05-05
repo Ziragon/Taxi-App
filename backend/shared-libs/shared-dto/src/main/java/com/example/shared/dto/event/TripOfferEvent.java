@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 public record TripOfferEvent(
         Long tripId,
         Long driverId,
+        Long passengerId,
         String originAddress,
         BigDecimal originLat,
         BigDecimal originLng,

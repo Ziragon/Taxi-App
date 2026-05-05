@@ -6,6 +6,7 @@ import com.example.paymentservice.exception.DuplicatePaymentMethodException;
 import com.example.paymentservice.exception.PaymentMethodNotActiveException;
 import com.example.paymentservice.exception.PaymentMethodNotFoundException;
 import com.example.paymentservice.repository.PaymentMethodRepository;
+import com.example.shared.exception.common.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -90,8 +91,16 @@ public class PaymentMethodService {
     public void setDefault(Long passengerId, Long paymentMethodId) {
         PaymentMethod paymentMethod = getById(paymentMethodId);
 
+        if (!paymentMethod.getPassengerId().equals(passengerId)) {
+            throw new AccessDeniedException();
+        }
+
         if (!paymentMethod.isActive()) {
             throw new PaymentMethodNotActiveException(paymentMethodId);
+        }
+
+        if (paymentMethod.isDefaultvalue()) {
+            return;
         }
 
         paymentMethodRepository.clearDefaultForPassenger(passengerId);
@@ -103,26 +112,38 @@ public class PaymentMethodService {
                 paymentMethod.getStripeCustomerId(),
                 paymentMethod.getStripePaymentMethodId()
         );
+
+        log.info("Payment method {} set as default for passenger {}", paymentMethodId, passengerId);
     }
 
     @Transactional
     public void deactivate(Long passengerId, Long paymentMethodId) {
         PaymentMethod paymentMethod = getById(paymentMethodId);
 
-        if (paymentMethod.isDefaultvalue()) {
-            throw new DefaultPaymentMethodException(passengerId);
+        if (!paymentMethod.getPassengerId().equals(passengerId)) {
+            throw new AccessDeniedException();
         }
 
-        paymentMethodRepository.deactivateById(paymentMethodId);
+        if (paymentMethod.isDefaultvalue()) {
+            List<PaymentMethod> otherActive = paymentMethodRepository
+                    .findAllByPassengerIdAndActiveTrue(passengerId)
+                    .stream()
+                    .filter(pm -> !pm.getId().equals(paymentMethodId))
+                    .toList();
+
+            if (!otherActive.isEmpty()) {
+                throw new DefaultPaymentMethodException(passengerId);
+            }
+        }
 
         try {
             stripeService.detachPaymentMethod(paymentMethod.getStripePaymentMethodId());
         } catch (Exception e) {
-
-            log.warn("Could not detach payment method {} from Stripe, deactivated locally: {}",
-                    paymentMethodId, e.getMessage());
+            log.warn("Could not detach payment method {} from Stripe: {}", paymentMethodId, e.getMessage());
         }
 
-        log.info("Payment method {} deactivated for passenger {}", paymentMethodId, passengerId);
+        paymentMethodRepository.deleteById(paymentMethodId);
+
+        log.info("Payment method {} deleted for passenger {}", paymentMethodId, passengerId);
     }
 }

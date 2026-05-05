@@ -35,7 +35,7 @@ public class DriverStatusController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
 
-        driverProfileService.updateStatus(principal.userId(), DriverStatus.ONLINE);
+        driverProfileService.goOnline(principal.userId());
 
         return ResponseEntity.noContent().build();
     }
@@ -52,7 +52,7 @@ public class DriverStatusController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
 
-        driverProfileService.updateStatus(principal.userId(), DriverStatus.OFFLINE);
+        driverProfileService.goOffline(principal.userId());
 
         return ResponseEntity.noContent().build();
     }

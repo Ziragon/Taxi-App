@@ -19,6 +19,9 @@ import java.util.Map;
 @Component
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
+    private static final String USER_TYPE_DRIVER = "DRIVER";
+    private static final String USER_TYPE_PASSENGER = "PASSENGER";
+
     @Override
     public Message<?> preSend(@NonNull Message<?> message, @NonNull MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(
@@ -48,6 +51,18 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                 throw new IllegalStateException("Unauthorized WebSocket connection");
             }
 
+            String userType = accessor.getFirstNativeHeader(
+                    JwtHandshakeInterceptor.SESSION_ATTR_USER_TYPE
+            );
+
+            if (userType != null && !userType.equals(USER_TYPE_DRIVER)
+                    && !userType.equals(USER_TYPE_PASSENGER)) {
+                log.warn("STOMP CONNECT: invalid userType={}, ignoring", userType);
+                userType = null;
+            }
+
+            sessionAttributes.put(JwtHandshakeInterceptor.SESSION_ATTR_USER_TYPE, userType);
+
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                     userId.toString(),
                     null,
@@ -57,7 +72,32 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             );
 
             accessor.setUser(auth);
-            log.debug("STOMP CONNECT authenticated: userId={}, role={}", userId, role);
+            log.debug("STOMP CONNECT authenticated: userId={}, role={}, userType={}",
+                    userId, role, userType);
+        }
+
+        if (StompCommand.SEND.equals(accessor.getCommand())) {
+            String destination = accessor.getDestination();
+            if ("/app/driver/location".equals(destination)) {
+                Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
+                if (sessionAttributes == null) {
+                    log.warn("STOMP SEND to driver/location: no session, rejecting");
+                    return null;
+                }
+
+                String userType = (String) sessionAttributes.get(
+                        JwtHandshakeInterceptor.SESSION_ATTR_USER_TYPE
+                );
+
+                if (!USER_TYPE_DRIVER.equals(userType)) {
+                    Long userId = (Long) sessionAttributes.get(
+                            JwtHandshakeInterceptor.SESSION_ATTR_USER_ID
+                    );
+                    log.warn("STOMP SEND to driver/location blocked: userId={}, userType={}",
+                            userId, userType);
+                    return null;
+                }
+            }
         }
 
         return message;
