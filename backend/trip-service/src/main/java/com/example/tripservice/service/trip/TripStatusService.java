@@ -77,9 +77,11 @@ public class TripStatusService {
             trip.setStatus(TripStatus.CANCELLED);
             tripRepository.save(trip);
             notificationPublisher.publishTripCancelled(
-                    trip.getPassengerId(),
                     tripId,
-                    "Отсутствует платёжный метод"
+                    trip.getPassengerId(),
+                    trip.getDriverId(),
+                    "Отменено пассажиром",
+                    "PASSENGER"
             );
             return;
         }
@@ -157,7 +159,13 @@ public class TripStatusService {
         activeTripCacheService.removeForPassenger(trip.getPassengerId());
 
         if (trip.getDriverId() != null) {
-            notificationPublisher.publishTripCancelled(trip.getDriverId(), tripId, "Отменено пассажиром");
+            notificationPublisher.publishTripCancelled(
+                    tripId,
+                    trip.getPassengerId(),
+                    null,
+                    "Отсутствует платёжный метод",
+                    "SYSTEM"
+            );
             activeTripCacheService.removeForDriver(trip.getDriverId());
         }
     }
@@ -171,7 +179,13 @@ public class TripStatusService {
         tripRepository.save(trip);
 
         log.info("Search cancelled for trip {} — no drivers found", tripId);
-        // TODO: WebSocket уведомление пассажиру
+        notificationPublisher.publishTripCancelled(
+                trip.getId(),
+                trip.getPassengerId(),
+                null,
+                "Водители не найдены",
+                "SYSTEM"
+        );
     }
 
     @Transactional
