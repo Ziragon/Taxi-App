@@ -1,4 +1,3 @@
-import 'package:arbuz_express/hooks/use_payment.dart';
 import 'package:arbuz_express/hooks/use_profile.dart';
 import 'package:arbuz_express/hooks/use_vehicle.dart';
 import 'package:arbuz_express/screens/driver_map_screen.dart';
@@ -6,7 +5,6 @@ import 'package:arbuz_express/screens/home_map_screen.dart';
 import 'package:arbuz_express/utils/validators.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
 
 class RegistrationDetailsScreen extends StatefulWidget {
   const RegistrationDetailsScreen({super.key, required this.isDriver});
@@ -20,7 +18,6 @@ class RegistrationDetailsScreen extends StatefulWidget {
 
 class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
   final _fioController = TextEditingController();
-  final _fioFocusNode = FocusNode();
 
   final _licenseNumberController = TextEditingController();
   final _carBrandController = TextEditingController();
@@ -31,16 +28,13 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
 
   final _useProfile = UseProfile();
   final _useVehicle = UseVehicle();
-  final _usePayment = UsePayment();
 
   bool _isFormValid = false;
   bool _isLoading = false;
-  CardFieldInputDetails? _cardDetails;
 
   void _validateForm() {
     final fio = _fioController.text.trim();
-    final isCommonValid =
-        Validators.validateFio(fio) && (_cardDetails?.complete ?? false);
+    final isCommonValid = Validators.validateFio(fio);
 
     if (widget.isDriver) {
       final license = _licenseNumberController.text.trim();
@@ -68,28 +62,9 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
   }
 
   Future<void> _submitProfile() async {
-    if (!(_cardDetails?.complete ?? false)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Введите корректные данные карты'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
-    }
-
     setState(() => _isLoading = true);
 
     try {
-      final stripePmId = await _usePayment.createStripePaymentMethod(
-        cardholderName: _fioController.text.trim(),
-        postalCode: _cardDetails?.postalCode,
-      );
-
-      if (stripePmId == null) {
-        throw Exception('Stripe did not return a payment method id');
-      }
-
       final fioWords = _fioController.text.trim().split(' ');
       final firstName = fioWords.isNotEmpty ? fioWords[0] : '';
       final lastName = fioWords.length > 1 ? fioWords.sublist(1).join(' ') : '';
@@ -125,20 +100,6 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
         if (!profileResult.success) {
           throw Exception(profileResult.error);
         }
-      }
-
-      final backendPmId = await _usePayment.addPaymentMethodToBackend(
-        stripePmId,
-      );
-
-      if (backendPmId == null) {
-        throw Exception('Не удалось сохранить карту в backend');
-      }
-
-      final setDefault = await _usePayment.setDefaultPaymentMethod(backendPmId);
-
-      if (!setDefault) {
-        throw Exception('Не удалось назначить карту основной');
       }
 
       if (!mounted) return;
@@ -190,7 +151,6 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
   @override
   void dispose() {
     _fioController.dispose();
-    _fioFocusNode.dispose();
     _licenseNumberController.dispose();
     _carBrandController.dispose();
     _carModelController.dispose();
@@ -244,7 +204,6 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        // Поле ФИО
                         CustomTextField(
                           label: 'Ваше ФИО',
                           hintText: 'Иванов Иван Иванович',
@@ -252,23 +211,6 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
                           controller: _fioController,
                           textCapitalization: TextCapitalization.words,
                         ),
-                        const SizedBox(height: 20),
-
-                        // Поле карты
-                        GestureDetector(
-                          onTap: () {
-                            _fioFocusNode.unfocus(); // Главное исправление
-                            FocusScope.of(context).unfocus();
-                          },
-                          behavior: HitTestBehavior.translucent,
-                          child: _StripeCardField(
-                            onChanged: (details) {
-                              _cardDetails = details;
-                              _validateForm();
-                            },
-                          ),
-                        ),
-
                         if (widget.isDriver) ...[
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 24),
@@ -341,65 +283,6 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _StripeCardField extends StatelessWidget {
-  const _StripeCardField({required this.onChanged});
-
-  final ValueChanged<CardFieldInputDetails> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            'ДАННЫЕ КАРТЫ',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.4),
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.06)),
-          ),
-          child: CardField(
-            enablePostalCode: true,
-            autofocus: false,
-            cursorColor: const Color(0xFFFFC107),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              height: 1.4,
-            ),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              isDense: true,
-              contentPadding: EdgeInsets.zero,
-            ),
-            numberHintText: '4242 4242 4242 4242',
-            expirationHintText: 'MM/YY',
-            cvcHintText: 'CVC',
-            postalCodeHintText: 'ZIP',
-            onCardChanged: (details) {
-              if (details != null) {
-                onChanged(details);
-              }
-            },
-          ),
-        ),
-      ],
     );
   }
 }
