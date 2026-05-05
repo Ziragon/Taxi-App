@@ -96,7 +96,7 @@ public class TripService {
     }
 
     @Transactional(readOnly = true)
-    public TripDto getTripByPassengerId(Long passengerId) {
+    public TripDto getActiveTripByPassengerId(Long passengerId) {
         Long existingId = activeTripCacheService.getPassengerActiveTripId(passengerId);
         if (existingId == null) return null;
 
@@ -116,15 +116,12 @@ public class TripService {
     }
 
     @Transactional(readOnly = true)
-    public TripDto getTripByDriverId(Long driverId, BigDecimal driverLat, BigDecimal driverLng) {
-        // 1. Проверяем наличие активной поездки в кэше именно для водителя
+    public TripDto getActiveTripByDriverId(Long driverId, BigDecimal driverLat, BigDecimal driverLng) {
         Long existingId = activeTripCacheService.getDriverActiveTripId(driverId);
         if (existingId == null) return null;
 
-        // 2. Ищем поездку в БД
         Trip trip = tripRepository.findById(existingId).orElse(null);
 
-        // 3. Валидация: если поездки нет или она завершена — чистим кэш
         if (trip == null || !ACTIVE_STATUSES.contains(trip.getStatus())) {
             activeTripCacheService.removeForDriver(driverId);
             return null;

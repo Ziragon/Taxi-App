@@ -39,6 +39,6 @@ public class TripPassengerService {
 
     @Transactional(readOnly = true)
     public TripDto getActiveTrip(Long userId) {
-        return tripService.getTripByPassengerId(userId);
+        return tripService.getActiveTripByPassengerId(userId);
     }
 }

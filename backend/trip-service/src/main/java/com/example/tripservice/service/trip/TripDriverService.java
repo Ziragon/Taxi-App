@@ -38,6 +38,6 @@ public class TripDriverService {
 
     @Transactional(readOnly = true)
     public TripDto getActiveTrip(Long userId, BigDecimal driverLat, BigDecimal driverLng) {
-        return tripService.getTripByDriverId(userId, driverLat, driverLng);
+        return tripService.getActiveTripByDriverId(userId, driverLat, driverLng);
     }
 }
