@@ -1,5 +1,4 @@
 class ApiConfig {
-  
   static const String baseUrl = 'http://192.168.0.10:8000/api/v1';
   static const String authRegister = '$baseUrl/auth/register';
   static const String authLogin = '$baseUrl/auth/login';
@@ -9,4 +8,7 @@ class ApiConfig {
   static const String vehicles = '$baseUrl/vehicles';
   static const String paymentMethods = '$baseUrl/payment-methods';
   static const String payoutAccounts = '$baseUrl/payout-accounts';
+
+  static const String trips = '$baseUrl/trips';
+  static const String tripsStartSearch = '$baseUrl/trips/start-search';
 }
