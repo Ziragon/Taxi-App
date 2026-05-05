@@ -58,17 +58,44 @@ public class NotificationPublisher {
         log.info("Published TRIP_COMPLETED: tripId={}", tripId);
     }
 
-    public void publishTripCancelled(Long recipientId, Long tripId, String reason) {
-        Map<String, Object> payload = Map.of(
-                "recipientId", recipientId,
+    public void publishTripCancelled(Long tripId, Long passengerId, Long driverId, String reason, String cancelledBy) {
+
+        String passengerMessage = switch (cancelledBy) {
+            case "PASSENGER" -> "Вы отменили поездку";
+            case "SYSTEM"    -> "Поездка отменена: " + reason;
+            default          -> "Поездка отменена: " + reason;
+        };
+
+        Map<String, Object> passengerPayload = Map.of(
+                "recipientId",   passengerId,
                 "recipientType", "PASSENGER",
-                "tripId", tripId,
-                "eventType", "TRIP_CANCELLED",
-                "channel", "PUSH",
-                "message", "Поездка отменена: " + reason
+                "tripId",        tripId,
+                "eventType",     "TRIP_CANCELLED",
+                "channel",       "PUSH",
+                "message",       passengerMessage
         );
-        rabbitTemplate.convertAndSend(NOTIFICATION_EXCHANGE, "notification.trip.cancelled", payload);
-        log.info("Published TRIP_CANCELLED: tripId={}", tripId);
+        rabbitTemplate.convertAndSend(NOTIFICATION_EXCHANGE, "notification.trip.cancelled", passengerPayload);
+
+        if (driverId != null) {
+            String driverMessage = switch (cancelledBy) {
+                case "PASSENGER" -> "Пассажир отменил поездку";
+                case "SYSTEM"    -> "Поездка отменена: " + reason;
+                default          -> "Поездка отменена: " + reason;
+            };
+
+            Map<String, Object> driverPayload = Map.of(
+                    "recipientId",   driverId,
+                    "recipientType", "DRIVER",
+                    "tripId",        tripId,
+                    "eventType",     "TRIP_CANCELLED",
+                    "channel",       "PUSH",
+                    "message",       driverMessage
+            );
+            rabbitTemplate.convertAndSend(NOTIFICATION_EXCHANGE, "notification.trip.cancelled", driverPayload);
+        }
+
+        log.info("Published TRIP_CANCELLED: tripId={}, passengerId={}, driverId={}, cancelledBy={}",
+                tripId, passengerId, driverId, cancelledBy);
     }
 
     public void publishPaymentSucceeded(Long passengerId, Long driverId, Long tripId, BigDecimal amount) {
