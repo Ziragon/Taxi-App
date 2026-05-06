@@ -26,6 +26,7 @@ public class DriverProfileService {
     private final VehicleRepository vehicleRepository;
     private final AccountService accountService;
     private final TripStatusService tripStatusService;
+    private final DriverProfileRepository driverRepository;
 
     private static final String DRIVER_PROFILE = "Driver profile";
 
@@ -99,10 +100,15 @@ public class DriverProfileService {
         driverCachingService.updateStatus(accountId, DriverStatus.ONLINE);
     }
 
-    @Transactional
-    public void goOffline(Long accountId) {
-        tripStatusService.validateDriverStatus(accountId);
-        driverCachingService.deleteDriver(accountId);
+    public void goOffline(Long driverId) {
+        driverCachingService.deleteDriver(driverId);
+
+        driverRepository.findById(driverId).ifPresent(driver -> {
+            driver.setStatus(DriverStatus.OFFLINE);
+            driverRepository.save(driver);
+        });
+
+        log.info("Driver {} went OFFLINE, cache cleared", driverId);
     }
 
     public void markBusy(Long accountId) {

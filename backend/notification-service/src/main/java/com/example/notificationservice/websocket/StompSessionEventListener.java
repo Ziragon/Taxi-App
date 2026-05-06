@@ -53,7 +53,6 @@ public class StompSessionEventListener {
     }
 
     @EventListener
-    @Async
     public void onDisconnect(SessionDisconnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = accessor.getSessionId();
