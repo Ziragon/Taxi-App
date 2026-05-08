@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../services/token_storage.dart';
+import '../services/websocket_manager.dart';
 
 class UserProfileData {
   final String firstName;
@@ -79,6 +80,7 @@ class UseProfile {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         TokenStorage.userRole = 'driver';
+        WebSocketManager().start('driver');
         final data = UserProfileData.fromJson(jsonDecode(response.body));
         return ProfileResult(success: true, data: data);
       } else {
@@ -110,6 +112,7 @@ class UseProfile {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         TokenStorage.userRole = 'passenger';
+        WebSocketManager().start('passenger');
         final data = UserProfileData.fromJson(jsonDecode(response.body));
         return ProfileResult(success: true, data: data);
       } else {
