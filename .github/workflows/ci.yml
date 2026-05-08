@@ -24,19 +24,14 @@ jobs:
               - '.github/workflows/**'
             gateway-service:
               - 'backend/gateway-service/**'
-              - '.github/workflows/**'
             user-service:
               - 'backend/user-service/**'
-              - '.github/workflows/**'
             trip-service:
               - 'backend/trip-service/**'
-              - '.github/workflows/**'
             payment-service:
               - 'backend/payment-service/**'
-              - '.github/workflows/**'
             notification-service:                        
               - 'backend/notification-service/**'
-              - '.github/workflows/**'
 
       - name: Set matrix
         id: set-matrix
