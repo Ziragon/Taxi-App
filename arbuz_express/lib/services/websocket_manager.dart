@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
+import 'package:geolocator/geolocator.dart';
 import '../config/api_config.dart';
 import 'token_storage.dart';
 
@@ -14,6 +15,8 @@ class WebSocketManager {
   String? _role;
   Timer? _locationTimer;
   Timer? _heartbeatTimer;
+  double _currentLat = 55.755864; // Default: Red Square
+  double _currentLng = 37.617617; // Default: Red Square
 
   void start(String role) {
     if (_client != null && _client!.connected) return;
@@ -65,13 +68,37 @@ class WebSocketManager {
     });
   }
 
-  void _sendLocationUpdate() {
-    final payload = jsonEncode({
-      'latitude': 55.755864,
-      'longitude': 37.617617,
-      'vehicleClass': 'COMFORT',
-    });
-    send('/app/driver/location', payload);
+  void _sendLocationUpdate() async {
+    try {
+      // Get current location
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+
+      _currentLat = position.latitude;
+      _currentLng = position.longitude;
+
+      final payload = jsonEncode({
+        'latitude': _currentLat,
+        'longitude': _currentLng,
+        'vehicleClass': 'COMFORT',
+      });
+
+      debugPrint(
+        '[WS] Sending real location: lat=${_currentLat.toStringAsFixed(6)}, lng=${_currentLng.toStringAsFixed(6)}',
+      );
+      send('/app/driver/location', payload);
+    } catch (e) {
+      debugPrint('[WS] Error getting location: $e, using last known position');
+      // Send last known position if we can't get new one
+      final payload = jsonEncode({
+        'latitude': _currentLat,
+        'longitude': _currentLng,
+        'vehicleClass': 'COMFORT',
+      });
+      send('/app/driver/location', payload);
+    }
   }
 
   void _startHeartbeatLoop() {

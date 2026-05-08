@@ -289,6 +289,45 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
     }
   }
 
+  Future<void> _updateLocationManually() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+
+      if (mounted) {
+        setState(() {
+          _currentPosition = LatLng(position.latitude, position.longitude);
+        });
+        _mapController.move(_currentPosition!, 15.0);
+
+        if (_isOnline) {
+          final locationData = {
+            'lat': position.latitude,
+            'lng': position.longitude,
+            'timestamp': DateTime.now().toIso8601String(),
+          };
+          _wsManager.send('/app/driver/location', jsonEncode(locationData));
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Геолокация обновлена'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Не удалось получить геолокацию'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   void _showNotifications() {
     showDialog(
       context: context,
@@ -424,6 +463,19 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
                       ),
               ),
             ),
+          Positioned(
+            bottom: 100,
+            right: 16,
+            child: SafeArea(
+              child: FloatingActionButton(
+                onPressed: _updateLocationManually,
+                backgroundColor: const Color(0xFFFFC107),
+                foregroundColor: Colors.black,
+                child: const Icon(Icons.my_location),
+                tooltip: 'Обновить геолокацию',
+              ),
+            ),
+          ),
         ],
       ),
     );
