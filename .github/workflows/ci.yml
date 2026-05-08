@@ -39,7 +39,6 @@ jobs:
               - '.github/workflows/**'
 
       - name: Set matrix
-        id: set-matrix
         run: |
           services=()
           [[ "${{ steps.filter.outputs.gateway-service }}" == "true" ]] && services+=("gateway-service")
@@ -47,9 +46,13 @@ jobs:
           [[ "${{ steps.filter.outputs.trip-service }}" == "true" ]] && services+=("trip-service")
           [[ "${{ steps.filter.outputs.payment-service }}" == "true" ]] && services+=("payment-service")
           [[ "${{ steps.filter.outputs.notification-service }}" == "true" ]] && services+=("notification-service")
-
-          json=$(printf '%s\n' "${services[@]}" | jq -R . | jq -cs .)
-          echo "services=$json" >> $GITHUB_OUTPUT
+          
+          if [ ${#services[@]} -eq 0 ]; then
+            echo "services=[]" >> $GITHUB_OUTPUT
+          else
+            json=$(printf '%s\n' "${services[@]}" | jq -R . | jq -cs .)
+            echo "services=$json" >> $GITHUB_OUTPUT
+          fi
 
   build-and-test:
     needs: detect-changes
