@@ -14,6 +14,7 @@ import 'package:arbuz_express/screens/menuScreens/notifications_panel.dart';
 import 'package:arbuz_express/screens/menuScreens/notifications_button.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
 import 'package:arbuz_express/hooks/use_driver_status.dart';
+import 'package:arbuz_express/services/websocket_manager.dart';
 import 'driverScreensWidgets/car_marker.dart';
 import 'driverScreensWidgets/driver_online_toggle.dart';
 import 'driverScreensWidgets/incoming_order_dialog.dart';
@@ -30,6 +31,8 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
   static const LatLng _initialCenter = LatLng(55.0084, 82.9357);
   final MapController _mapController = MapController();
   final UseDriverStatus _statusHook = UseDriverStatus();
+  final WebSocketManager _wsManager = WebSocketManager();
+
   LatLng? _currentPosition;
   LatLng? _clientPosition;
   List<LatLng> _routePoints = [];
@@ -38,6 +41,7 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
   bool _isOrderActive = false;
   bool _isUpdating = false;
   Timer? _searchTimer;
+  Timer? _locationUpdateTimer;
 
   final String _mockClientName = 'Алексей Д.';
   final String _mockClientRating = '4.9';
@@ -79,32 +83,50 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
     }
   }
 
-  String _parseErrorCode(String message) {
-    final lowerMessage = message.toLowerCase();
-    if (lowerMessage.contains('vehicle') && lowerMessage.contains('active')) {
-      return 'VEHICLE_MISSING';
+  void _startLocationUpdates() {
+    _locationUpdateTimer?.cancel();
+    _locationUpdateTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      _sendCurrentLocation();
+    });
+  }
+
+  void _stopLocationUpdates() {
+    _locationUpdateTimer?.cancel();
+    _locationUpdateTimer = null;
+  }
+
+  Future<void> _sendCurrentLocation() async {
+    if (!_isOnline) return;
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      if (mounted) {
+        setState(() {
+          _currentPosition = LatLng(position.latitude, position.longitude);
+        });
+      }
+
+      final locationData = {
+        'lat': position.latitude,
+        'lng': position.longitude,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      _wsManager.send('/app/driver/location', jsonEncode(locationData));
+    } catch (e) {
+      debugPrint(e.toString());
     }
-    if (lowerMessage.contains('vehicle') && lowerMessage.contains('verified')) {
-      return 'VEHICLE_NOT_VERIFIED';
-    }
-    if (lowerMessage.contains('account') || lowerMessage.contains('profile')) {
-      return 'ACCOUNT_NOT_VERIFIED';
-    }
-    return 'FORBIDDEN';
   }
 
   Future<void> _toggleOnlineStatus() async {
     if (_isUpdating) return;
 
-    if (TokenStorage.accessToken == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ошибка: отсутствует токен авторизации')),
-      );
-      return;
-    }
+    if (TokenStorage.accessToken == null) return;
 
     setState(() => _isUpdating = true);
-
     final bool targetStatus = !_isOnline;
 
     try {
@@ -118,7 +140,9 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
             _isOnline = targetStatus;
             if (!_isOnline) {
               _searchTimer?.cancel();
+              _stopLocationUpdates();
             } else {
+              _startLocationUpdates();
               _searchTimer = Timer(
                 const Duration(seconds: 3),
                 _showIncomingOrder,
@@ -128,22 +152,27 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
         } else {
           final message = result['message'] as String;
           final code = _parseErrorCode(message);
-
           showStatusNotification(context, message: message, code: code);
         }
       }
     } catch (e) {
-      debugPrint('Exception in _toggleOnlineStatus: $e');
       if (mounted) {
-        showStatusNotification(
-          context,
-          message: 'Произошла неожиданная ошибка',
-          code: 'ERROR',
-        );
+        showStatusNotification(context, message: 'Ошибка', code: 'ERROR');
       }
     } finally {
       if (mounted) setState(() => _isUpdating = false);
     }
+  }
+
+  String _parseErrorCode(String message) {
+    final lowerMessage = message.toLowerCase();
+    if (lowerMessage.contains('vehicle') && lowerMessage.contains('active'))
+      return 'VEHICLE_MISSING';
+    if (lowerMessage.contains('vehicle') && lowerMessage.contains('verified'))
+      return 'VEHICLE_NOT_VERIFIED';
+    if (lowerMessage.contains('account') || lowerMessage.contains('profile'))
+      return 'ACCOUNT_NOT_VERIFIED';
+    return 'FORBIDDEN';
   }
 
   void _showIncomingOrder() {
@@ -254,6 +283,7 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
       _routePoints = [];
       _isOnline = false;
     });
+    _stopLocationUpdates();
     if (_currentPosition != null) {
       _mapController.move(_currentPosition!, 15.0);
     }
@@ -270,6 +300,7 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
   @override
   void dispose() {
     _searchTimer?.cancel();
+    _locationUpdateTimer?.cancel();
     super.dispose();
   }
 
