@@ -1,18 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:arbuz_express/services/token_storage.dart';
+import 'package:arbuz_express/screens/driverScreensWidgets/status_notification.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
-
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:arbuz_express/screens/profile_screen.dart';
 import 'package:arbuz_express/screens/homeScreensWidgets/verification_banner.dart';
 import 'package:arbuz_express/screens/menuScreens/notifications_panel.dart';
 import 'package:arbuz_express/screens/menuScreens/notifications_button.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
-
+import 'package:arbuz_express/hooks/use_driver_status.dart';
+import 'package:arbuz_express/services/websocket_manager.dart';
 import 'driverScreensWidgets/car_marker.dart';
 import 'driverScreensWidgets/driver_online_toggle.dart';
 import 'driverScreensWidgets/incoming_order_dialog.dart';
@@ -20,9 +22,7 @@ import 'driverScreensWidgets/driver_active_order_panel.dart';
 
 class DriverMapScreen extends StatefulWidget {
   final bool showVerificationBanner;
-
   const DriverMapScreen({super.key, this.showVerificationBanner = false});
-
   @override
   State<DriverMapScreen> createState() => _DriverMapScreenState();
 }
@@ -30,6 +30,8 @@ class DriverMapScreen extends StatefulWidget {
 class _DriverMapScreenState extends State<DriverMapScreen> {
   static const LatLng _initialCenter = LatLng(55.0084, 82.9357);
   final MapController _mapController = MapController();
+  final UseDriverStatus _statusHook = UseDriverStatus();
+  final WebSocketManager _wsManager = WebSocketManager();
 
   LatLng? _currentPosition;
   LatLng? _clientPosition;
@@ -37,7 +39,9 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
 
   bool _isOnline = false;
   bool _isOrderActive = false;
+  bool _isUpdating = false;
   Timer? _searchTimer;
+  Timer? _locationUpdateTimer;
 
   final String _mockClientName = 'Алексей Д.';
   final String _mockClientRating = '4.9';
@@ -63,33 +67,116 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
         permission = await Geolocator.requestPermission();
       }
       if (permission == LocationPermission.deniedForever) return;
-
       Position position = await Geolocator.getCurrentPosition();
-      setState(() {
-        _currentPosition = LatLng(position.latitude, position.longitude);
-      });
-      _mapController.move(_currentPosition!, 15.0);
+      if (mounted) {
+        setState(() {
+          _currentPosition = LatLng(position.latitude, position.longitude);
+        });
+        _mapController.move(_currentPosition!, 15.0);
+      }
     } catch (e) {
-      setState(() {
-        _currentPosition = _initialCenter;
-      });
+      if (mounted) {
+        setState(() {
+          _currentPosition = _initialCenter;
+        });
+      }
     }
   }
 
-  void _toggleOnlineStatus() {
-    setState(() {
-      _isOnline = !_isOnline;
-      if (!_isOnline) {
-        _searchTimer?.cancel();
-      } else {
-        _searchTimer = Timer(const Duration(seconds: 5), _showIncomingOrder);
-      }
+  void _startLocationUpdates() {
+    _locationUpdateTimer?.cancel();
+    _locationUpdateTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      _sendCurrentLocation();
     });
   }
 
-  void _showIncomingOrder() {
-    if (!mounted) return;
+  void _stopLocationUpdates() {
+    _locationUpdateTimer?.cancel();
+    _locationUpdateTimer = null;
+  }
 
+  Future<void> _sendCurrentLocation() async {
+    if (!_isOnline) return;
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      if (mounted) {
+        setState(() {
+          _currentPosition = LatLng(position.latitude, position.longitude);
+        });
+      }
+
+      final locationData = {
+        'lat': position.latitude,
+        'lng': position.longitude,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      _wsManager.send('/app/driver/location', jsonEncode(locationData));
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
+
+  Future<void> _toggleOnlineStatus() async {
+    if (_isUpdating) return;
+
+    if (TokenStorage.accessToken == null) return;
+
+    setState(() => _isUpdating = true);
+    final bool targetStatus = !_isOnline;
+
+    try {
+      final result = targetStatus
+          ? await _statusHook.setOnline()
+          : await _statusHook.setOffline();
+
+      if (mounted) {
+        if (result['success']) {
+          setState(() {
+            _isOnline = targetStatus;
+            if (!_isOnline) {
+              _searchTimer?.cancel();
+              _stopLocationUpdates();
+            } else {
+              _startLocationUpdates();
+              _searchTimer = Timer(
+                const Duration(seconds: 3),
+                _showIncomingOrder,
+              );
+            }
+          });
+        } else {
+          final message = result['message'] as String;
+          final code = _parseErrorCode(message);
+          showStatusNotification(context, message: message, code: code);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        showStatusNotification(context, message: 'Ошибка', code: 'ERROR');
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdating = false);
+    }
+  }
+
+  String _parseErrorCode(String message) {
+    final lowerMessage = message.toLowerCase();
+    if (lowerMessage.contains('vehicle') && lowerMessage.contains('active'))
+      return 'VEHICLE_MISSING';
+    if (lowerMessage.contains('vehicle') && lowerMessage.contains('verified'))
+      return 'VEHICLE_NOT_VERIFIED';
+    if (lowerMessage.contains('account') || lowerMessage.contains('profile'))
+      return 'ACCOUNT_NOT_VERIFIED';
+    return 'FORBIDDEN';
+  }
+
+  void _showIncomingOrder() {
+    if (!mounted || !_isOnline || _isOrderActive) return;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -106,20 +193,15 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
         },
         onDecline: () {
           Navigator.pop(context);
-          setState(() {
-            _isOnline = false;
-          });
+          _toggleOnlineStatus();
         },
       ),
     );
   }
 
   Future<void> _acceptOrder() async {
-    if (_currentPosition == null) return;
-
     await _getAddressCoordinates();
-
-    if (_clientPosition != null) {
+    if (mounted) {
       setState(() {
         _isOrderActive = true;
       });
@@ -136,59 +218,49 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
         url,
         headers: {'User-Agent': 'ArbuzExpressApp'},
       );
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data.isNotEmpty) {
           final lat = double.parse(data[0]['lat']);
           final lon = double.parse(data[0]['lon']);
-          setState(() {
-            _clientPosition = LatLng(lat, lon);
-          });
-
-          final address = data[0]['address'];
-          if (address != null) {
-            final street =
-                address['road'] ??
-                address['residential'] ??
-                'Комсомольская улица';
-            final house = address['house_number'] ?? '2';
-            _mockFromAddress = '$street, $house';
+          if (mounted) {
+            setState(() {
+              _clientPosition = LatLng(lat, lon);
+            });
           }
         }
       }
     } catch (e) {
-      setState(() {
-        _clientPosition = const LatLng(55.0305, 82.9200);
-      });
+      if (mounted) {
+        setState(() {
+          _clientPosition = const LatLng(55.0305, 82.9200);
+        });
+      }
     }
   }
 
   Future<void> _buildRouteToClient() async {
     if (_currentPosition == null || _clientPosition == null) return;
-
     try {
       final url = Uri.parse(
         'https://router.project-osrm.org/route/v1/driving/${_currentPosition!.longitude},${_currentPosition!.latitude};${_clientPosition!.longitude},${_clientPosition!.latitude}?overview=full&geometries=geojson',
       );
       final response = await http.get(url);
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['routes'] != null && data['routes'].isNotEmpty) {
           final List coordinates = data['routes'][0]['geometry']['coordinates'];
-          setState(() {
-            _routePoints = coordinates
-                .map((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
-                .toList();
-          });
-          try {
+          if (mounted) {
+            setState(() {
+              _routePoints = coordinates
+                  .map((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
+                  .toList();
+            });
             final bounds = LatLngBounds.fromPoints([
               _currentPosition!,
               _clientPosition!,
               ..._routePoints,
             ]);
-
             _mapController.fitCamera(
               CameraFit.bounds(
                 bounds: bounds,
@@ -196,17 +268,11 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
                 maxZoom: 15.0,
               ),
             );
-          } catch (e) {
-            final centerLat =
-                (_currentPosition!.latitude + _clientPosition!.latitude) / 2;
-            final centerLng =
-                (_currentPosition!.longitude + _clientPosition!.longitude) / 2;
-            _mapController.move(LatLng(centerLat, centerLng), 13.0);
           }
         }
       }
     } catch (e) {
-      debugPrint('Ошибка построения маршрута: $e');
+      debugPrint(e.toString());
     }
   }
 
@@ -217,9 +283,48 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
       _routePoints = [];
       _isOnline = false;
     });
-
+    _stopLocationUpdates();
     if (_currentPosition != null) {
       _mapController.move(_currentPosition!, 15.0);
+    }
+  }
+
+  Future<void> _updateLocationManually() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+
+      if (mounted) {
+        setState(() {
+          _currentPosition = LatLng(position.latitude, position.longitude);
+        });
+        _mapController.move(_currentPosition!, 15.0);
+
+        if (_isOnline) {
+          final locationData = {
+            'lat': position.latitude,
+            'lng': position.longitude,
+            'timestamp': DateTime.now().toIso8601String(),
+          };
+          _wsManager.send('/app/driver/location', jsonEncode(locationData));
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Геолокация обновлена'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Не удалось получить геолокацию'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -234,6 +339,7 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
   @override
   void dispose() {
     _searchTimer?.cancel();
+    _locationUpdateTimer?.cancel();
     super.dispose();
   }
 
@@ -249,18 +355,12 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
               options: MapOptions(
                 initialCenter: _initialCenter,
                 initialZoom: 14.5,
-                minZoom: 10.0,
-                maxZoom: 18.0,
-                cameraConstraint: CameraConstraint.contain(
-                  bounds: LatLngBounds(
-                    const LatLng(-90, -180),
-                    const LatLng(90, 180),
-                  ),
-                ),
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate:
+                      'https://{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png',
+                  subdomains: const ['a', 'b', 'c'],
                   userAgentPackageName: 'com.arbuzexpress.app',
                   retinaMode: true,
                 ),
@@ -271,8 +371,6 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
                         points: _routePoints,
                         strokeWidth: 5.0,
                         color: const Color(0xFFFFC107),
-                        strokeCap: StrokeCap.round,
-                        strokeJoin: StrokeJoin.round,
                       ),
                     ],
                   ),
@@ -315,14 +413,12 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
                 padding: const EdgeInsets.only(right: 16, top: 16),
                 child: CircleIconButton(
                   icon: Icons.person_rounded,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ProfileScreen(),
-                      ),
-                    );
-                  },
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileScreen(),
+                    ),
+                  ),
                   color: const Color(0xFF1A1A1E),
                 ),
               ),
@@ -359,12 +455,27 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
               left: 0,
               right: 0,
               child: Center(
-                child: DriverOnlineToggle(
-                  isOnline: _isOnline,
-                  onToggle: _toggleOnlineStatus,
-                ),
+                child: _isUpdating
+                    ? const CircularProgressIndicator(color: Color(0xFFFFC107))
+                    : DriverOnlineToggle(
+                        isOnline: _isOnline,
+                        onToggle: _toggleOnlineStatus,
+                      ),
               ),
             ),
+          Positioned(
+            bottom: 100,
+            right: 16,
+            child: SafeArea(
+              child: FloatingActionButton(
+                onPressed: _updateLocationManually,
+                backgroundColor: const Color(0xFFFFC107),
+                foregroundColor: Colors.black,
+                child: const Icon(Icons.my_location),
+                tooltip: 'Обновить геолокацию',
+              ),
+            ),
+          ),
         ],
       ),
     );

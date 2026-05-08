@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/tariff_selector.dart';
+import 'package:arbuz_express/models/trip_models.dart';
 import 'address_input_row.dart';
 
 class CollapsibleBottomCard extends StatelessWidget {
@@ -19,6 +20,7 @@ class CollapsibleBottomCard extends StatelessWidget {
   final int selectedTariff;
   final ValueChanged<int> onTariffSelected;
   final VoidCallback? onOrderPressed;
+  final List<Tariff>? tariffs;
 
   const CollapsibleBottomCard({
     super.key,
@@ -37,6 +39,7 @@ class CollapsibleBottomCard extends StatelessWidget {
     required this.selectedTariff,
     required this.onTariffSelected,
     this.onOrderPressed,
+    this.tariffs,
   });
 
   @override
@@ -91,26 +94,77 @@ class CollapsibleBottomCard extends StatelessWidget {
                       ),
                       if (showTariffs) ...[
                         const SizedBox(height: 12),
-                        TariffSelector(
-                          selectedTariff: selectedTariff,
-                          onTariffSelected: onTariffSelected,
-                        ),
+                        if (tariffs != null && tariffs!.isNotEmpty)
+                          TariffSelector(
+                            selectedTariff: selectedTariff,
+                            onTariffSelected: onTariffSelected,
+                          )
+                        else
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1A1A1E),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFFFFC107).withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.info_outline_rounded,
+                                  color: Color(0xFFFFC107),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Машин нет на линии, попробуйте позже',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          if (showTariffs)
+                          if (showTariffs &&
+                              tariffs != null &&
+                              tariffs!.isNotEmpty)
                             CircleIconButton(
                               icon: Icons.map_rounded,
                               onTap: () {},
                               color: const Color(0xFF1A1A1E),
                             ),
-                          if (showTariffs) const SizedBox(width: 12),
+                          if (showTariffs &&
+                              tariffs != null &&
+                              tariffs!.isNotEmpty)
+                            const SizedBox(width: 12),
                           Expanded(
                             child: PrimaryButton(
                               label: 'Заказать',
-                              onPressed: onOrderPressed,
-                              enabled: onOrderPressed != null,
+                              onPressed:
+                                  (showTariffs &&
+                                      tariffs != null &&
+                                      tariffs!.isNotEmpty)
+                                  ? onOrderPressed
+                                  : null,
+                              enabled:
+                                  (showTariffs &&
+                                  tariffs != null &&
+                                  tariffs!.isNotEmpty &&
+                                  onOrderPressed != null),
                             ),
                           ),
                         ],

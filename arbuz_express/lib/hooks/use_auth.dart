@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../services/token_storage.dart';
+import '../services/websocket_manager.dart';
 
 class AuthResult {
   final bool success;
@@ -71,6 +72,10 @@ class UseAuth {
           TokenStorage.userRole = 'passenger';
         }
 
+        if (TokenStorage.userRole != null) {
+          WebSocketManager().start(TokenStorage.userRole!);
+        }
+
         return AuthResult(
           success: true,
           hasProfile: TokenStorage.userRole != null,
@@ -92,6 +97,8 @@ class UseAuth {
         Uri.parse(ApiConfig.authLogout),
         headers: TokenStorage.getAuthHeaders(),
       );
+
+      WebSocketManager().stop();
 
       if (response.statusCode == 204 || response.statusCode == 200) {
         TokenStorage.accessToken = null;

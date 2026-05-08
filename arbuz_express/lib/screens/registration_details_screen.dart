@@ -1,7 +1,6 @@
 import 'package:arbuz_express/hooks/use_profile.dart';
 import 'package:arbuz_express/hooks/use_vehicle.dart';
-import 'package:arbuz_express/screens/driver_map_screen.dart';
-import 'package:arbuz_express/screens/home_map_screen.dart';
+import 'package:arbuz_express/screens/main_map_gate.dart';
 import 'package:arbuz_express/utils/validators.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:flutter/material.dart';
@@ -104,24 +103,15 @@ class _RegistrationDetailsScreenState extends State<RegistrationDetailsScreen> {
 
       if (!mounted) return;
 
-      if (widget.isDriver) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (_) => const DriverMapScreen(showVerificationBanner: true),
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => MainMapGate(
+            role: widget.isDriver ? 'driver' : 'passenger',
+            showVerificationBanner: widget.isDriver,
           ),
-          (route) => false,
-        );
-      } else {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (_) => const HomeMapScreen(
-              isDriver: false,
-              showVerificationBanner: false,
-            ),
-          ),
-          (route) => false,
-        );
-      }
+        ),
+        (route) => false,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

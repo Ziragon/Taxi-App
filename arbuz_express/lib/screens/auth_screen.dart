@@ -1,7 +1,8 @@
 import 'package:arbuz_express/hooks/use_auth.dart';
 import 'package:arbuz_express/screens/role_selection_screen.dart';
-import 'package:arbuz_express/screens/home_map_screen.dart';
+import 'package:arbuz_express/screens/main_map_gate.dart'; 
 import 'package:arbuz_express/screens/basic_registration_screen.dart';
+import 'package:arbuz_express/services/token_storage.dart'; 
 import 'package:arbuz_express/utils/validators.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:flutter/material.dart';
@@ -51,8 +52,15 @@ class _AuthScreenState extends State<AuthScreen> {
 
       if (result.success) {
         if (result.hasProfile) {
+     
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const HomeMapScreen()),
+            MaterialPageRoute(
+              builder: (_) => MainMapGate(
+                role:
+                    TokenStorage.userRole ??
+                    'passenger', 
+              ),
+            ),
           );
         } else {
           Navigator.of(context).pushReplacement(

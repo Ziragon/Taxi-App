@@ -102,6 +102,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/user_db
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
+      - TRIP_SERVICE=http://trip-service:8081
       - REDIS_HOST=redis
       - RABBITMQ_HOST=rabbitmq
 

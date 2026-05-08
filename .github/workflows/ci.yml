@@ -48,8 +48,12 @@ jobs:
           [[ "${{ steps.filter.outputs.payment-service }}" == "true" ]] && services+=("payment-service")
           [[ "${{ steps.filter.outputs.notification-service }}" == "true" ]] && services+=("notification-service")
 
-          json=$(printf '%s\n' "${services[@]}" | jq -R . | jq -cs .)
-          echo "services=$json" >> $GITHUB_OUTPUT
+          if [ ${#services[@]} -eq 0 ]; then
+            echo "services=[]" >> $GITHUB_OUTPUT
+          else
+            json=$(printf '%s\n' "${services[@]}" | jq -R . | jq -cs .)
+            echo "services=$json" >> $GITHUB_OUTPUT
+          fi
 
   build-and-test:
     needs: detect-changes
@@ -185,9 +189,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check results
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        if: |
+          needs.build-and-test.result == 'failure' || needs.build-and-test.result == 'cancelled' ||
+          needs.build-and-push.result == 'failure'  || needs.build-and-push.result == 'cancelled'
         run: |
-          echo "Build job was failed or was cancelled"
+          echo "build-and-test: ${{ needs.build-and-test.result }}"
+          echo "build-and-push: ${{ needs.build-and-push.result }}"
           exit 1
 
       - name: Success
