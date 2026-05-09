@@ -48,6 +48,8 @@ class WebSocketManager {
     _subscribe('/user/queue/notifications');
 
     if (_role == 'driver') {
+      // Send location immediately on connect, then start periodic updates
+      _sendLocationUpdate();
       _startLocationLoop();
     } else if (_role == 'passenger') {
       _startHeartbeatLoop();
@@ -98,25 +100,31 @@ class WebSocketManager {
       _currentLat = position.latitude;
       _currentLng = position.longitude;
 
+      // Validate that coordinates are not null before sending
+      if (_currentLat == null || _currentLng == null) {
+        debugPrint('[WS] Error: Location coordinates are null, skipping send');
+        return;
+      }
+
       final payload = jsonEncode({
-        'latitude': _currentLat,
         'longitude': _currentLng,
+        'latitude': _currentLat,
         'vehicleClass': 'COMFORT',
       });
+      final headers = {
+        'content-type': 'application/json',
+        'content-length': utf8.encode(payload).length.toString(),
+      };
 
       debugPrint(
-        '[WS] Sending real location: lat=${_currentLat.toStringAsFixed(6)}, lng=${_currentLng.toStringAsFixed(6)}',
+        '[WS] Sending location via STOMP: longitude=${_currentLng.toStringAsFixed(6)}, latitude=${_currentLat.toStringAsFixed(6)}, vehicleClass=COMFORT',
       );
-      send('/app/driver/location', payload);
+      debugPrint('[WS] Full payload: $payload');
+      debugPrint('[WS] Headers: $headers');
+      send('/app/driver/location', payload, headers: headers);
     } catch (e) {
-      debugPrint('[WS] Error getting location: $e, using last known position');
-      // Send last known position if we can't get new one
-      final payload = jsonEncode({
-        'latitude': _currentLat,
-        'longitude': _currentLng,
-        'vehicleClass': 'COMFORT',
-      });
-      send('/app/driver/location', payload);
+      debugPrint('[WS] Error getting location: $e, will retry in next cycle');
+      // Don't send incomplete data - wait for next attempt
     }
   }
 
@@ -144,10 +152,25 @@ class WebSocketManager {
     }
   }
 
-  void send(String destination, String body) {
-    if (_client != null && _client!.connected) {
-      _client!.send(destination: destination, body: body);
+  void send(String destination, String body, {Map<String, String>? headers}) {
+    if (_client == null) {
+      debugPrint(
+        '[WS] Error: STOMP client is null, cannot send to $destination',
+      );
+      return;
     }
+    if (!_client!.connected) {
+      debugPrint(
+        '[WS] Error: STOMP not connected, cannot send to $destination',
+      );
+      return;
+    }
+    debugPrint('[WS] Sending to $destination');
+    debugPrint('[WS] Payload: $body');
+    if (headers != null) {
+      debugPrint('[WS] Headers: $headers');
+    }
+    _client!.send(destination: destination, body: body, headers: headers);
   }
 
   void stop() {
