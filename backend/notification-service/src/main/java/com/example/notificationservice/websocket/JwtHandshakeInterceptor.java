@@ -55,8 +55,6 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
         attributes.put(SESSION_ATTR_USER_ID, userId);
         attributes.put(SESSION_ATTR_USER_ROLE, role);
-
-        log.debug("WS Handshake accepted: userId={}, role={}", userId, role);
         return true;
     }
 

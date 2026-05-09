@@ -95,8 +95,9 @@ management:
 logging:
   level:
     root: INFO
-    com.example.notificationservice: DEBUG
-    org.springframework.web.socket: DEBUG
-    org.springframework.messaging: DEBUG
-    com.example.notificationservice.client.UserServiceClient: DEBUG
-    feign: DEBUG
+    com.example.notificationservice: INFO
+    org.springframework.web.socket: WARN
+    org.springframework.messaging: WARN
+    org.springframework.web.servlet.DispatcherServlet: WARN
+    com.example.notificationservice.client.UserServiceClient: INFO
+    feign: WARN

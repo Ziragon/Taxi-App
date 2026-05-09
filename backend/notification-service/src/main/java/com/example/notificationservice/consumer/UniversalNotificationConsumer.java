@@ -39,6 +39,7 @@ public class UniversalNotificationConsumer {
             Message message,
             @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey
     ) {
+        log.info("Event received: routingKey={}", routingKey);
         Object rawEvent = messageConverter.fromMessage(message);
 
         try {
@@ -181,7 +182,7 @@ public class UniversalNotificationConsumer {
                 }
             }
         }
-        // парсинг предложения поездки водителю
+
         if ("notification.trip.offer".equals(routingKey)) {
             TripOfferEvent event;
 
