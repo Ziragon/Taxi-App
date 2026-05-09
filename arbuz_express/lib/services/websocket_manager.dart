@@ -18,6 +18,10 @@ class WebSocketManager {
   double _currentLat = 55.755864; // Default: Red Square
   double _currentLng = 37.617617; // Default: Red Square
 
+  void Function(Map<String, dynamic>)? onNotification;
+
+  bool get isConnected => _client?.connected ?? false;
+
   void start(String role) {
     if (_client != null && _client!.connected) return;
 
@@ -56,8 +60,23 @@ class WebSocketManager {
         destination: destination,
         callback: (frame) {
           debugPrint('[WS] Message: ${frame.body}');
+          final body = _parseNotificationBody(frame.body);
+          if (body != null) {
+            onNotification?.call(body);
+          }
         },
       );
+    }
+  }
+
+  Map<String, dynamic>? _parseNotificationBody(String? body) {
+    if (body == null || body.isEmpty) return null;
+    final cleaned = body.replaceAll('\x00', '').trim();
+    if (cleaned.isEmpty) return null;
+    try {
+      return jsonDecode(cleaned) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
     }
   }
 

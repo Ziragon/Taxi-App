@@ -11,6 +11,7 @@ import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/destination_marker.dart';
 import 'package:arbuz_express/models/trip_models.dart';
 import 'package:arbuz_express/services/trip_service.dart';
+import 'package:arbuz_express/services/websocket_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -42,10 +43,13 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
   bool _isOrderAccepted = false;
   Map<String, String> _orderOptions = {};
   TripCalculationResponse? _lastTripData;
+  final WebSocketManager _wsManager = WebSocketManager();
+  final List<Map<String, dynamic>> _notifications = [];
 
   @override
   void initState() {
     super.initState();
+    _registerNotificationListener();
   }
 
   Future<void> _getCurrentLocation() async {
@@ -421,14 +425,46 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
   void _showNotifications() {
     showDialog(
       context: context,
-      builder: (context) =>
-          NotificationsPanel(onClose: () => Navigator.pop(context)),
+      builder: (context) => NotificationsPanel(
+        onClose: () => Navigator.pop(context),
+        notifications: _notifications,
+      ),
     );
+  }
+
+  void _registerNotificationListener() {
+    _wsManager.onNotification = (notification) {
+      if (!mounted) return;
+      setState(() {
+        _notifications.insert(0, notification);
+      });
+      final eventType = notification['eventType']?.toString() ?? '';
+      if (eventType == 'DRIVER_NOT_FOUND') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Поездка не найдена: водители отсутствуют'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      } else if (eventType == 'DRIVER_ASSIGNED') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Водитель найден! Откройте уведомления для деталей'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    };
+
+    if (!_wsManager.isConnected) {
+      _wsManager.start('passenger');
+    }
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _wsManager.onNotification = null;
     _fromController.dispose();
     _toController.dispose();
     super.dispose();

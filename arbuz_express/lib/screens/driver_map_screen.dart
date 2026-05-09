@@ -33,6 +33,7 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
   final UseDriverStatus _statusHook = UseDriverStatus();
   final WebSocketManager _wsManager = WebSocketManager();
 
+  final List<Map<String, dynamic>> _notifications = [];
   LatLng? _currentPosition;
   LatLng? _clientPosition;
   List<LatLng> _routePoints = [];
@@ -56,6 +57,7 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
   void initState() {
     super.initState();
     _getCurrentLocation();
+    _registerNotificationListener();
   }
 
   Future<void> _getCurrentLocation() async {
@@ -331,15 +333,40 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
   void _showNotifications() {
     showDialog(
       context: context,
-      builder: (context) =>
-          NotificationsPanel(onClose: () => Navigator.pop(context)),
+      builder: (context) => NotificationsPanel(
+        onClose: () => Navigator.pop(context),
+        notifications: _notifications,
+      ),
     );
+  }
+
+  void _registerNotificationListener() {
+    _wsManager.onNotification = (notification) {
+      if (!mounted) return;
+      setState(() {
+        _notifications.insert(0, notification);
+      });
+      final eventType = notification['eventType']?.toString() ?? '';
+      if (eventType == 'DRIVER_ASSIGNED') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Вам пришло новое уведомление о поездке'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    };
+
+    if (!_wsManager.isConnected) {
+      _wsManager.start('driver');
+    }
   }
 
   @override
   void dispose() {
     _searchTimer?.cancel();
     _locationUpdateTimer?.cancel();
+    _wsManager.onNotification = null;
     super.dispose();
   }
 

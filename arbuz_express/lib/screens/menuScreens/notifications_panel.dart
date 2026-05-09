@@ -3,8 +3,13 @@ import 'package:arbuz_express/widgets/app_ui.dart';
 
 class NotificationsPanel extends StatelessWidget {
   final VoidCallback onClose;
+  final List<Map<String, dynamic>> notifications;
 
-  const NotificationsPanel({super.key, required this.onClose});
+  const NotificationsPanel({
+    super.key,
+    required this.onClose,
+    required this.notifications,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -35,45 +40,117 @@ class NotificationsPanel extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            NotificationItem(
-              icon: Icons.local_offer_rounded,
-              title: 'Специальное предложение',
-              description: 'Скидка 20% на первый заказ',
-              time: '5 мин назад',
-              iconColor: const Color(0xFFFFC107),
-              onTap: () {},
-            ),
-            const SizedBox(height: 12),
-            NotificationItem(
-              icon: Icons.info_rounded,
-              title: 'Обновление приложения',
-              description: 'Доступна новая версия приложения',
-              time: '1 час назад',
-              iconColor: Colors.blue,
-              onTap: () {},
-            ),
-            const SizedBox(height: 12),
-            NotificationItem(
-              icon: Icons.star_rounded,
-              title: 'Оценка заказа',
-              description: 'Спасибо за оценку! Это помогает нам улучшаться',
-              time: '3 часа назад',
-              iconColor: Colors.green,
-              onTap: () {},
-            ),
-            const SizedBox(height: 12),
-            NotificationItem(
-              icon: Icons.warning_rounded,
-              title: 'Техническое обслуживание',
-              description: 'Сервис будет недоступен с 02:00 до 04:00',
-              time: '1 день назад',
-              iconColor: Colors.redAccent,
-              onTap: () {},
+            SizedBox(
+              height: 320,
+              child: notifications.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Уведомлений пока нет',
+                        style: TextStyle(color: Colors.white54, fontSize: 14),
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      child: Column(
+                        children: notifications.map((notification) {
+                          final title = _makeTitle(notification);
+                          final description = _makeDescription(notification);
+                          final time = _makeTime(notification);
+                          final iconData = _makeIcon(notification);
+                          final iconColor = _makeIconColor(notification);
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: NotificationItem(
+                              icon: iconData,
+                              title: title,
+                              description: description,
+                              time: time,
+                              iconColor: iconColor,
+                              onTap: () {},
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _makeTitle(Map<String, dynamic> notification) {
+    final eventType = notification['eventType']?.toString() ?? '';
+    switch (eventType) {
+      case 'DRIVER_ASSIGNED':
+        return 'Водитель назначен';
+      case 'DRIVER_NOT_FOUND':
+        return 'Водитель не найден';
+      case 'TRIP_STARTED':
+        return 'Поездка начата';
+      case 'TRIP_COMPLETED':
+        return 'Поездка завершена';
+      case 'TRIP_REJECTED':
+        return 'Поездка отклонена';
+      default:
+        final title = notification['title']?.toString();
+        if (title != null && title.isNotEmpty) {
+          return title;
+        }
+        return eventType.isNotEmpty ? eventType : 'Уведомление';
+    }
+  }
+
+  String _makeDescription(Map<String, dynamic> notification) {
+    if (notification.containsKey('message')) {
+      return notification['message'].toString();
+    }
+    if (notification.containsKey('eventType')) {
+      return notification['eventType'].toString();
+    }
+    return notification.toString();
+  }
+
+  String _makeTime(Map<String, dynamic> notification) {
+    if (notification.containsKey('timestamp')) {
+      return notification['timestamp'].toString();
+    }
+    return 'только что';
+  }
+
+  IconData _makeIcon(Map<String, dynamic> notification) {
+    final eventType = notification['eventType']?.toString() ?? '';
+    switch (eventType) {
+      case 'DRIVER_ASSIGNED':
+        return Icons.directions_car_rounded;
+      case 'DRIVER_NOT_FOUND':
+        return Icons.search_off_rounded;
+      case 'TRIP_STARTED':
+        return Icons.play_arrow_rounded;
+      case 'TRIP_COMPLETED':
+        return Icons.check_circle_rounded;
+      case 'TRIP_REJECTED':
+        return Icons.close_rounded;
+      default:
+        return Icons.notifications_rounded;
+    }
+  }
+
+  Color _makeIconColor(Map<String, dynamic> notification) {
+    final eventType = notification['eventType']?.toString() ?? '';
+    switch (eventType) {
+      case 'DRIVER_ASSIGNED':
+        return Colors.green;
+      case 'DRIVER_NOT_FOUND':
+        return Colors.orange;
+      case 'TRIP_STARTED':
+        return Colors.blue;
+      case 'TRIP_COMPLETED':
+        return Colors.green;
+      case 'TRIP_REJECTED':
+        return Colors.redAccent;
+      default:
+        return Colors.white54;
+    }
   }
 }
 
