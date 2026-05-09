@@ -47,7 +47,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             );
 
             if (userId == null) {
-                log.warn("STOMP CONNECT: userId not found in session");
+                log.warn("STOMP CONNECT: userId not found in session, rejecting");
                 throw new IllegalStateException("Unauthorized WebSocket connection");
             }
 
@@ -57,7 +57,8 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
             if (userType != null && !userType.equals(USER_TYPE_DRIVER)
                     && !userType.equals(USER_TYPE_PASSENGER)) {
-                log.warn("STOMP CONNECT: invalid userType={}, ignoring", userType);
+                log.warn("STOMP CONNECT: invalid userType={} for userId={}, ignoring",
+                        userType, userId);
                 userType = null;
             }
 
@@ -72,8 +73,6 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             );
 
             accessor.setUser(auth);
-            log.debug("STOMP CONNECT authenticated: userId={}, role={}, userType={}",
-                    userId, role, userType);
         }
 
         if (StompCommand.SEND.equals(accessor.getCommand())) {
@@ -81,7 +80,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
             if ("/app/driver/location".equals(destination)) {
                 Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
                 if (sessionAttributes == null) {
-                    log.warn("STOMP SEND to driver/location: no session, rejecting");
+                    log.warn("STOMP SEND driver/location: no session, rejecting");
                     return null;
                 }
 
@@ -93,7 +92,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                     Long userId = (Long) sessionAttributes.get(
                             JwtHandshakeInterceptor.SESSION_ATTR_USER_ID
                     );
-                    log.warn("STOMP SEND to driver/location blocked: userId={}, userType={}",
+                    log.warn("STOMP SEND driver/location blocked: userId={}, userType={}",
                             userId, userType);
                     return null;
                 }

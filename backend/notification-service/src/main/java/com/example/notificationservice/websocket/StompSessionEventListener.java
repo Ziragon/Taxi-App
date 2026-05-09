@@ -5,9 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.web.socket.messaging.SessionConnectedEvent;
+import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
 
@@ -22,12 +21,12 @@ public class StompSessionEventListener {
     private final UserServiceClient userServiceClient;
 
     @EventListener
-    public void onConnected(SessionConnectedEvent event) {
+    public void onConnect(SessionConnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
 
         Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
         if (sessionAttributes == null) {
-            log.warn("SessionConnectedEvent: sessionAttributes is null, sessionId={}",
+            log.warn("STOMP CONNECT: sessionAttributes is null, sessionId={}",
                     accessor.getSessionId());
             return;
         }
@@ -38,17 +37,18 @@ public class StompSessionEventListener {
 
         sessionRegistry.register(sessionId, userId, userType);
 
-        log.info("STOMP connected: sessionId={}, userId={}, userType={}",
+        log.info("WS connect: sessionId={}, userId={}, userType={}",
                 sessionId, userId, userType);
     }
 
     @EventListener
     public void onSubscribe(SessionSubscribeEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        Long userId = (Long) accessor.getSessionAttributes().get(
-                JwtHandshakeInterceptor.SESSION_ATTR_USER_ID
-        );
-        log.debug("STOMP subscribed: sessionId={}, userId={}, destination={}",
+        Map<String, Object> attrs = accessor.getSessionAttributes();
+        if (attrs == null) return;
+
+        Long userId = (Long) attrs.get(JwtHandshakeInterceptor.SESSION_ATTR_USER_ID);
+        log.info("WS subscribe: sessionId={}, userId={}, destination={}",
                 accessor.getSessionId(), userId, accessor.getDestination());
     }
 
@@ -60,7 +60,7 @@ public class StompSessionEventListener {
         Long userId = sessionRegistry.getUserId(sessionId);
         boolean isDriver = sessionRegistry.isDriver(sessionId);
 
-        log.info("STOMP disconnected: sessionId={}, userId={}, isDriver={}, closeStatus={}",
+        log.info("WS disconnect: sessionId={}, userId={}, isDriver={}, closeStatus={}",
                 sessionId, userId, isDriver, event.getCloseStatus());
 
         if (isDriver && userId != null) {
@@ -68,7 +68,7 @@ public class StompSessionEventListener {
                 userServiceClient.setDriverOffline(userId);
                 log.info("Driver {} set OFFLINE after WS disconnect", userId);
             } catch (Exception e) {
-                log.error("Failed to set driver {} OFFLINE after disconnect: {}",
+                log.error("Driver {} OFFLINE failed after disconnect: {}",
                         userId, e.getMessage());
             }
         }
