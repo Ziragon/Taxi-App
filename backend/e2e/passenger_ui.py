@@ -20,6 +20,8 @@ HELP_TEXT = """
 ║  search  - запустить поиск водителя  ║
 ║  cancel  - отменить поездку по ID    ║
 ║  active  - получить активную поездку ║
+║  trip    - получить поездку по ID    ║
+║  history - история поездок           ║
 ║  help    - эта справка               ║
 ║  exit    - выход                     ║
 ╚══════════════════════════════════════╝
@@ -104,6 +106,20 @@ def main():
 
         elif cmd == "active":
             service.get_active_trip()
+
+        elif cmd == "trip":
+            raw = input("  ID поездки: ").strip()
+            if not raw.isdigit():
+                print("  [!] Некорректный ID поездки.")
+                continue
+            service.get_trip(raw)
+
+        elif cmd == "history":
+            raw_page = input("  Страница [0]: ").strip()
+            raw_size = input("  Размер [10]: ").strip()
+            page = int(raw_page) if raw_page.isdigit() else 0
+            size = int(raw_size) if raw_size.isdigit() else 10
+            service.get_history(page=page, size=size)
 
         elif cmd == "help":
             print(HELP_TEXT)

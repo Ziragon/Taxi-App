@@ -23,6 +23,8 @@ HELP_TEXT = """
 ║  start   - начать поездку по ID      ║
 ║  complete- завершить поездку по ID   ║
 ║  active  - получить активную поездку ║
+║  trip    - получить поездку по ID    ║
+║  history - история поездок           ║
 ║  card    - привязать тестовую карту  ║
 ║  help    - эта справка               ║
 ║  exit    - выход                     ║
@@ -112,6 +114,20 @@ def main():
 
         elif cmd == "active":
             service.get_active_trip()
+
+        elif cmd == "trip":
+            trip_id = input("  ID поездки: ").strip()
+            if trip_id.isdigit():
+                service.get_trip(trip_id)
+            else:
+                print("  [!] Некорректный ID поездки.")
+
+        elif cmd == "history":
+            raw_page = input("  Страница [0]: ").strip()
+            raw_size = input("  Размер [10]: ").strip()
+            page = int(raw_page) if raw_page.isdigit() else 0
+            size = int(raw_size) if raw_size.isdigit() else 10
+            service.get_history(page=page, size=size)
 
         elif cmd == "help":
             print(HELP_TEXT)
