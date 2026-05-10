@@ -130,9 +130,10 @@ class PassengerService:
                 threading.Thread(target=self._heartbeat_loop, daemon=True).start()
 
             elif message.startswith("MESSAGE"):
-                print(f"\n[🔔 {self.email} WS]:\n{message}\n")
                 if self.on_ws_message:
                     self.on_ws_message(message)
+                else:
+                    print(f"\n[🔔 {self.email} WS]:\n{message}\n")
 
         def on_error(ws, err):
             print(f"[!] WS ошибка ({self.email}): {err}")

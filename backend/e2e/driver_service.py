@@ -156,7 +156,6 @@ class DriverService:
                     json.dumps(payload),
                 )
                 self.ws.send(frame)
-                print(f"[📍 {self.email}] {payload['latitude']:.6f}, {payload['longitude']:.6f}")
             except Exception as e:
                 print(f"[!] Ошибка отправки локации: {e}")
             time.sleep(5)
@@ -184,9 +183,10 @@ class DriverService:
                 ws.send(self._stomp_frame("SUBSCRIBE", {"id": "sub-0", "destination": "/user/queue/notifications"}))
                 threading.Thread(target=self._location_loop, daemon=True).start()
             elif message.startswith("MESSAGE"):
-                print(f"\n[🔔 {self.email}]:\n{message}\n")
                 if self.on_ws_message:
                     self.on_ws_message(message)
+                else:
+                    print(f"\n[🔔 {self.email}]:\n{message}\n")
 
         self.ws = websocket.WebSocketApp(
             ws_url,
