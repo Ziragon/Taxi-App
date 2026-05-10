@@ -1,8 +1,8 @@
-// incoming_order_dialog.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 
-class IncomingOrderDialog extends StatelessWidget {
+class IncomingOrderDialog extends StatefulWidget {
   final String clientName;
   final String rating;
   final String fromAddress;
@@ -11,6 +11,7 @@ class IncomingOrderDialog extends StatelessWidget {
   final String price;
   final VoidCallback onAccept;
   final VoidCallback onDecline;
+  final VoidCallback onTimeout;
 
   const IncomingOrderDialog({
     super.key,
@@ -22,7 +23,43 @@ class IncomingOrderDialog extends StatelessWidget {
     required this.price,
     required this.onAccept,
     required this.onDecline,
+    required this.onTimeout,
   });
+
+  @override
+  State<IncomingOrderDialog> createState() => _IncomingOrderDialogState();
+}
+
+class _IncomingOrderDialogState extends State<IncomingOrderDialog> {
+  Timer? _timer;
+  int _remainingSeconds = 15;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingSeconds > 0) {
+        setState(() {
+          _remainingSeconds--;
+        });
+      } else {
+        _timer?.cancel();
+        if (mounted) {
+          widget.onTimeout();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,14 +73,40 @@ class IncomingOrderDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Новый заказ',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Новый заказ',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _remainingSeconds <= 5
+                        ? Colors.redAccent.withOpacity(0.2)
+                        : const Color(0xFFFFC107).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$_remainingSeconds сек',
+                    style: TextStyle(
+                      color: _remainingSeconds <= 5
+                          ? Colors.redAccent
+                          : const Color(0xFFFFC107),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             Row(
@@ -64,7 +127,7 @@ class IncomingOrderDialog extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        clientName,
+                        widget.clientName,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -75,14 +138,10 @@ class IncomingOrderDialog extends StatelessWidget {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(
-                            Icons.star_rounded,
-                            color: Color(0xFFFFC107),
-                            size: 16,
-                          ),
+                          const Text('🍉', style: TextStyle(fontSize: 16)),
                           const SizedBox(width: 4),
                           Text(
-                            rating,
+                            widget.rating,
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 14,
@@ -96,11 +155,15 @@ class IncomingOrderDialog extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            _buildAddressRow(Icons.my_location, fromAddress, Colors.white),
+            _buildAddressRow(
+              Icons.my_location,
+              widget.fromAddress,
+              Colors.white,
+            ),
             const SizedBox(height: 16),
             _buildAddressRow(
               Icons.location_on,
-              toAddress,
+              widget.toAddress,
               const Color(0xFFFFC107),
             ),
             const SizedBox(height: 24),
@@ -122,7 +185,7 @@ class IncomingOrderDialog extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    price,
+                    widget.price,
                     style: const TextStyle(
                       color: Color(0xFFFFC107),
                       fontSize: 24,
@@ -138,7 +201,7 @@ class IncomingOrderDialog extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: onDecline,
+                    onPressed: widget.onDecline,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       side: const BorderSide(color: Colors.redAccent),
@@ -159,7 +222,7 @@ class IncomingOrderDialog extends StatelessWidget {
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: onAccept,
+                    onPressed: widget.onAccept,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFFC107),
                       padding: const EdgeInsets.symmetric(vertical: 16),

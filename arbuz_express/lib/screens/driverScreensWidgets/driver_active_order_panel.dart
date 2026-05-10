@@ -6,7 +6,6 @@ class DriverActiveOrderPanel extends StatelessWidget {
   final String fromAddress;
   final String price;
   final VoidCallback onArrived;
-  final VoidCallback onCancel;
 
   const DriverActiveOrderPanel({
     super.key,
@@ -14,7 +13,6 @@ class DriverActiveOrderPanel extends StatelessWidget {
     required this.fromAddress,
     required this.price,
     required this.onArrived,
-    required this.onCancel,
   });
 
   @override
@@ -134,29 +132,7 @@ class DriverActiveOrderPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onCancel,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.redAccent,
-                    side: BorderSide(color: Colors.redAccent.withOpacity(0.3)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: const Text('Отмена'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: PrimaryButton(label: 'Я на месте', onPressed: onArrived),
-              ),
-            ],
-          ),
+          PrimaryButton(label: 'Я на месте', onPressed: onArrived),
         ],
       ),
     );

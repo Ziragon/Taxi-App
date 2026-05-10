@@ -21,6 +21,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import 'dart:async';
 import 'driverScreensWidgets/car_marker.dart';
 
 class DriverMapScreen extends StatefulWidget {
@@ -401,6 +402,11 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
           Navigator.pop(context);
           _rejectOrder();
         },
+        onTimeout: () {
+          _isIncomingOrderDialogVisible = false;
+          Navigator.pop(context);
+          _handleTimeout();
+        },
       ),
     ).then((_) {
       _isIncomingOrderDialogVisible = false;
@@ -442,6 +448,12 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
           duration: Duration(seconds: 3),
         ),
       );
+
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted) {
+          _updateLocationManually();
+        }
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -464,9 +476,31 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
       });
       _isIncomingOrderDialogVisible = false;
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Ошибка отклонения: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка отклонения: $e')));
+      }
+    }
+  }
+
+  void _handleTimeout() {
+    if (_currentTripId == null) return;
+
+    setState(() {
+      _currentTripId = null;
+      _isOrderActive = false;
+    });
+    _isIncomingOrderDialogVisible = false;
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Вы не успели принять заказ'),
+          duration: Duration(seconds: 3),
+          backgroundColor: Colors.orange,
+        ),
+      );
     }
   }
 
@@ -504,32 +538,6 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Ошибка при начале поездки: $e'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _cancelTrip() async {
-    if (_currentTripId == null) return;
-
-    try {
-      await TripService.cancelTrip(_currentTripId!);
-      if (!mounted) return;
-
-      _resetTripState();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Поездка отменена'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка при отмене поездки: $e'),
             duration: const Duration(seconds: 3),
           ),
         );
@@ -679,12 +687,14 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
         );
       }
     } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Не удалось получить геолокацию'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Не удалось получить геолокацию'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -813,7 +823,6 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
                     fromAddress: _fromAddress,
                     price: _incomingPrice,
                     onArrived: _arriveAtPickup,
-                    onCancel: _cancelTrip,
                   ),
                 ),
               ),
