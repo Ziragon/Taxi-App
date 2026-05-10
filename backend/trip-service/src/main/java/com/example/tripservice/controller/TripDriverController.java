@@ -2,7 +2,9 @@ package com.example.tripservice.controller;
 
 import com.example.shared.security.UserPrincipal;
 import com.example.tripservice.dto.data.RouteDto;
+import com.example.tripservice.dto.data.TripSummaryDto;
 import com.example.tripservice.dto.request.DriverCoordinatesRequest;
+import com.example.tripservice.dto.response.PageResponse;
 import com.example.tripservice.dto.response.RouteResponse;
 import com.example.tripservice.dto.response.TripResponse;
 import com.example.tripservice.service.trip.TripDriverService;
@@ -11,6 +13,9 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -113,8 +118,36 @@ public class TripDriverController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody DriverCoordinatesRequest request
     ) {
-        return Optional.ofNullable(tripDriverService.getActiveTrip(principal.userId(), request.latitude(), request.latitude()))
+        return Optional.ofNullable(tripDriverService.getActiveTrip(principal.userId(), request.latitude(), request.longitude()))
                 .map(trip -> ResponseEntity.ok(TripResponse.from(trip)))
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @GetMapping("/driver/{tripId}")
+    @Operation(
+            summary = "Получить информацию о поездке",
+            description = "Возвращает текущие детали поездки, включая статус и данные водителя (если назначен)",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Данные получены"),
+                    @ApiResponse(responseCode = "404", description = "Поездка не найдена")
+            }
+    )
+    public ResponseEntity<TripResponse> getTrip(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long tripId
+    ) {
+        return ResponseEntity.ok(
+                TripResponse.from(tripDriverService.getTrip(principal.userId(), tripId)));
+    }
+
+    @GetMapping("/driver/history")
+    public ResponseEntity<PageResponse<TripSummaryDto>> getHistory(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<TripSummaryDto> response = tripDriverService.getTripHistory(principal.userId(), pageable);
+        return ResponseEntity.ok(PageResponse.from(response));
     }
 }

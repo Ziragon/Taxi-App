@@ -2,9 +2,12 @@ package com.example.tripservice.service.trip;
 
 import com.example.tripservice.dto.data.RouteDto;
 import com.example.tripservice.dto.data.TripDto;
+import com.example.tripservice.dto.data.TripSummaryDto;
 import com.example.tripservice.service.search.DriverSearchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,5 +43,13 @@ public class TripDriverService {
     @Transactional(readOnly = true)
     public TripDto getActiveTrip(Long userId, BigDecimal driverLat, BigDecimal driverLng) {
         return tripService.getActiveTripByDriverId(userId, driverLat, driverLng);
+    }
+
+    public Page<TripSummaryDto> getTripHistory(Long driverId, Pageable pageable) {
+        return tripService.getTripHistoryByDriver(driverId, pageable);
+    }
+
+    public TripDto getTrip(Long driverId, Long tripId) {
+        return tripService.getTripById(driverId, tripId);
     }
 }

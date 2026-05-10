@@ -4,7 +4,9 @@ import com.example.shared.dto.enums.VehicleClass;
 import com.example.shared.security.UserPrincipal;
 import com.example.tripservice.dto.data.TripCreateDto;
 import com.example.tripservice.dto.data.TripDto;
+import com.example.tripservice.dto.data.TripSummaryDto;
 import com.example.tripservice.dto.request.TripCreateRequest;
+import com.example.tripservice.dto.response.PageResponse;
 import com.example.tripservice.dto.response.TripResponse;
 import com.example.tripservice.service.trip.TripPassengerService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +16,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -127,5 +132,16 @@ public class TripPassengerController {
         return Optional.ofNullable(tripPassengerService.getActiveTrip(principal.userId()))
                 .map(trip -> ResponseEntity.ok(TripResponse.from(trip)))
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<PageResponse<TripSummaryDto>> getHistory(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<TripSummaryDto> response = tripPassengerService.getTripHistory(principal.userId(), pageable);
+        return ResponseEntity.ok(PageResponse.from(response));
     }
 }
