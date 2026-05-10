@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/tariff_selector.dart';
 import 'package:arbuz_express/models/trip_models.dart';
+import 'package:arbuz_express/widgets/app_ui.dart';
+import 'package:flutter/material.dart';
+
 import 'address_input_row.dart';
 
 class CollapsibleBottomCard extends StatelessWidget {
@@ -44,6 +45,10 @@ class CollapsibleBottomCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasTariffs = tariffs != null && tariffs!.isNotEmpty;
+    final buttonLabel = showTariffs ? 'Заказать' : 'Рассчитать';
+    final buttonEnabled = onOrderPressed != null && (!showTariffs || hasTariffs);
+
     return GlassCard(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Column(
@@ -94,8 +99,9 @@ class CollapsibleBottomCard extends StatelessWidget {
                       ),
                       if (showTariffs) ...[
                         const SizedBox(height: 12),
-                        if (tariffs != null && tariffs!.isNotEmpty)
+                        if (hasTariffs)
                           TariffSelector(
+                            tariffs: tariffs!,
                             selectedTariff: selectedTariff,
                             onTariffSelected: onTariffSelected,
                           )
@@ -124,7 +130,7 @@ class CollapsibleBottomCard extends StatelessWidget {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
-                                    'Машин нет на линии, попробуйте позже',
+                                    'Нет доступных машин для выбранного маршрута',
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.9),
                                       fontSize: 13,
@@ -139,32 +145,19 @@ class CollapsibleBottomCard extends StatelessWidget {
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          if (showTariffs &&
-                              tariffs != null &&
-                              tariffs!.isNotEmpty)
+                          if (showTariffs && hasTariffs)
                             CircleIconButton(
                               icon: Icons.map_rounded,
                               onTap: () {},
                               color: const Color(0xFF1A1A1E),
                             ),
-                          if (showTariffs &&
-                              tariffs != null &&
-                              tariffs!.isNotEmpty)
+                          if (showTariffs && hasTariffs)
                             const SizedBox(width: 12),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Заказать',
-                              onPressed:
-                                  (showTariffs &&
-                                      tariffs != null &&
-                                      tariffs!.isNotEmpty)
-                                  ? onOrderPressed
-                                  : null,
-                              enabled:
-                                  (showTariffs &&
-                                  tariffs != null &&
-                                  tariffs!.isNotEmpty &&
-                                  onOrderPressed != null),
+                              label: buttonLabel,
+                              onPressed: buttonEnabled ? onOrderPressed : null,
+                              enabled: buttonEnabled,
                             ),
                           ),
                         ],

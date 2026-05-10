@@ -1,20 +1,17 @@
+import 'package:arbuz_express/models/trip_models.dart';
 import 'package:flutter/material.dart';
 
 class TariffSelector extends StatelessWidget {
+  final List<Tariff> tariffs;
   final int selectedTariff;
   final ValueChanged<int> onTariffSelected;
 
   const TariffSelector({
     super.key,
+    required this.tariffs,
     required this.selectedTariff,
     required this.onTariffSelected,
   });
-
-  static const tariffs = [
-    ('Эконом', '650 ₽', Icons.directions_car),
-    ('Комфорт', '820 ₽', Icons.airport_shuttle),
-    ('Бизнес', '1200 ₽', Icons.workspace_premium),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -25,8 +22,14 @@ class TariffSelector extends StatelessWidget {
         itemCount: tariffs.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
-          final t = tariffs[index];
+          final tariff = tariffs[index];
           final selected = selectedTariff == index;
+          final icon = switch (tariff.tripClass.toUpperCase()) {
+            'ECONOMY' => Icons.directions_car,
+            'BUSINESS' => Icons.workspace_premium,
+            _ => Icons.airport_shuttle,
+          };
+
           return GestureDetector(
             onTap: () => onTariffSelected(index),
             child: Container(
@@ -47,13 +50,13 @@ class TariffSelector extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    t.$3,
+                    icon,
                     color: selected ? const Color(0xFFFFC107) : Colors.white54,
                     size: 26,
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    t.$1,
+                    tariff.tripClass,
                     style: TextStyle(
                       color: selected ? Colors.white : Colors.white70,
                       fontSize: 13,
@@ -61,7 +64,7 @@ class TariffSelector extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    t.$2,
+                    '${tariff.price} ₽',
                     style: const TextStyle(
                       color: Color(0xFFFFC107),
                       fontSize: 13,

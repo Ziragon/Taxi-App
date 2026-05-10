@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 
-class IncomingOrderDialog extends StatelessWidget {
+class IncomingOrderDialog extends StatefulWidget {
   final String clientName;
   final String rating;
   final String fromAddress;
@@ -10,6 +11,7 @@ class IncomingOrderDialog extends StatelessWidget {
   final String price;
   final VoidCallback onAccept;
   final VoidCallback onDecline;
+  final VoidCallback onTimeout;
 
   const IncomingOrderDialog({
     super.key,
@@ -21,17 +23,42 @@ class IncomingOrderDialog extends StatelessWidget {
     required this.price,
     required this.onAccept,
     required this.onDecline,
+    required this.onTimeout,
   });
 
-  IconData _getPreferenceIcon(String key) {
-    switch (key.toLowerCase()) {
-      case 'кальян':
-        return Icons.smoke_free_rounded;
-      case 'музыка':
-        return Icons.music_note_rounded;
-      default:
-        return Icons.check_circle_outline_rounded;
-    }
+  @override
+  State<IncomingOrderDialog> createState() => _IncomingOrderDialogState();
+}
+
+class _IncomingOrderDialogState extends State<IncomingOrderDialog> {
+  Timer? _timer;
+  int _remainingSeconds = 15;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingSeconds > 0) {
+        setState(() {
+          _remainingSeconds--;
+        });
+      } else {
+        _timer?.cancel();
+        if (mounted) {
+          widget.onTimeout();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -44,40 +71,18 @@ class IncomingOrderDialog extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFC107).withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                'НОВЫЙ ЗАКАЗ',
-                style: TextStyle(
-                  color: Color(0xFFFFC107),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.person_rounded, color: Colors.white70),
-                    const SizedBox(width: 8),
-                    Text(
-                      clientName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                const Text(
+                  'Новый заказ',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -85,276 +90,152 @@ class IncomingOrderDialog extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1E),
+                    color: _remainingSeconds <= 5
+                        ? Colors.redAccent.withOpacity(0.2)
+                        : const Color(0xFFFFC107).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Row(
+                  child: Text(
+                    '$_remainingSeconds сек',
+                    style: TextStyle(
+                      color: _remainingSeconds <= 5
+                          ? Colors.redAccent
+                          : const Color(0xFFFFC107),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFC107).withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.person, color: Color(0xFFFFC107)),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('🍉', style: TextStyle(fontSize: 16)),
-                      const SizedBox(width: 6),
                       Text(
-                        rating,
+                        widget.clientName,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
                         ),
+                        softWrap: true,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Text('🍉', style: TextStyle(fontSize: 16)),
+                          const SizedBox(width: 4),
+                          Text(
+                            widget.rating,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            const Divider(color: Colors.white10, height: 32),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.03),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.my_location_rounded,
-                        color: Color(0xFFFFC107),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          fromAddress,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on_outlined,
-                        color: Colors.white70,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          toAddress,
-                          style: const TextStyle(
-                            color: Colors.white54,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            const SizedBox(height: 24),
+            _buildAddressRow(
+              Icons.my_location,
+              widget.fromAddress,
+              Colors.white,
             ),
             const SizedBox(height: 16),
+            _buildAddressRow(
+              Icons.location_on,
+              widget.toAddress,
+              const Color(0xFFFFC107),
+            ),
+            const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFC107).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: const Color(0xFFFFC107).withOpacity(0.3),
-                  width: 1.5,
+                  color: const Color(0xFFFFC107).withOpacity(0.2),
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFC107).withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.attach_money_rounded,
-                          color: Color(0xFFFFC107),
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Сумма к получению',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                  const Text(
+                    'К получению',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
+                  const SizedBox(height: 8),
                   Text(
-                    price,
+                    widget.price,
                     style: const TextStyle(
                       color: Color(0xFFFFC107),
-                      fontSize: 18,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
+                    softWrap: true,
                   ),
                 ],
               ),
             ),
-            if (preferences.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      const Color(0xFFFFC107).withOpacity(0.08),
-                      const Color(0xFFFFC107).withOpacity(0.03),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFFFFC107).withOpacity(0.3),
-                    width: 1.5,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFC107).withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.stars_rounded,
-                            color: Color(0xFFFFC107),
-                            size: 16,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'Пожелания клиента',
-                          style: TextStyle(
-                            color: Color(0xFFFFC107),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    ...preferences.entries.map(
-                      (entry) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1E).withOpacity(0.6),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.05),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFFFFC107,
-                                  ).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  _getPreferenceIcon(entry.key),
-                                  color: const Color(0xFFFFC107),
-                                  size: 16,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      entry.key,
-                                      style: const TextStyle(
-                                        color: Colors.white60,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      entry.value,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: onDecline,
+                    onPressed: widget.onDecline,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white24),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: Colors.redAccent),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Пропустить'),
+                    child: const Text(
+                      'Отклонить',
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: onAccept,
+                    onPressed: widget.onAccept,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFFC107),
-                      foregroundColor: Colors.black,
-                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: const Text(
                       'Принять',
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
                         fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -364,6 +245,23 @@ class IncomingOrderDialog extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAddressRow(IconData icon, String address, Color iconColor) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: iconColor, size: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            address,
+            style: const TextStyle(color: Colors.white, fontSize: 14),
+            softWrap: true,
+          ),
+        ),
+      ],
     );
   }
 }

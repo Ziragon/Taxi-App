@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
 
-class DriverActiveOrderPanel extends StatelessWidget {
+class DriverTripInProgressPanel extends StatelessWidget {
   final String clientName;
-  final String fromAddress;
+  final String toAddress;
   final String price;
-  final VoidCallback onArrived;
+  final VoidCallback onComplete;
 
-  const DriverActiveOrderPanel({
+  const DriverTripInProgressPanel({
     super.key,
     required this.clientName,
-    required this.fromAddress,
+    required this.toAddress,
     required this.price,
-    required this.onArrived,
+    required this.onComplete,
   });
 
   @override
@@ -28,12 +28,12 @@ class DriverActiveOrderPanel extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFC107).withOpacity(0.2),
+                  color: const Color(0xFF4CAF50).withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.person_rounded,
-                  color: Color(0xFFFFC107),
+                  Icons.directions_car_rounded,
+                  color: Color(0xFF4CAF50),
                   size: 28,
                 ),
               ),
@@ -43,7 +43,7 @@ class DriverActiveOrderPanel extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Едем к клиенту',
+                      'Поездка в процессе',
                       style: TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                     const SizedBox(height: 4),
@@ -69,14 +69,14 @@ class DriverActiveOrderPanel extends StatelessWidget {
           Row(
             children: [
               const Icon(
-                Icons.location_on_rounded,
-                color: Color(0xFFFFC107),
+                Icons.flag_rounded,
+                color: Color(0xFF4CAF50),
                 size: 20,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  fromAddress,
+                  toAddress,
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ),
@@ -86,10 +86,10 @@ class DriverActiveOrderPanel extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFC107).withOpacity(0.1),
+              color: const Color(0xFF4CAF50).withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: const Color(0xFFFFC107).withOpacity(0.2),
+                color: const Color(0xFF4CAF50).withOpacity(0.2),
               ),
             ),
             child: Row(
@@ -100,12 +100,12 @@ class DriverActiveOrderPanel extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFC107).withOpacity(0.15),
+                        color: const Color(0xFF4CAF50).withOpacity(0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
                         Icons.attach_money_rounded,
-                        color: Color(0xFFFFC107),
+                        color: Color(0xFF4CAF50),
                         size: 18,
                       ),
                     ),
@@ -123,7 +123,7 @@ class DriverActiveOrderPanel extends StatelessWidget {
                 Text(
                   price,
                   style: const TextStyle(
-                    color: Color(0xFFFFC107),
+                    color: Color(0xFF4CAF50),
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -132,7 +132,7 @@ class DriverActiveOrderPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          PrimaryButton(label: 'Я на месте', onPressed: onArrived),
+          PrimaryButton(label: 'Завершить поездку', onPressed: onComplete),
         ],
       ),
     );

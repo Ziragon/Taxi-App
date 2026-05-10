@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:arbuz_express/widgets/app_ui.dart';
+import 'package:flutter/material.dart';
 
 class ActiveOrderCard extends StatelessWidget {
   final String driverName;
@@ -30,7 +30,7 @@ class ActiveOrderCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              avatarUrl != null
+              avatarUrl != null && avatarUrl!.isNotEmpty
                   ? Container(
                       width: 52,
                       height: 52,
@@ -39,18 +39,8 @@ class ActiveOrderCard extends StatelessWidget {
                         image: DecorationImage(
                           image: NetworkImage(avatarUrl!),
                           fit: BoxFit.cover,
-                          onError: (_, __) {
-                        
-                          },
                         ),
                       ),
-                      child: avatarUrl == null
-                          ? const Icon(
-                              Icons.person_rounded,
-                              color: Color(0xFFFFC107),
-                              size: 32,
-                            )
-                          : null,
                     )
                   : Container(
                       width: 52,
@@ -150,8 +140,8 @@ class ActiveOrderCard extends StatelessWidget {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: onIAmHere,
-                  icon: const Icon(Icons.exit_to_app_rounded, size: 18),
-                  label: const Text('Уже выхожу'),
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  label: const Text('Отменить'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFFC107),
                     foregroundColor: Colors.black,

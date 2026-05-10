@@ -41,6 +41,7 @@ class DriverWebSocketService extends WebSocketService {
     sendFrame('SEND', {
       'destination': '/app/driver/location',
       'content-type': 'application/json',
+      'content-length': utf8.encode(payload).length.toString(),
     }, body: payload);
   }
 
