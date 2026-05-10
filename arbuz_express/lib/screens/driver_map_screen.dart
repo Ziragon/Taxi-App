@@ -1,6 +1,6 @@
 import 'dart:convert';
-
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
+import 'package:arbuz_express/CustomTextField/HomeMapScreen/destination_marker.dart';
 import 'package:arbuz_express/hooks/use_driver_status.dart';
 import 'package:arbuz_express/models/trip_models.dart';
 import 'package:arbuz_express/screens/driverScreensWidgets/driver_active_order_panel.dart';
@@ -21,7 +21,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
-
 import 'driverScreensWidgets/car_marker.dart';
 
 class DriverMapScreen extends StatefulWidget {
@@ -56,10 +55,10 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
 
   String _currentClientName = 'Новый пассажир';
   String _currentClientRating = '5.0';
-  String _fromAddress = 'Комсомольская улица, 2';
-  String _toAddress = 'ул. Кирова, 113';
+  String _fromAddress = 'Неизвестно';
+  String _toAddress = 'Неизвестно';
   Map<String, String> _currentPreferences = {};
-  String _incomingPrice = '₽ 500';
+  String _incomingPrice = '₽ 0';
 
   @override
   void initState() {
@@ -79,7 +78,9 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
       }
       if (permission == LocationPermission.deniedForever) return;
 
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
       if (!mounted) return;
 
       setState(() {
@@ -133,7 +134,7 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
         await _buildRouteToClient();
       }
     } catch (e) {
-      debugPrint('No active driver trip: $e');
+      debugPrint(e.toString());
     }
   }
 
@@ -196,6 +197,13 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
     final title = notification['title']?.toString().toUpperCase() ?? '';
     final message = notification['message']?.toString().toUpperCase() ?? '';
 
+    if (eventType == 'TRIP_COMPLETED' ||
+        eventType == 'TRIP_CANCELLED' ||
+        eventType == 'TRIP_STARTED' ||
+        eventType == 'DRIVER_ASSIGNED') {
+      return false;
+    }
+
     return eventType == 'NEW_TRIP_REQUEST' ||
         eventType == 'TRIP_OFFER' ||
         eventType == 'NEW_ORDER' ||
@@ -206,91 +214,22 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
         message.contains('TRIP_OFFER') ||
         message.contains('NEW_TRIP') ||
         message.contains('NEW') ||
-        notification['tripData'] is Map<String, dynamic> ||
-        (notification['originAddress'] != null &&
+        (eventType.isEmpty &&
+            notification['tripData'] is Map<String, dynamic>) ||
+        (eventType.isEmpty &&
+            notification['originAddress'] != null &&
             notification['destAddress'] != null &&
-            notification['id'] != null) ||
-        notification['tripId'] != null;
+            notification['id'] != null);
   }
 
-  Map<String, dynamic>? _extractTripPayload(Map<String, dynamic> notification) {
-    final tripData = notification['tripData'];
-    if (tripData is Map<String, dynamic>) {
-      return tripData;
-    }
-    if (notification['id'] != null &&
-        notification['originAddress'] != null &&
-        notification['destAddress'] != null) {
-      return notification;
-    }
-    return null;
-  }
-
-  Future<void> _handleIncomingTripNotification(
-    Map<String, dynamic> notification,
-  ) async {
-    Map<String, dynamic>? tripData = _extractTripPayload(notification);
-
-    if (tripData == null) {
-      final tripId = _extractTripId(notification);
-      if (tripId != null) {
-        try {
-          final trip = await TripService.getTripDetails(tripId);
-          tripData = _tripDetailsToPayload(trip);
-        } catch (e) {
-          debugPrint('Failed to load trip details for popup: $e');
-        }
-      }
-    }
-
-    if (tripData == null && _currentPosition != null) {
-      try {
-        final trip = await TripService.getDriverActiveTrip(
-          _currentPosition!.latitude,
-          _currentPosition!.longitude,
-        );
-        tripData = _tripDetailsToPayload(trip);
-      } catch (e) {
-        debugPrint('Failed to load driver active trip for popup: $e');
-      }
-    }
-
-    if (tripData == null || !mounted) return;
-
-    _applyIncomingTripData(tripData);
+  void _handleIncomingTripNotification(Map<String, dynamic> notification) {
+    if (!mounted) return;
+    _applyIncomingTripData(notification);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _showIncomingOrder();
       }
     });
-  }
-
-  Map<String, dynamic> _tripDetailsToPayload(TripDetails trip) {
-    return {
-      'id': trip.id,
-      'passengerId': trip.passengerId,
-      'originAddress': trip.originAddress,
-      'originLat': trip.originLat,
-      'originLng': trip.originLng,
-      'destAddress': trip.destAddress,
-      'destLat': trip.destLat,
-      'destLng': trip.destLng,
-      'tariffs': trip.tariffs
-          .map(
-            (tariff) => {
-              'id': tariff.id,
-              'tripClass': tariff.tripClass,
-              'baseFare': tariff.baseFare,
-              'pricePerKm': tariff.pricePerKm,
-              'distanceCost': tariff.distanceCost,
-              'pricePerMin': tariff.pricePerMin,
-              'durationCost': tariff.durationCost,
-              'price': tariff.price,
-              'carsNearby': tariff.carsNearby,
-            },
-          )
-          .toList(),
-    };
   }
 
   int? _extractTripId(Map<String, dynamic> notification) {
@@ -305,18 +244,34 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
     return null;
   }
 
-  void _applyIncomingTripData(Map<String, dynamic> tripData) {
-    _currentTripId = tripData['id'] as int?;
+  void _applyIncomingTripData(Map<String, dynamic> data) {
+    _currentTripId = _extractTripId(data);
+
+    final tripData = data['tripData'] as Map<String, dynamic>? ?? data;
+
     _fromAddress = tripData['originAddress'] as String? ?? 'Неизвестно';
     _toAddress = tripData['destAddress'] as String? ?? 'Неизвестно';
-    _currentClientName =
-        tripData['passengerName'] as String? ??
-        tripData['clientName'] as String? ??
-        'Новый пассажир';
-    _currentClientRating =
-        (tripData['passengerRating'] as num?)?.toStringAsFixed(1) ??
-        (tripData['rating'] as num?)?.toStringAsFixed(1) ??
-        '5.0';
+
+    final passengerProfile = data['passengerProfile'] as Map<String, dynamic>?;
+    if (passengerProfile != null) {
+      final firstName = passengerProfile['firstName'] as String? ?? '';
+      final lastName = passengerProfile['lastName'] as String? ?? '';
+      _currentClientName = '$firstName $lastName'.trim();
+      if (_currentClientName.isEmpty) _currentClientName = 'Новый пассажир';
+
+      _currentClientRating =
+          (passengerProfile['averageRating'] as num?)?.toStringAsFixed(1) ??
+          '5.0';
+    } else {
+      _currentClientName =
+          tripData['passengerName'] as String? ??
+          tripData['clientName'] as String? ??
+          'Новый пассажир';
+      _currentClientRating =
+          (tripData['passengerRating'] as num?)?.toStringAsFixed(1) ??
+          (tripData['rating'] as num?)?.toStringAsFixed(1) ??
+          '5.0';
+    }
 
     final originLat = (tripData['originLat'] as num?)?.toDouble();
     final originLng = (tripData['originLng'] as num?)?.toDouble();
@@ -339,13 +294,35 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
       _currentPreferences = {};
     }
 
-    final tariffs = tripData['tariffs'] as List<dynamic>?;
     _incomingPrice = '₽ 500';
-    if (tariffs != null) {
-      for (final tariff in tariffs) {
-        if (tariff['tripClass'] == 'COMFORT') {
-          _incomingPrice = '₽ ${tariff['price']}';
-          break;
+    final price = tripData['price'] ?? data['price'];
+    if (price != null) {
+      _incomingPrice = '₽ $price';
+    } else {
+      final tariffs = tripData['tariffs'] as List<dynamic>?;
+      if (tariffs != null) {
+        for (final tariff in tariffs) {
+          if (tariff['tripClass'] == 'COMFORT') {
+            _incomingPrice = '₽ ${tariff['price']}';
+            break;
+          }
+        }
+      }
+    }
+
+    final message = data['message'] as String?;
+    if (message != null && message.isNotEmpty) {
+      if (_fromAddress == 'Неизвестно' && _toAddress == 'Неизвестно') {
+        final parts = message.split('→');
+        if (parts.length == 2) {
+          _fromAddress = parts[0].replaceAll('Новый заказ:', '').trim();
+          _toAddress = parts[1].split(',').first.trim();
+        }
+      }
+      if (_incomingPrice == '₽ 500' || _incomingPrice == '₽ 0') {
+        final match = RegExp(r'(\d+(?:\.\d+)?)\s*₽').firstMatch(message);
+        if (match != null) {
+          _incomingPrice = '₽ ${match.group(1)}';
         }
       }
     }
@@ -384,15 +361,12 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
 
   String _parseErrorCode(String message) {
     final lowerMessage = message.toLowerCase();
-    if (lowerMessage.contains('vehicle') && lowerMessage.contains('active')) {
+    if (lowerMessage.contains('vehicle') && lowerMessage.contains('active'))
       return 'VEHICLE_MISSING';
-    }
-    if (lowerMessage.contains('vehicle') && lowerMessage.contains('verified')) {
+    if (lowerMessage.contains('vehicle') && lowerMessage.contains('verified'))
       return 'VEHICLE_NOT_VERIFIED';
-    }
-    if (lowerMessage.contains('account') || lowerMessage.contains('profile')) {
+    if (lowerMessage.contains('account') || lowerMessage.contains('profile'))
       return 'ACCOUNT_NOT_VERIFIED';
-    }
     return 'FORBIDDEN';
   }
 
@@ -434,14 +408,31 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
   }
 
   Future<void> _acceptOrder() async {
-    if (_currentTripId == null || _currentPosition == null) return;
+    if (_currentTripId == null) return;
 
     try {
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _currentPosition = LatLng(position.latitude, position.longitude);
+      });
+
       await TripService.acceptTrip(
         _currentTripId!,
         _currentPosition!.latitude,
         _currentPosition!.longitude,
       );
+
+      if (!mounted) return;
+      setState(() {
+        _isOrderActive = true;
+      });
+
+      await _buildRouteToClient();
       await _checkActiveTrip();
 
       if (!mounted) return;
@@ -452,9 +443,11 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Ошибка принятия: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка принятия: $e')));
+      }
     }
   }
 
@@ -482,9 +475,24 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
 
     try {
       await TripService.startTrip(_currentTripId!);
-      await _checkActiveTrip();
+
       if (!mounted) return;
 
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _currentPosition = LatLng(position.latitude, position.longitude);
+        _hasArrivedAtPickup = true;
+      });
+
+      await _buildRouteToDestination();
+      await _checkActiveTrip();
+
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Поездка начата! Маршрут до точки назначения обновлён'),
@@ -578,7 +586,7 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
         }
       }
     } catch (e) {
-      debugPrint('Error building route to destination: $e');
+      debugPrint(e.toString());
     }
   }
 
@@ -610,9 +618,8 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
   }
 
   void _fitRoute(LatLng? target) {
-    if (_currentPosition == null || target == null || _routePoints.isEmpty) {
+    if (_currentPosition == null || target == null || _routePoints.isEmpty)
       return;
-    }
 
     final bounds = LatLngBounds.fromPoints([
       _currentPosition!,
@@ -738,12 +745,19 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
                         height: 44,
                         child: const CarMarker(),
                       ),
-                    if (_clientPosition != null)
+                    if (_clientPosition != null && !_hasArrivedAtPickup)
                       Marker(
                         point: _clientPosition!,
                         width: 56,
                         height: 70,
                         child: const PickupMarker(),
+                      ),
+                    if (_destinationPosition != null && _hasArrivedAtPickup)
+                      Marker(
+                        point: _destinationPosition!,
+                        width: 56,
+                        height: 70,
+                        child: const DestinationMarker(),
                       ),
                   ],
                 ),
@@ -836,15 +850,15 @@ class _DriverMapScreenState extends State<DriverMapScreen> {
               ),
             ),
           Positioned(
-            bottom: 100,
+            bottom: _isOrderActive ? 370 : 100,
             right: 16,
             child: SafeArea(
               child: FloatingActionButton(
                 onPressed: _updateLocationManually,
                 backgroundColor: const Color(0xFFFFC107),
                 foregroundColor: Colors.black,
-                child: const Icon(Icons.my_location),
                 tooltip: 'Обновить геолокацию',
+                child: const Icon(Icons.my_location),
               ),
             ),
           ),

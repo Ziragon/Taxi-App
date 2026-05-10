@@ -1,3 +1,4 @@
+// notifications_panel.dart
 import 'package:arbuz_express/widgets/app_ui.dart';
 import 'package:flutter/material.dart';
 
@@ -131,11 +132,13 @@ class NotificationsPanel extends StatelessWidget {
         eventType == 'NEW_TRIP_REQUEST' ||
         eventType == 'NEW_ORDER' ||
         eventType == 'TRIP_REQUEST') {
-      final origin = notification['originAddress']?.toString() ??
+      final origin =
+          notification['originAddress']?.toString() ??
           (notification['tripData'] is Map
               ? notification['tripData']['originAddress']?.toString()
               : null);
-      final dest = notification['destAddress']?.toString() ??
+      final dest =
+          notification['destAddress']?.toString() ??
           (notification['tripData'] is Map
               ? notification['tripData']['destAddress']?.toString()
               : null);

@@ -418,7 +418,10 @@ class _StatsBottomSheetState extends State<StatsBottomSheet> {
     setState(() => _isLoading = true);
 
     try {
-      await TripService.startSearching(vehicleClass: tariff.tripClass);
+      await TripService.startSearching(
+        tripId: widget.tripData.id,
+        vehicleClass: tariff.tripClass,
+      );
 
       widget.onAccept({
         'paymentMethod': _paymentMethod,

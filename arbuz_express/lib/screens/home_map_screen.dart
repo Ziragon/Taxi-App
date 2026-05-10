@@ -1,6 +1,6 @@
+// home_map_screen.dart
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/destination_marker.dart';
 import 'package:arbuz_express/CustomTextField/HomeMapScreen/pickup_marker.dart';
 import 'package:arbuz_express/models/trip_models.dart';
@@ -63,10 +63,12 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
     try {
       final activeTrip = await TripService.getActiveTrip();
       if (!mounted) return;
-      _applyTripState(activeTrip, isFreshSearch: false);
-      _startTripRefresh();
+      if (activeTrip != null) {
+        _applyTripState(activeTrip, isFreshSearch: false);
+        _startTripRefresh();
+      }
     } catch (e) {
-      debugPrint('No active trip: $e');
+      debugPrint(e.toString());
     }
   }
 
@@ -83,7 +85,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
         _clearOrderState();
       }
     } catch (e) {
-      debugPrint('Failed to refresh trip details: $e');
+      debugPrint(e.toString());
     }
   }
 
@@ -217,7 +219,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Error fetching suggestions: $e');
+      debugPrint(e.toString());
     }
   }
 
@@ -284,7 +286,7 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
       });
       _fitRoute(points);
     } catch (e) {
-      debugPrint('Error building route: $e');
+      debugPrint(e.toString());
     }
   }
 
@@ -292,16 +294,15 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
     if (_currentPosition == null || _toPosition == null) return;
 
     try {
-      final response = await TripService.calculateTrip(
-        TripCalculationRequest(
-          originAddress: _fromController.text,
-          originLat: _currentPosition!.latitude,
-          originLng: _currentPosition!.longitude,
-          destAddress: _toController.text,
-          destLat: _toPosition!.latitude,
-          destLng: _toPosition!.longitude,
-        ),
+      final request = TripCalculationRequest(
+        originAddress: _fromController.text,
+        originLat: _currentPosition!.latitude,
+        originLng: _currentPosition!.longitude,
+        destAddress: _toController.text,
+        destLat: _toPosition!.latitude,
+        destLng: _toPosition!.longitude,
       );
+      final response = await TripService.calculateTrip(request);
 
       if (!mounted) return;
       final routePoints = response.routeGeometry == null
@@ -348,7 +349,10 @@ class _HomeMapScreenState extends State<HomeMapScreen> {
 
     try {
       final selectedClass = _lastTripData!.tariffs[_selectedTariff].tripClass;
-      await TripService.startSearching(vehicleClass: selectedClass);
+      await TripService.startSearching(
+        tripId: _lastTripData!.id,
+        vehicleClass: selectedClass,
+      );
       if (!mounted) return;
 
       setState(() {
