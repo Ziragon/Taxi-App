@@ -17,6 +17,8 @@ import com.example.tripservice.service.search.DriverSearchService;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -98,8 +100,11 @@ public class TripService {
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new TripNotFoundException(tripId));
 
-        if (!Objects.equals(userId, trip.getPassengerId())) {
-            throw new AccessDeniedException("You are not owner of this trip");
+        boolean isPassenger = Objects.equals(userId, trip.getPassengerId());
+        boolean isDriver = Objects.equals(userId, trip.getDriverId());
+
+        if (!isPassenger && !isDriver) {
+            throw new AccessDeniedException("You are not a participant of this trip");
         }
 
         return TripDto.from(trip, null, null);
@@ -154,5 +159,17 @@ public class TripService {
         }
 
         return TripDto.from(trip, null, route.geometry());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TripSummaryDto> getTripHistoryByPassenger(Long passengerId, Pageable pageable) {
+        return tripRepository.findByPassengerIdOrderByCreatedAtDesc(passengerId, pageable)
+                .map(TripSummaryDto::from);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TripSummaryDto> getTripHistoryByDriver(Long driverId, Pageable pageable) {
+        return tripRepository.findByDriverIdOrderByCreatedAtDesc(driverId, pageable)
+                .map(TripSummaryDto::from);
     }
 }

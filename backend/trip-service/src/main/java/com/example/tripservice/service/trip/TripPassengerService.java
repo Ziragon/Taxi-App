@@ -3,8 +3,11 @@ package com.example.tripservice.service.trip;
 import com.example.shared.dto.enums.VehicleClass;
 import com.example.tripservice.dto.data.TripCreateDto;
 import com.example.tripservice.dto.data.TripDto;
+import com.example.tripservice.dto.data.TripSummaryDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,5 +43,9 @@ public class TripPassengerService {
     @Transactional(readOnly = true)
     public TripDto getActiveTrip(Long userId) {
         return tripService.getActiveTripByPassengerId(userId);
+    }
+
+    public Page<TripSummaryDto> getTripHistory(Long passengerId, Pageable pageable) {
+        return tripService.getTripHistoryByPassenger(passengerId, pageable);
     }
 }
